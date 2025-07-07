@@ -43,6 +43,8 @@ export function StatementTable({
     })
   }
 
+  console.log(clientInfo)
+
   const formatDateTime = dateString => {
     return new Date(dateString).toLocaleDateString("en-IN", {
       day: "2-digit",
@@ -406,7 +408,7 @@ const downloadPDF = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center space-x-3">
               <User className="h-4 w-4 text-gray-500" />
               <div>
@@ -414,15 +416,7 @@ const downloadPDF = () => {
                 <p className="font-medium">{clientInfo.name}</p>
               </div>
             </div>
-            {clientInfo.email && (
-              <div className="flex items-center space-x-3">
-                <Mail className="h-4 w-4 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium">{clientInfo.email}</p>
-                </div>
-              </div>
-            )}
+          
             {clientInfo.phone && (
               <div className="flex items-center space-x-3">
                 <Phone className="h-4 w-4 text-gray-500" />

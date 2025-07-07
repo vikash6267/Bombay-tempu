@@ -40,8 +40,14 @@ router.post(
   restrictTo("admin"),
   tripController.addAdvancePayment
 );
+router.post(
+  "/:id/del-advance",
+  restrictTo("admin"),
+  tripController.deleteAdvancePayment
+);
 
 router.post("/:id/expense", tripController.addExpense);
+router.post("/:id/del-expense", tripController.deleteExpense);
 
 router.post(
   "/:id/documents",
@@ -58,9 +64,11 @@ router.post(
 
 // ✅ NEW: Fleet Advance & Expense Routes
 router.post("/:tripId/fleet-advance",  tripController.addFleetAdvance);
+router.post("/:tripId/del-fleet-advance",  tripController.deleteFleetAdvance);
 router.post("/:tripId/fleet-expense",  tripController.addFleetExpense);
 
 router.post("/:tripId/self-expense", tripController.addSelfExpense);
+router.post("/:tripId/del-self-expense", tripController.deleteSelfExpense);
 router.post("/:tripId/self-advance", tripController.addSelfAdvance);
 // POD DETIALS
 router.put("/:id/pod-details", tripController.updatePodDetails);

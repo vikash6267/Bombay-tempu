@@ -202,12 +202,15 @@ const PackagingTypeSelect = ({ value, onChange, error }) => (
 // Calculation Summary Component
 const CalculationSummary = ({ clients, overallRate }) => {
   const calculations = useMemo(() => {
+    console.log(clients)
     const totalClientRate = clients.reduce(
       (sum, client) => sum + (Number(client.rate) || 0),
       0
     );
-    const totalTruckHireCost = Number(overallRate) || 0;
-
+    const totalTruckHireCost = clients.reduce(
+      (sum, client) => sum + (Number(client.truckHireCost) || 0),
+      0
+    );
     const overallProfit = totalClientRate - totalTruckHireCost;
 
     const clientProfits = clients.map((client, index) => {

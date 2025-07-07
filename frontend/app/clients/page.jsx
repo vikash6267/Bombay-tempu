@@ -282,7 +282,7 @@ export default function ClientsPage() {
 
         {/* Client Statement Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto">
+          <DialogContent className=" max-h-[95vh] overflow-y-auto min-w-[66%]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3">
                 <div className="h-10 w-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">

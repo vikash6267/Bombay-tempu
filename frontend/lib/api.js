@@ -138,14 +138,18 @@ export const tripsApi = {
   getMyTrips: (params) => apiGet("/trips/my-trips", params),
   updateStatus: (id, data) => apiPatch(`/trips/${id}/status`, data),
   addAdvance: (id, data) => apiPost(`/trips/${id}/advance`, data),
+  deleteAdvance: (id, data) => apiPost(`/trips/${id}/del-advance`, data),
   addExpense: (id, data) => apiPost(`/trips/${id}/expense`, data),
+  deleteExpense: (id, data) => apiPost(`/trips/${id}/del-expense`, data),
   uploadDocument: (id, formData) =>
     apiUpload(`/trips/${id}/documents`, formData),
    addFleetAdvance: (id, data) => apiPost(`/trips/${id}/fleet-advance`, data), // 👈 singular
+   deleteFleetAdvance: (id, data) => apiPost(`/trips/${id}/del-fleet-advance`, data), // 👈 singular
 addFleetExpense: (id, data) => apiPost(`/trips/${id}/fleet-expense`, data), // 👈 singular
 
  // ✅ Add self expense and advance
   addSelfExpense: (id, data) => apiPost(`/trips/${id}/self-expense`, data),
+  deleteSelfExpense: (id, data) => apiPost(`/trips/${id}/del-self-expense`, data),
   addSelfAdvance: (id, data) => apiPost(`/trips/${id}/self-advance`, data),
     updatePodDetails: (id, data) => apiPut(`/trips/${id}/pod-details`, data),
     updatePodStatus: (id, data) => apiPut(`/trips/pod-status/${id}`, data),

@@ -6,7 +6,7 @@ const AppError = require("../utils/appError");
 const APIFeatures = require("../utils/apiFeatures");
 const cloudinary = require("../utils/cloudinary");
 const Email = require("../utils/email");
-const {CounterService} = require("../models/Counter");
+const { CounterService } = require("../models/Counter");
 const mongoose = require("mongoose");
 
 const { isValidObjectId } = mongoose;
@@ -46,7 +46,7 @@ const getAllTrips = catchAsync(async (req, res, next) => {
 });
 
 const getTrip = catchAsync(async (req, res, next) => {
-  const filter = {_id: req.params.id};
+  const filter = { _id: req.params.id };
 
   // Apply role-based filtering
   switch (req.user.role) {
@@ -106,7 +106,7 @@ const createTrip = catchAsync(async (req, res, next) => {
 
 
     console.log(req.body)
-    
+
     // Validate clients array
     if (!clients || !Array.isArray(clients) || clients.length === 0) {
       return next(new AppError("At least one client is required", 400));
@@ -275,42 +275,169 @@ const createTrip = catchAsync(async (req, res, next) => {
 
 
 const updateTrip = catchAsync(async (req, res, next) => {
-  const filter = {_id: req.params.id};
+  try {
+    const  tripId  = req.params.id;
+    const {
+      clients,
+      vehicle,
+      driver,
+      origin,
+      destination,
+      scheduledDate,
+      estimatedDuration,
+      estimatedDistance,
+      specialInstructions,
+      podBalance,
+      commission,
+      rate,
+    } = req.body;
 
-  const trip = await Trip.findOneAndUpdate(
-    filter,
-    {$push: {clients: req.body}},
-    {
-      new: true,
-      runValidators: true,
+    console.log(req.body)
+    const trip = await Trip.findById(tripId);
+    console.log(trip)
+    if (!trip) {
+      return next(new AppError("Trip not found", 404));
     }
-  ).populate([
-    {path: "clients.client", select: "name email phone"},
-    {path: "vehicle", select: "registrationNumber make model"},
-    {path: "driver", select: "name email phone"},
-    {path: "vehicleOwner.ownerId", select: "name email phone"},
-  ]);
 
-  if (!trip) {
-    return next(
-      new AppError(
-        "No trip found with that ID or you don't have permission to update it",
-        404
-      )
-    );
+    // Validate and update clients if provided
+    if (clients) {
+      if (!Array.isArray(clients) || clients.length === 0) {
+        return next(new AppError("At least one client is required", 400));
+      }
+
+      for (const clientData of clients) {
+        if (
+          !clientData.client ||
+          !isValidObjectId(clientData.client) ||
+          !clientData.loadDetails ||
+          !clientData.rate
+        ) {
+          return next(
+            new AppError(
+              "Each client must have a valid client ID, load details, and rate",
+              400
+            )
+          );
+        }
+
+        const clientUser = await User.findById(clientData.client);
+        if (!clientUser || clientUser.role !== "client") {
+          return next(
+            new AppError(`Invalid client specified: ${clientData.client}`, 400)
+          );
+        }
+
+        if (
+          req.user.role === "client" &&
+          req.user.id !== clientData.client.toString()
+        ) {
+          return next(
+            new AppError("Clients can only edit trips for themselves", 403)
+          );
+        }
+      }
+
+      // Update clients with totalRate
+      trip.clients = clients.map((client) => ({
+        ...client,
+        totalRate: client.rate,
+      }));
+    }
+
+    // Vehicle validation if changed
+    if (vehicle && vehicle !== trip.vehicle.toString()) {
+      if (!isValidObjectId(vehicle)) {
+        return next(new AppError("Invalid vehicle ID format", 400));
+      }
+
+      const vehicleDoc = await Vehicle.findById(vehicle);
+      if (!vehicleDoc) {
+        return next(new AppError("Invalid vehicle specified", 400));
+      }
+
+      trip.vehicle = vehicle;
+      const vehicleOwnerDetails = vehicleDoc.getOwnerDetails();
+      const ownershipType = vehicleOwnerDetails.type;
+
+      trip.vehicleOwner = {
+        ownershipType: ownershipType === "self" ? "self" : "fleet_owner",
+        ownerId:
+          ownershipType === "self"
+            ? vehicleOwnerDetails.details.adminId
+            : vehicleOwnerDetails.details._id,
+        ownerDetails: vehicleOwnerDetails.details,
+        commissionRate: vehicleOwnerDetails.commissionRate,
+      };
+
+      // For self-owned vehicles, driver must be revalidated
+      if (ownershipType === "self") {
+        if (!driver || !isValidObjectId(driver)) {
+          return next(new AppError("Valid driver is required", 400));
+        }
+
+        const driverUser = await User.findById(driver);
+        if (!driverUser || driverUser.role !== "driver") {
+          return next(new AppError("Invalid driver specified", 400));
+        }
+
+        const activeTrip = await Trip.findOne({
+          _id: { $ne: tripId },
+          driver: driver,
+          status: { $in: ["booked", "in_progress"] },
+        });
+
+        if (activeTrip) {
+          return next(
+            new AppError("Driver is already assigned to another active trip", 400)
+          );
+        }
+
+        trip.driver = driver;
+      } else {
+        trip.driver = undefined;
+      }
+
+      // Update old vehicle's status
+      await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
+      await Vehicle.findByIdAndUpdate(vehicle, { status: "booked" });
+    }
+
+    // Optional fields update
+    if (origin) trip.origin = origin;
+    if (destination) trip.destination = destination;
+    if (scheduledDate) trip.scheduledDate = scheduledDate;
+    if (estimatedDuration) trip.estimatedDuration = estimatedDuration;
+    if (estimatedDistance) trip.estimatedDistance = estimatedDistance;
+    if (specialInstructions) trip.specialInstructions = specialInstructions;
+    if (podBalance) trip.podBalance = podBalance;
+    if (commission) trip.commission = commission;
+    if (rate) trip.rate = rate;
+
+    await trip.save();
+
+    await trip.populate([
+      { path: "clients.client", select: "name email phone" },
+      { path: "vehicle", select: "registrationNumber make model" },
+      { path: "driver", select: "name email phone" },
+      { path: "vehicleOwner.ownerId", select: "name email phone" },
+    ]);
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        trip,
+      },
+    });
+  } catch (error) {
+    console.log("Trip update error:", error);
+    next(error);
   }
-
-  res.status(200).json({
-    status: "success",
-    data: {
-      trip,
-    },
-  });
 });
 
+
 const updateTripStatus = catchAsync(async (req, res, next) => {
-  const {status} = req.body;
-  const filter = {_id: req.params.id};
+  const { status } = req.body;
+  const filter = { _id: req.params.id };
 
   // Apply role-based filtering and status change permissions
   switch (req.user.role) {
@@ -390,7 +517,7 @@ const updateTripStatus = catchAsync(async (req, res, next) => {
 
   // Update vehicle status based on trip status
   if (status === "completed" || status === "cancelled") {
-    await Vehicle.findByIdAndUpdate(trip.vehicle, {status: "available"});
+    await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
   }
 
   // Send notifications for completed trips
@@ -422,7 +549,7 @@ const uploadPOD = catchAsync(async (req, res, next) => {
     return next(new AppError("Please upload a POD file", 400));
   }
 
-  const filter = {_id: req.params.id};
+  const filter = { _id: req.params.id };
 
   // Apply role-based filtering - only driver and admin can upload POD
   switch (req.user.role) {
@@ -455,14 +582,14 @@ const uploadPOD = catchAsync(async (req, res, next) => {
   });
 
   // Upload POD
-  await trip.uploadPOD({url: result.secure_url}, req.user.id);
+  await trip.uploadPOD({ url: result.secure_url }, req.user.id);
 
   // If admin uploaded, auto-verify and complete
   if (req.user.role === "admin") {
     await trip.verifyPODAndComplete(req.user.id);
 
     // Update vehicle status
-    await Vehicle.findByIdAndUpdate(trip.vehicle, {status: "available"});
+    await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
 
     // Send completion notifications
     try {
@@ -492,7 +619,7 @@ const uploadPOD = catchAsync(async (req, res, next) => {
 });
 
 const verifyPOD = catchAsync(async (req, res, next) => {
-  const {action, rejectionReason} = req.body; // action: 'verify' or 'reject'
+  const { action, rejectionReason } = req.body; // action: 'verify' or 'reject'
 
   if (!action || !["verify", "reject"].includes(action)) {
     return next(
@@ -524,7 +651,7 @@ const verifyPOD = catchAsync(async (req, res, next) => {
     await trip.verifyPODAndComplete(req.user.id);
 
     // Update vehicle status
-    await Vehicle.findByIdAndUpdate(trip.vehicle, {status: "available"});
+    await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
 
     // Send completion notifications
     try {
@@ -560,7 +687,7 @@ const verifyPOD = catchAsync(async (req, res, next) => {
 });
 
 const addPaidAmount = catchAsync(async (req, res, next) => {
-  const {amount, tripId} = req.body;
+  const { amount, tripId } = req.body;
 
   const trip = await Trip.findById(tripId);
   if (!trip) {
@@ -601,6 +728,7 @@ const addPaidAmount = catchAsync(async (req, res, next) => {
 const addAdvancePayment = catchAsync(async (req, res, next) => {
   const { amount, paidTo, purpose, notes, index, pymentMathod } = req.body;
 
+  console.log(req.body)
   const trip = await Trip.findById(req.params.id);
   if (!trip || !trip.clients[index]) {
     return next(new AppError("Trip or client not found", 404));
@@ -679,7 +807,7 @@ const addExpense = catchAsync(async (req, res, next) => {
     console.log("✅ Updated totalExpense:", newExpense);
 
     client.totalExpense = newExpense;
-    client.dueAmount +=newExpense
+    client.dueAmount += newExpense
     const expenseData = {
       type,
       amount,
@@ -729,6 +857,115 @@ const addExpense = catchAsync(async (req, res, next) => {
   }
 });
 
+const deleteAdvancePayment = catchAsync(async (req, res, next) => {
+  const { id } = req.params; // tripId
+  const { clientIndex, advanceIndex } = req.body;
+
+  const trip = await Trip.findById(id);
+  if (!trip || !trip.clients?.[clientIndex]) {
+    return next(new AppError("Trip or client not found", 404));
+  }
+
+  const client = trip.clients[clientIndex];
+  const advance = client.advances?.[advanceIndex];
+
+  if (!advance) {
+    return next(new AppError("Advance payment not found", 404));
+  }
+
+  const amount = advance.amount || 0;
+  const paidTo = advance.paidTo;
+  const purpose = advance.purpose;
+  const notes = advance.notes;
+
+  // Subtract amount from paidAmount
+  client.paidAmount = (client.paidAmount || 0) - amount;
+
+  // Remove from client advances
+  client.advances.splice(advanceIndex, 1);
+  trip.markModified(`clients.${clientIndex}`);
+
+  await trip.save();
+
+  // Remove from user.advanceRecords
+  const user = await User.findById(client.client);
+  if (user) {
+    user.advanceRecords = user.advanceRecords.filter((record) => {
+      return !(
+        record.tripId?.toString() === trip._id.toString() &&
+        record.amount === amount &&
+        record.paidTo === paidTo &&
+        record.purpose === purpose &&
+        record.notes === notes
+      );
+    });
+    await user.save();
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Advance payment deleted successfully",
+    data: { trip },
+  });
+});
+
+
+
+
+const deleteExpense = catchAsync(async (req, res, next) => {
+  const { id } = req.params; // tripId
+  const { clientIndex, expenseIndex } = req.body;
+
+  const trip = await Trip.findById(id);
+  if (!trip || !trip.clients?.[clientIndex]) {
+    return next(new AppError("Trip or client not found", 404));
+  }
+
+  const client = trip.clients[clientIndex];
+  const expense = client.expenses?.[expenseIndex];
+
+  if (!expense) {
+    return next(new AppError("Expense not found", 404));
+  }
+
+  const amount = expense.amount || 0;
+  const type = expense.type;
+  const description = expense.description;
+
+  // Subtract from totalExpense and dueAmount
+  client.totalExpense = (client.totalExpense || 0) - amount;
+  client.dueAmount = (client.dueAmount || 0) - amount;
+
+  // Remove from client expenses
+  client.expenses.splice(expenseIndex, 1);
+  trip.markModified(`clients.${clientIndex}`);
+
+  await trip.save();
+
+  // Remove from user.expenseRecords
+  const userId = client.client || client.user;
+  if (userId) {
+    const user = await User.findById(userId);
+    if (user) {
+      user.expenseRecords = user.expenseRecords.filter((record) => {
+        return !(
+          record.tripId?.toString() === trip._id.toString() &&
+          record.amount === amount &&
+          record.type === type &&
+          record.description === description
+        );
+      });
+      await user.save();
+    }
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Expense deleted successfully",
+    data: { trip },
+  });
+});
+
 
 
 
@@ -742,12 +979,12 @@ const uploadDocument = catchAsync(async (req, res, next) => {
     return next(new AppError("Please upload a file", 400));
   }
 
-  const {documentType, description, clientId} = req.body;
+  const { documentType, description, clientId } = req.body;
   if (!documentType) {
     return next(new AppError("Please specify document type", 400));
   }
 
-  const filter = {_id: req.params.id};
+  const filter = { _id: req.params.id };
 
   // Apply role-based filtering
   switch (req.user.role) {
@@ -871,7 +1108,7 @@ const deleteTrip = catchAsync(async (req, res, next) => {
   }
 
   // Update vehicle status back to available
-  await Vehicle.findByIdAndUpdate(trip.vehicle, {status: "available"});
+  await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
 
   await Trip.findByIdAndDelete(req.params.id);
 
@@ -925,14 +1162,14 @@ const getTripStats = catchAsync(async (req, res, next) => {
     {
       $group: {
         _id: "$status",
-        count: {$sum: 1},
-        totalRevenue: {$sum: "$totalClientAmount"},
-        totalCommission: {$sum: "$totalCommission"},
-        avgCommission: {$avg: "$totalCommission"},
+        count: { $sum: 1 },
+        totalRevenue: { $sum: "$totalClientAmount" },
+        totalCommission: { $sum: "$totalCommission" },
+        avgCommission: { $avg: "$totalCommission" },
       },
     },
     {
-      $sort: {count: -1},
+      $sort: { count: -1 },
     },
   ]);
 
@@ -949,25 +1186,25 @@ const getTripStats = catchAsync(async (req, res, next) => {
     },
     {
       $group: {
-        _id: {$month: "$createdAt"},
-        count: {$sum: 1},
-        revenue: {$sum: "$totalClientAmount"},
-        commission: {$sum: "$totalCommission"},
+        _id: { $month: "$createdAt" },
+        count: { $sum: 1 },
+        revenue: { $sum: "$totalClientAmount" },
+        commission: { $sum: "$totalCommission" },
       },
     },
     {
-      $sort: {_id: 1},
+      $sort: { _id: 1 },
     },
   ]);
 
   // Get top clients by total business
   const topClients = await Trip.aggregate([
-    {$unwind: "$clients"},
+    { $unwind: "$clients" },
     {
       $group: {
         _id: "$clients.client",
-        tripCount: {$sum: 1},
-        totalRevenue: {$sum: "$clients.rate"},
+        tripCount: { $sum: 1 },
+        totalRevenue: { $sum: "$clients.rate" },
       },
     },
     {
@@ -990,7 +1227,7 @@ const getTripStats = catchAsync(async (req, res, next) => {
       },
     },
     {
-      $sort: {totalRevenue: -1},
+      $sort: { totalRevenue: -1 },
     },
     {
       $limit: 10,
@@ -1066,6 +1303,63 @@ const addFleetAdvance = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+const deleteFleetAdvance = async (req, res) => {
+  const { tripId } = req.params;
+  const { advanceIndex } = req.body;
+
+  try {
+    const trip = await Trip.findById(tripId);
+    if (!trip) return res.status(404).json({ message: "Trip not found" });
+
+    if (
+      !trip.fleetAdvances ||
+      !Array.isArray(trip.fleetAdvances) ||
+      !trip.fleetAdvances[advanceIndex]
+    ) {
+      return res.status(404).json({ message: "Fleet advance not found" });
+    }
+
+    const deletedAdvance = trip.fleetAdvances[advanceIndex];
+
+    // Deduct the advance amount
+    trip.totalFleetAdvance = (trip.totalFleetAdvance || 0) - (deletedAdvance.amount || 0);
+
+    // Remove from trip
+    trip.fleetAdvances.splice(advanceIndex, 1);
+    await trip.save();
+
+    // Also remove from fleet owner's user record
+    if (
+      trip.vehicleOwner &&
+      trip.vehicleOwner.ownershipType === "fleet_owner" &&
+      trip.vehicleOwner.ownerId
+    ) {
+      const user = await User.findById(trip.vehicleOwner.ownerId);
+      if (user) {
+        user.fleetAdvances = user.fleetAdvances.filter((record) => {
+          return !(
+            record.trip?.toString() === tripId &&
+            record.amount === deletedAdvance.amount &&
+            record.reason === deletedAdvance.reason &&
+            record.referenceNumber === deletedAdvance.referenceNumber
+          );
+        });
+        await user.save();
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Fleet advance deleted successfully",
+      trip,
+    });
+  } catch (err) {
+    console.error("❌ Error deleting fleet advance:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 
 
 const addFleetExpense = async (req, res) => {
@@ -1164,6 +1458,44 @@ const addSelfExpense = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+// DELETE self expense
+const deleteSelfExpense = async (req, res) => {
+  const { tripId } = req.params;
+  const { expenseIndex } = req.body;
+
+  try {
+    const trip = await Trip.findById(tripId);
+    if (!trip || !trip.selfExpenses?.[expenseIndex]) {
+      return res.status(404).json({ message: "Trip or expense not found" });
+    }
+
+    const expense = trip.selfExpenses[expenseIndex];
+
+    // Remove from driver history if applicable
+    if (expense.expenseFor === "driver" && trip.driver) {
+      await User.findByIdAndUpdate(trip.driver, {
+        $pull: { driverExpenseHistory: { paidAt: expense.paidAt, amount: expense.amount } }
+      });
+    }
+
+    // Remove from vehicle history if applicable
+    if (expense.expenseFor === "vehicle" && trip.vehicle) {
+      await Vehicle.findByIdAndUpdate(trip.vehicle, {
+        $pull: { vehicleExpenseHistory: { paidAt: expense.paidAt, amount: expense.amount } }
+      });
+    }
+
+    // Remove from trip
+    trip.selfExpenses.splice(expenseIndex, 1);
+    await trip.save();
+
+    res.status(200).json({ success: true, message: "Self expense deleted successfully", trip });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
 
 // Add Self Advance
 const addSelfAdvance = async (req, res) => {
@@ -1235,7 +1567,7 @@ const updatePodDetails = async (req, res) => {
       podGive,
       notes: notes || "",
     };
-trip.podBalance = 0
+    trip.podBalance = 0
     await trip.save();
 
     res.status(200).json({
@@ -1262,7 +1594,7 @@ const updatePodStatus = async (req, res) => {
     const { tripId } = req.params
     const { status, document } = req.body
 
-    
+
     console.log(req.files)
     console.log(req.file)
     console.log(req.body)
@@ -1273,7 +1605,7 @@ const updatePodStatus = async (req, res) => {
       if (trip.vehicle) {
         await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
       }
-trip.status = "completed"
+      trip.status = "completed"
       // ✅ Make driver available
       if (trip.driver) {
         await User.findByIdAndUpdate(trip.driver, { status: "available" });
@@ -1296,14 +1628,14 @@ trip.status = "completed"
     if (document?.url) {
 
       const result = await cloudinary.uploader.upload(req.file.path, {
-    folder: `trips/${trip._id}/pod`,
-    resource_type: "auto",
-  });
+        folder: `trips/${trip._id}/pod`,
+        resource_type: "auto",
+      });
       trip.podManage.document = {
         url: result.url,
         fileType: result.fileType || "unknown",
         uploadedAt: new Date(),
-       
+
       }
     }
 
@@ -1445,6 +1777,8 @@ module.exports = {
   verifyPOD,
   addAdvancePayment,
   addExpense,
+  deleteAdvancePayment,
+  deleteExpense,
   uploadDocument,
   generateClientInvoices,
   deleteTrip,
@@ -1457,5 +1791,9 @@ module.exports = {
   updatePodDetails,
   updatePodStatus,
   uploadPodDocument,
-  getDashboardData
+  getDashboardData,
+  deleteFleetAdvance,
+deleteSelfExpense
+
+
 };

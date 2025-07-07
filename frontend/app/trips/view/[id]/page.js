@@ -89,6 +89,7 @@ import { BalanceMemoDialog } from "@/components/memos/balance-memo-dialog"
 import { ClientStatementGenerator } from "@/components/memos/client-statment"
 import { PODStepUpload } from "@/components/memos/pod-step-upload"
 import axios from "axios"
+import { EnhancedEditTripDialog } from "components/trips/enhanced-edit-trip-dialog"
 
 // Self Owner Expense Form Schema
 const selfExpenseSchema = z.object({
@@ -920,6 +921,18 @@ export default function TripDetailPage() {
   )
   const [showBalanceMemoDialog, setShowBalanceMemoDialog] = useState(false)
   const [selectedClientForMemo, setSelectedClientForMemo] = useState(null)
+  const [showEditDialog, setShowEditDialog] = useState(false) // New state for edit dialog
+
+  const handleEdit = () => {
+    setShowEditDialog(true) // Open edit dialog instead of inline editing
+  }
+
+  const handleEditSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
+    setShowEditDialog(false)
+    toast.success("Trip updated successfully!")
+  }
+
 
   const form = useForm({
     resolver: zodResolver(tripSchema)
@@ -1008,22 +1021,22 @@ export default function TripDetailPage() {
     updateTripMutation.mutate(data)
   }
 
-  const handleEdit = () => {
-    setIsEditing(true)
-    if (trip) {
-      form.reset({
-        clients: trip.clients || [],
-        vehicle: trip.vehicle._id,
-        driver: trip.driver._id,
-        origin: trip.origin,
-        destination: trip.destination,
-        scheduledDate: new Date(trip.scheduledDate).toISOString().slice(0, 16),
-        estimatedDuration: trip.estimatedDuration,
-        estimatedDistance: trip.estimatedDistance,
-        specialInstructions: trip.specialInstructions
-      })
-    }
-  }
+  // const handleEdit = () => {
+  //   setIsEditing(true)
+  //   if (trip) {
+  //     form.reset({
+  //       clients: trip.clients || [],
+  //       vehicle: trip.vehicle._id,
+  //       driver: trip.driver._id,
+  //       origin: trip.origin,
+  //       destination: trip.destination,
+  //       scheduledDate: new Date(trip.scheduledDate).toISOString().slice(0, 16),
+  //       estimatedDuration: trip.estimatedDuration,
+  //       estimatedDistance: trip.estimatedDistance,
+  //       specialInstructions: trip.specialInstructions
+  //     })
+  //   }
+  // }
 
   const handleCancelEdit = () => {
     setIsEditing(false)
@@ -1043,6 +1056,59 @@ export default function TripDetailPage() {
       toast.error("Failed to add payment")
     }
   }
+
+
+
+
+
+  const handleDeleteAdvance = async (tripId, clientIndex, advanceIndex) => {
+    if (!window.confirm("Are you sure you want to delete this advance payment?")) return;
+
+    try {
+
+
+
+      const res = await tripsApi.deleteAdvance(params.id, {
+        clientIndex,
+        advanceIndex,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
+
+      // ✅ Optional: Show toast or refresh data
+      console.log("Deleted successfully:", res.data);
+      toast.success("Advance payment deleted");
+
+
+
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete advance");
+    }
+  };
+
+
+
+
+  const handleDeleteExpense = async (tripId, clientIndex, expenseIndex) => {
+  if (!window.confirm("Are you sure you want to delete this expense?")) return;
+
+  try {
+        const res = await tripsApi.deleteExpense(params.id, {
+        clientIndex,
+        expenseIndex,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
+
+
+    toast.success("Expense deleted successfully");
+  
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to delete expense");
+  }
+};
 
   const handleESubmit = async (values, index) => {
     const data = { ...values, index: index }
@@ -1087,6 +1153,45 @@ export default function TripDetailPage() {
       toast.error("Failed to add fleet advance payment")
     }
   }
+
+
+
+
+
+
+
+  const handleDeleteFleetAdvance = async (advanceIndex) => {
+  if (!window.confirm("Are you sure you want to delete this advance?")) return;
+
+  try {
+   
+      const res = await tripsApi.deleteFleetAdvance(params.id, {advanceIndex})
+
+    toast.success("Fleet advance deleted");
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
+
+  } catch (error) {
+    toast.error(
+      error.response?.data?.message || "Failed to delete advance"
+    );
+  }
+};
+
+const handleDeleteSelfExpense = async (expenseIndex) => {
+  const confirmed = window.confirm("Are you sure you want to delete this self expense?");
+  if (!confirmed) return;
+
+  try {
+ 
+      const res = await tripsApi.deleteSelfExpense(params.id, {expenseIndex})
+
+    toast.success("Expense deleted");
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
+
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Failed to delete self expense");
+  }
+};
 
   // Self Owner Expense Handler
   const handleSelfExpenseSubmit = async values => {
@@ -1219,32 +1324,32 @@ export default function TripDetailPage() {
 
 
   const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
-    const token = localStorage?.getItem("token");
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+  const token = localStorage?.getItem("token");
 
   // POD Step Document Upload Handler
   const handlePODStepUpload = async (file, stepKey) => {
-   try {
-    const formData = new FormData();
-    formData.append("file", file);        // 👈 👈 Important: Field name should be "file"
-    formData.append("stepKey", stepKey);  // 👈 Optional field agar extra data bhejna ho
-console.log(file)
-    const res = await axios.post(
-      `${API_BASE_URL}/trips/${params.id}/podDocument`,  // 👈 Trip ID ke hisab se URL
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",  // 👈 VERY IMPORTANT
-                Authorization: token ? `Bearer ${token}` : "",
+    try {
+      const formData = new FormData();
+      formData.append("file", file);        // 👈 👈 Important: Field name should be "file"
+      formData.append("stepKey", stepKey);  // 👈 Optional field agar extra data bhejna ho
+      console.log(file)
+      const res = await axios.post(
+        `${API_BASE_URL}/trips/${params.id}/podDocument`,  // 👈 Trip ID ke hisab se URL
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",  // 👈 VERY IMPORTANT
+            Authorization: token ? `Bearer ${token}` : "",
 
-        },
-      }
-    );
+          },
+        }
+      );
 
-    console.log("Upload success:", res.data);
-  } catch (error) {
-    console.error("Upload failed:", error);
-  }
+      console.log("Upload success:", res.data);
+    } catch (error) {
+      console.error("Upload failed:", error);
+    }
   }
 
   const handleDelete = () => {
@@ -1313,7 +1418,7 @@ console.log(file)
 
 
 
-     const tripRate = trip.rate || 0
+  const tripRate = trip.rate || 0
   const totalGivenToFleetOwner = totalFleetExpenses + totalFleetAdvances
   const commission = trip.commission || 0
   const podBalance = trip.podBalance || 0
@@ -1483,7 +1588,7 @@ console.log(file)
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-orange-600">
                 {formatCurrency(trip.rate || 0)} / {" "}
-                  {formatCurrency(trip.totalClientAmount || 0)}
+                {formatCurrency(trip.totalClientAmount || 0)}
               </div>
               <p className="text-sm text-muted-foreground">Total Amount / Total clients</p>
             </CardContent>
@@ -1558,49 +1663,49 @@ console.log(file)
                 <CardContent className="space-y-4">
                   <Separator />
 
-                {!isSelfOwner && (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-    {/* Trip Amount Card */}
-    <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out border border-red-200">
-      <div className="text-sm font-semibold text-red-700 mb-1">
-        Trip Amount
-      </div>
-      <div className="text-2xl font-extrabold text-red-800">
-        ₹{trip?.rate?.toLocaleString() || 0}
-      </div>
-    </div>
+                  {!isSelfOwner && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      {/* Trip Amount Card */}
+                      <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out border border-red-200">
+                        <div className="text-sm font-semibold text-red-700 mb-1">
+                          Trip Amount
+                        </div>
+                        <div className="text-2xl font-extrabold text-red-800">
+                          ₹{trip?.rate?.toLocaleString() || 0}
+                        </div>
+                      </div>
 
-    {/* Commission Card */}
-    <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out border border-blue-200">
-      <div className="text-sm font-semibold text-blue-700 mb-1">
-        Commission
-      </div>
-      <div className="text-2xl font-extrabold text-blue-800">
-        ₹{trip?.commission?.toLocaleString() || 0}
-      </div>
-    </div>
+                      {/* Commission Card */}
+                      <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out border border-blue-200">
+                        <div className="text-sm font-semibold text-blue-700 mb-1">
+                          Commission
+                        </div>
+                        <div className="text-2xl font-extrabold text-blue-800">
+                          ₹{trip?.commission?.toLocaleString() || 0}
+                        </div>
+                      </div>
 
-    {/* POD Balance Card */}
-    <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out col-span-1 md:col-span-2 border border-green-200">
-      <div className="text-sm font-semibold text-green-700 mb-1">
-        POD Balance
-      </div>
-      <div className="text-2xl font-extrabold text-green-800">
-        ₹{trip?.podBalance?.toLocaleString() || 0}
-      </div>
-    </div>
+                      {/* POD Balance Card */}
+                      <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out col-span-1 md:col-span-2 border border-green-200">
+                        <div className="text-sm font-semibold text-green-700 mb-1">
+                          POD Balance
+                        </div>
+                        <div className="text-2xl font-extrabold text-green-800">
+                          ₹{trip?.podBalance?.toLocaleString() || 0}
+                        </div>
+                      </div>
 
-    {/* Total Profile Section - Styled as a prominent card */}
-    <div className="col-span-1 md:col-span-2 p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-lg border border-purple-200 flex items-center justify-between">
-      <div className="text-md font-semibold text-purple-700">
-        Total Profile:
-      </div>
-      <div className="text-2xl font-extrabold text-purple-800">
-        ₹{(trip.rate - trip.podBalance + trip.commission)?.toLocaleString() || 0}
-      </div>
-    </div>
-  </div>
-)}
+                      {/* Total Profile Section - Styled as a prominent card */}
+                      <div className="col-span-1 md:col-span-2 p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-lg border border-purple-200 flex items-center justify-between">
+                        <div className="text-md font-semibold text-purple-700">
+                          Total Profile:
+                        </div>
+                        <div className="text-2xl font-extrabold text-purple-800">
+                          ₹{(trip.rate - trip.podBalance + trip.commission)?.toLocaleString() || 0}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -1624,7 +1729,7 @@ console.log(file)
               </Card>
             </div>
 
-           
+
 
             {/* Self Owner Expenses & Advances Section - Only show for self-owned vehicles */}
             {isSelfOwner && (
@@ -1655,13 +1760,7 @@ console.log(file)
                         <Plus className="h-4 w-4 mr-2" />
                         Add Expense
                       </Button>
-                      <Button
-                        onClick={() => setSelfAdvanceForm(!selfAdvanceForm)}
-                        className="bg-green-600 hover:bg-green-700 shadow-md"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Advance
-                      </Button>
+                    
                       <Button
                         onClick={() => setShowDriverReceiptDialog(true)}
                         className="bg-blue-600 hover:bg-blue-700 shadow-md"
@@ -1724,37 +1823,33 @@ console.log(file)
                     </Card>
 
                     <Card
-                      className={`bg-gradient-to-r hover:shadow-md transition-shadow ${
-                        netProfit >= 0
+                      className={`bg-gradient-to-r hover:shadow-md transition-shadow ${netProfit >= 0
                           ? "from-blue-100 to-blue-200"
                           : "from-orange-100 to-orange-200"
-                      }`}
+                        }`}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-2">
                           <TrendingUp
-                            className={`h-5 w-5 ${
-                              netProfit >= 0
+                            className={`h-5 w-5 ${netProfit >= 0
                                 ? "text-blue-600"
                                 : "text-orange-600"
-                            }`}
+                              }`}
                           />
                           <div>
                             <div
-                              className={`text-sm font-medium ${
-                                netProfit >= 0
+                              className={`text-sm font-medium ${netProfit >= 0
                                   ? "text-blue-700"
                                   : "text-orange-700"
-                              }`}
+                                }`}
                             >
                               Net Profit
                             </div>
                             <div
-                              className={`text-xl font-bold ${
-                                netProfit >= 0
+                              className={`text-xl font-bold ${netProfit >= 0
                                   ? "text-blue-800"
                                   : "text-orange-800"
-                              }`}
+                                }`}
                             >
                               {formatCurrency(netProfit)}
                             </div>
@@ -1787,13 +1882,7 @@ console.log(file)
                         <Receipt className="h-4 w-4" />
                         <span>Expenses ({trip.selfExpenses?.length || 0})</span>
                       </TabsTrigger>
-                      <TabsTrigger
-                        value="advances"
-                        className="flex items-center space-x-2"
-                      >
-                        <CreditCard className="h-4 w-4" />
-                        <span>Advances ({trip.selfAdvances?.length || 0})</span>
-                      </TabsTrigger>
+                    
                     </TabsList>
 
                     <TabsContent value="expenses">
@@ -1857,11 +1946,18 @@ console.log(file)
                                     )}
                                   </div>
                                 </div>
-                                <div className="text-right">
-                                  <div className="text-lg font-bold text-red-600">
-                                    {formatCurrency(expense.amount)}
-                                  </div>
-                                </div>
+                              <div className="text-right">
+  <div className="text-lg font-bold text-red-600">
+    {formatCurrency(expense.amount)}
+  </div>
+  <button
+    onClick={() => handleDeleteSelfExpense(index)}
+    className="text-red-500 text-sm mt-2 hover:underline"
+  >
+    Delete
+  </button>
+</div>
+
                               </div>
                             ))}
                           </div>
@@ -1877,81 +1973,7 @@ console.log(file)
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="advances">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center border-b pb-2">
-                          <h4 className="font-medium text-gray-700">
-                            Advance Payment Details
-                          </h4>
-                          <p className="font-semibold text-purple-600">
-                            Total: {formatCurrency(totalSelfAdvances)}
-                          </p>
-                        </div>
-
-                        {trip.selfAdvances && trip.selfAdvances.length > 0 ? (
-                          <div className="space-y-3">
-                            {trip.selfAdvances.map((advance, index) => (
-                              <div
-                                key={index}
-                                className="flex justify-between items-start p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
-                              >
-                                <div className="flex items-start space-x-3">
-                                  <div className="text-2xl">💰</div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      <Badge
-                                        className={getRecipientColor(
-                                          advance.paymentFor
-                                        )}
-                                      >
-                                        {getExpenseForIcon(advance.paymentFor)}{" "}
-                                        {advance.paymentFor}
-                                      </Badge>
-                                      <span className="text-sm text-gray-500">
-                                        {formatDate(
-                                          advance.createdAt,
-                                          "MMM dd, yyyy HH:mm"
-                                        )}
-                                      </span>
-                                    </div>
-                                    <div className="font-medium text-gray-900 mb-1">
-                                      {advance.reason}
-                                    </div>
-                                    <div className="text-sm text-gray-600 mb-1">
-                                      To: {advance.recipientName}
-                                    </div>
-                                    {advance.description && (
-                                      <div className="text-sm text-gray-600 mb-1">
-                                        {advance.description}
-                                      </div>
-                                    )}
-                                    {advance.referenceNumber && (
-                                      <div className="text-xs text-blue-600">
-                                        Ref: {advance.referenceNumber}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-lg font-bold text-purple-600">
-                                    {formatCurrency(advance.amount)}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-gray-500">
-                            <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                            <p>No advance payments recorded yet</p>
-                            <p className="text-sm">
-                              Click "Add Advance" to start tracking your advance
-                              payments
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </TabsContent>
+                  
                   </Tabs>
                 </CardContent>
               </Card>
@@ -2055,37 +2077,33 @@ console.log(file)
                     </Card>
 
                     <Card
-                      className={`bg-gradient-to-r hover:shadow-md transition-shadow ${
-                        netProfit >= 0
+                      className={`bg-gradient-to-r hover:shadow-md transition-shadow ${netProfit >= 0
                           ? "from-blue-100 to-blue-200"
                           : "from-orange-100 to-orange-200"
-                      }`}
+                        }`}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-2">
                           <TrendingUp
-                            className={`h-5 w-5 ${
-                              netProfit >= 0
+                            className={`h-5 w-5 ${netProfit >= 0
                                 ? "text-blue-600"
                                 : "text-orange-600"
-                            }`}
+                              }`}
                           />
                           <div>
                             <div
-                              className={`text-sm font-medium ${
-                                netProfit >= 0
+                              className={`text-sm font-medium ${netProfit >= 0
                                   ? "text-blue-700"
                                   : "text-orange-700"
-                              }`}
+                                }`}
                             >
                               Pending Fleet Owner
                             </div>
                             <div
-                              className={`text-xl font-bold ${
-                                netProfit >= 0
+                              className={`text-xl font-bold ${netProfit >= 0
                                   ? "text-blue-800"
                                   : "text-orange-800"
-                              }`}
+                                }`}
                             >
                               {formatCurrency(finalAmount)}
                             </div>
@@ -2131,79 +2149,7 @@ console.log(file)
                       </TabsTrigger>
                     </TabsList>
 
-                    {/* <TabsContent value="expenses">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center border-b pb-2">
-                          <h4 className="font-medium text-gray-700">
-                            Expense Details
-                          </h4>
-                          <p className="font-semibold text-red-600">
-                            Total: {formatCurrency(totalFleetExpenses)}
-                          </p>
-                        </div>
-
-                        {trip.fleetExpenses && trip.fleetExpenses.length > 0 ? (
-                          <div className="space-y-3">
-                            {trip.fleetExpenses.map((expense, index) => (
-                              <div
-                                key={index}
-                                className="flex justify-between items-start p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
-                              >
-                                <div className="flex items-start space-x-3">
-                                  <div className="text-2xl">
-                                    {getCategoryIcon(expense.category)}
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      <Badge
-                                        className={getCategoryColor(
-                                          expense.category
-                                        )}
-                                      >
-                                        {expense.category.replace("_", " ")}
-                                      </Badge>
-                                      <span className="text-sm text-gray-500">
-                                        {formatDate(
-                                          expense.createdAt,
-                                          "MMM dd, yyyy HH:mm"
-                                        )}
-                                      </span>
-                                    </div>
-                                    <div className="font-medium text-gray-900 mb-1">
-                                      {expense.reason}
-                                    </div>
-                                    {expense.description && (
-                                      <div className="text-sm text-gray-600 mb-1">
-                                        {expense.description}
-                                      </div>
-                                    )}
-                                    {expense.receiptNumber && (
-                                      <div className="text-xs text-blue-600">
-                                        Receipt: {expense.receiptNumber}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-lg font-bold text-red-600">
-                                    {formatCurrency(expense.amount)}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-gray-500">
-                            <Receipt className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                            <p>No expenses recorded yet</p>
-                            <p className="text-sm">
-                              Click "Add Expense" to start tracking your costs
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </TabsContent> */}
-
+                   
                     <TabsContent value="advances">
                       <div className="space-y-3">
                         <div className="flex justify-between items-center border-b pb-2">
@@ -2261,11 +2207,18 @@ console.log(file)
                                     )}
                                   </div>
                                 </div>
-                                <div className="text-right">
-                                  <div className="text-lg font-bold text-purple-600">
-                                    {formatCurrency(advance.amount)}
-                                  </div>
-                                </div>
+                           <div className="text-right">
+  <div className="text-lg font-bold text-purple-600">
+    {formatCurrency(advance.amount)}
+  </div>
+  <button
+    onClick={() => handleDeleteFleetAdvance(index)}
+    className="text-red-500 text-sm mt-2 hover:underline cursor-pointer"
+  >
+    Delete
+  </button>
+</div>
+
                               </div>
                             ))}
                           </div>
@@ -2391,7 +2344,7 @@ console.log(file)
                               <div className="text-sm">
                                 Profite  client rate - truck cost:{" "}
                                 <span className="text-green-600 font-bold">
-                                  {formatCurrency(Math.abs(clientData.truckHireCost  - clientData.totalRate))}
+                                  {formatCurrency(Math.abs(clientData.truckHireCost - clientData.totalRate))}
                                 </span>
                               </div>
                               <div className="text-sm">
@@ -2411,8 +2364,8 @@ console.log(file)
                                 <span className="text-orange-600 font-bold">
                                   {formatCurrency(
                                     (clientData.totalRate ?? 0) -
-                                      (clientData.paidAmount ?? 0) +
-                                      (clientData.totalExpense ?? 0)
+                                    (clientData.paidAmount ?? 0) +
+                                    (clientData.totalExpense ?? 0)
                                   )}
                                 </span>
                               </div>
@@ -2508,7 +2461,7 @@ console.log(file)
                           </CardHeader>
                           <CardContent>
                             {clientData.collectionMemos &&
-                            clientData.collectionMemos.length > 0 ? (
+                              clientData.collectionMemos.length > 0 ? (
                               <div className="space-y-2">
                                 {clientData.collectionMemos.map(
                                   (memo, memoIndex) => (
@@ -2583,7 +2536,7 @@ console.log(file)
                           </CardHeader>
                           <CardContent>
                             {clientData.balanceMemos &&
-                            clientData.balanceMemos.length > 0 ? (
+                              clientData.balanceMemos.length > 0 ? (
                               <div className="space-y-2">
                                 {clientData.balanceMemos.map(
                                   (memo, memoIndex) => (
@@ -2670,19 +2623,29 @@ console.log(file)
                                     Payment #{advanceIndex + 1}
                                   </p>
                                   <p className="text-xs text-gray-500">
-                                    {formatDate(
-                                      item.paidAt,
-                                      "MMM dd, yyyy HH:mm"
-                                    )}
+                                    {formatDate(item.paidAt, "MMM dd, yyyy HH:mm")}
                                   </p>
                                 </div>
                               </div>
-                              <p className="font-semibold text-green-600">
-                                {formatCurrency(item.amount)}
-                              </p>
+
+                              <div className="flex items-center space-x-2">
+                                <p className="font-semibold text-green-600">
+                                  {formatCurrency(item.amount)}
+                                </p>
+
+                                {/* 🗑 Delete Button */}
+                                <button
+                                  onClick={() => handleDeleteAdvance(params.id, index, advanceIndex)}
+                                  className="text-red-500 hover:text-red-700 text-xs cursor pointer"
+                                  title="Delete Advance"
+                                >
+                                  Remove
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
+
 
                         <Button
                           variant="outline"
@@ -2716,32 +2679,44 @@ console.log(file)
                           </p>
                         </div>
 
-                        <div className="space-y-2 mb-4">
-                          {clientData.expenses?.map((item, expenseIndex) => (
-                            <div
-                              key={expenseIndex}
-                              className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                            >
-                              <div className="flex items-center space-x-3">
-                                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900">
-                                    Expense #{expenseIndex + 1}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    {formatDate(
-                                      item.paidAt,
-                                      "MMM dd, yyyy HH:mm"
-                                    )}
-                                  </p>
-                                </div>
-                              </div>
-                              <p className="font-semibold text-red-600">
-                                {formatCurrency(item.amount)}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
+                 <div className="space-y-2 mb-4">
+  {clientData.expenses?.map((item, expenseIndex) => (
+    <div
+      key={expenseIndex}
+      className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+    >
+      <div className="flex items-center space-x-3">
+        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+        <div>
+          <p className="text-sm font-medium text-gray-900">
+            Expense #{expenseIndex + 1}
+          </p>
+          <p className="text-xs text-gray-500">
+            {formatDate(item.paidAt, "MMM dd, yyyy HH:mm")}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <p className="font-semibold text-red-600">
+          {formatCurrency(item.amount)}
+        </p>
+
+        {/* 🗑 Delete Button */}
+        <button
+          onClick={() =>
+            handleDeleteExpense(params.id, index, expenseIndex)
+          }
+          className="text-red-500 hover:text-red-700 text-xs cursor-pointer"
+          title="Delete Expense"
+        >
+    Remove
+        </button>
+      </div>
+    </div>
+  ))}
+</div>
+
 
                         <Button
                           variant="outline"
@@ -2787,323 +2762,321 @@ console.log(file)
 
 
 
-         {/* Enhanced POD Management Section */}
-            <Card className="border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-indigo-100 rounded-lg">
-                      <FileText className="h-6 w-6 text-indigo-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-indigo-800 text-xl">
-                        POD Management System
-                      </CardTitle>
-                      <CardDescription className="text-indigo-600">
-                        Track your Proof of Delivery status in real-time
-                      </CardDescription>
-                    </div>
-                    <Badge className="bg-indigo-100 text-indigo-800 px-3 py-1 text-sm font-medium">
-                      {trip?.podManage?.status
-                        ?.replace("_", " ")
-                        .toUpperCase() || "NOT STARTED"}
-                    </Badge>
-                  </div>
-                  {canManagePOD && (
-                    <Button
-                      onClick={() => setShowPODDialog(true)}
-                      className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md"
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Manage POD
-                    </Button>
-                  )}
+        {/* Enhanced POD Management Section */}
+        <Card className="border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-lg">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-indigo-100 rounded-lg">
+                  <FileText className="h-6 w-6 text-indigo-600" />
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                {/* Progress Steps with Enhanced Design */}
-                <div className="relative">
-                  {/* Background Progress Line */}
-                  <div className="absolute top-6 left-0 right-0 h-1 bg-gray-200 rounded-full">
+                <div>
+                  <CardTitle className="text-indigo-800 text-xl">
+                    POD Management System
+                  </CardTitle>
+                  <CardDescription className="text-indigo-600">
+                    Track your Proof of Delivery status in real-time
+                  </CardDescription>
+                </div>
+                <Badge className="bg-indigo-100 text-indigo-800 px-3 py-1 text-sm font-medium">
+                  {trip?.podManage?.status
+                    ?.replace("_", " ")
+                    .toUpperCase() || "NOT STARTED"}
+                </Badge>
+              </div>
+              {canManagePOD && (
+                <Button
+                  onClick={() => setShowPODDialog(true)}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Manage POD
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            {/* Progress Steps with Enhanced Design */}
+            <div className="relative">
+              {/* Background Progress Line */}
+              <div className="absolute top-6 left-0 right-0 h-1 bg-gray-200 rounded-full">
+                <div
+                  className="h-full bg-gradient-to-r from-green-400 via-blue-500 to-indigo-600 rounded-full transition-all duration-1000 ease-in-out shadow-sm"
+                  style={{
+                    width: `${((currentIndex + 1) / steps.length) * 100}%`
+                  }}
+                />
+              </div>
+
+              {/* Steps */}
+              <div className="relative flex justify-between">
+                {steps.map((step, index) => {
+                  const isDone = index < currentIndex
+                  const isCurrent = index === currentIndex
+                  const isNext = index === currentIndex + 1
+                  const isPending = index > currentIndex
+
+                  return (
                     <div
-                      className="h-full bg-gradient-to-r from-green-400 via-blue-500 to-indigo-600 rounded-full transition-all duration-1000 ease-in-out shadow-sm"
-                      style={{
-                        width: `${((currentIndex + 1) / steps.length) * 100}%`
-                      }}
-                    />
-                  </div>
-
-                  {/* Steps */}
-                  <div className="relative flex justify-between">
-                    {steps.map((step, index) => {
-                      const isDone = index < currentIndex
-                      const isCurrent = index === currentIndex
-                      const isNext = index === currentIndex + 1
-                      const isPending = index > currentIndex
-
-                      return (
-                        <div
-                          key={step.key}
-                          className="flex flex-col items-center space-y-3 relative"
-                        >
-                          {/* Step Circle with Enhanced Design */}
-                          <div
-                            className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 transform hover:scale-110 shadow-lg ${
-                              isDone
-                                ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-green-200"
-                                : isCurrent
-                                ? "bg-gradient-to-r from-indigo-400 to-indigo-600 text-white shadow-indigo-200 animate-pulse"
-                                : isNext
+                      key={step.key}
+                      className="flex flex-col items-center space-y-3 relative"
+                    >
+                      {/* Step Circle with Enhanced Design */}
+                      <div
+                        className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 transform hover:scale-110 shadow-lg ${isDone
+                            ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-green-200"
+                            : isCurrent
+                              ? "bg-gradient-to-r from-indigo-400 to-indigo-600 text-white shadow-indigo-200 animate-pulse"
+                              : isNext
                                 ? "bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-700 border-2 border-yellow-300 shadow-yellow-100"
                                 : "bg-gray-200 text-gray-400 shadow-gray-100"
-                            }`}
-                          >
-                            {isDone ? (
-                              <CheckCircle className="w-6 h-6" />
-                            ) : isCurrent ? (
-                              <div className="flex items-center justify-center">
-                                <Clock className="w-5 h-5 animate-spin" />
-                              </div>
-                            ) : isNext ? (
-                              <AlertCircle className="w-5 h-5" />
-                            ) : (
-                              <Circle className="w-5 h-5" />
-                            )}
-
-                            {/* Pulse animation for current step */}
-                            {isCurrent && (
-                              <div className="absolute inset-0 rounded-full bg-indigo-400 animate-ping opacity-30" />
-                            )}
+                          }`}
+                      >
+                        {isDone ? (
+                          <CheckCircle className="w-6 h-6" />
+                        ) : isCurrent ? (
+                          <div className="flex items-center justify-center">
+                            <Clock className="w-5 h-5 animate-spin" />
                           </div>
+                        ) : isNext ? (
+                          <AlertCircle className="w-5 h-5" />
+                        ) : (
+                          <Circle className="w-5 h-5" />
+                        )}
 
-                          {/* Step Label with Enhanced Typography */}
-                          <div className="text-center max-w-24">
-                            <div
-                              className={`text-sm font-semibold transition-colors duration-300 ${
-                                isDone
-                                  ? "text-green-700"
-                                  : isCurrent
-                                  ? "text-indigo-700"
-                                  : isNext
+                        {/* Pulse animation for current step */}
+                        {isCurrent && (
+                          <div className="absolute inset-0 rounded-full bg-indigo-400 animate-ping opacity-30" />
+                        )}
+                      </div>
+
+                      {/* Step Label with Enhanced Typography */}
+                      <div className="text-center max-w-24">
+                        <div
+                          className={`text-sm font-semibold transition-colors duration-300 ${isDone
+                              ? "text-green-700"
+                              : isCurrent
+                                ? "text-indigo-700"
+                                : isNext
                                   ? "text-yellow-700"
                                   : "text-gray-500"
-                              }`}
-                            >
-                              {step.label}
-                            </div>
+                            }`}
+                        >
+                          {step.label}
+                        </div>
 
-                            {/* Emoji indicator */}
-                            <div className="text-lg mt-1">{step.icon}</div>
+                        {/* Emoji indicator */}
+                        <div className="text-lg mt-1">{step.icon}</div>
 
-                            {/* Timestamp for completed/current steps */}
-                            {(isDone || isCurrent) && trip.podManage?.date && (
-                              <div className="text-xs text-gray-500 mt-2 bg-white px-2 py-1 rounded-full shadow-sm">
-                                {formatDate(
-                                  trip.podManage.date,
-                                  "MMM dd, HH:mm"
-                                )}
-                              </div>
+                        {/* Timestamp for completed/current steps */}
+                        {(isDone || isCurrent) && trip.podManage?.date && (
+                          <div className="text-xs text-gray-500 mt-2 bg-white px-2 py-1 rounded-full shadow-sm">
+                            {formatDate(
+                              trip.podManage.date,
+                              "MMM dd, HH:mm"
                             )}
                           </div>
-
-                          {/* Optional Document Upload for each step */}
-                          {(isDone || isCurrent) && (
-                            <PODStepUpload
-                              stepName={step.label}
-                              onUpload={file =>
-                                handlePODStepUpload(file, step.key)
-                              }
-                              existingDocument={
-                                trip.podManage?.stepDocuments?.[step.key]
-                              }
-                            />
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Enhanced Action Section */}
-                <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-6">
-                      {/* Current Status Info */}
-                      <div className="text-center">
-                        <div className="text-sm text-gray-600 font-medium">
-                          Current Status
-                        </div>
-                        <div className="text-lg font-bold text-gray-900 mt-1">
-                          {steps[currentIndex]?.label || "Not Started"}
-                        </div>
+                        )}
                       </div>
 
-                      {/* Progress Percentage with Circular Progress */}
-                      <div className="text-center">
-                        <div className="relative w-16 h-16">
-                          <svg
-                            className="w-16 h-16 transform -rotate-90"
-                            viewBox="0 0 64 64"
-                          >
-                            <circle
-                              cx="32"
-                              cy="32"
-                              r="28"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                              fill="none"
-                              className="text-gray-200"
-                            />
-                            <circle
-                              cx="32"
-                              cy="32"
-                              r="28"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                              fill="none"
-                              strokeDasharray={`${2 * Math.PI * 28}`}
-                              strokeDashoffset={`${2 *
-                                Math.PI *
-                                28 *
-                                (1 - (currentIndex + 1) / steps.length)}`}
-                              className="text-indigo-600 transition-all duration-1000 ease-in-out"
-                            />
-                          </svg>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-lg font-bold text-indigo-600">
-                              {Math.round(
-                                ((currentIndex + 1) / steps.length) * 100
-                              )}
-                              %
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          Complete
-                        </div>
-                      </div>
-
-                      {/* Next Step Info */}
-                      {currentIndex < steps.length - 1 && (
-                        <div className="text-center">
-                          <div className="text-sm text-gray-600 font-medium">
-                            Next Step
-                          </div>
-                          <div className="text-md font-semibold text-indigo-600 mt-1">
-                            {steps[currentIndex + 1]?.label}
-                          </div>
-                        </div>
+                      {/* Optional Document Upload for each step */}
+                      {(isDone || isCurrent) && (
+                        <PODStepUpload
+                          stepName={step.label}
+                          onUpload={file =>
+                            handlePODStepUpload(file, step.key)
+                          }
+                          existingDocument={
+                            trip.podManage?.stepDocuments?.[step.key]
+                          }
+                        />
                       )}
                     </div>
+                  )
+                })}
+              </div>
+            </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center space-x-3">
-                      {canManagePOD && currentIndex < steps.length - 1 && (
-                        <Button
-                          onClick={handleStepClick}
-                          disabled={isUpdatingPOD}
-                          className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md px-6 py-2"
-                        >
-                          {isUpdatingPOD ? (
-                            <>
-                              <Clock className="w-4 h-4 mr-2 animate-spin" />
-                              Updating...
-                            </>
-                          ) : (
-                            <>Advance to: {steps[currentIndex + 1]?.label}</>
-                          )}
-                        </Button>
-                      )}
-
-                      {currentIndex === steps.length - 1 && (
-                        <div className="flex items-center space-x-2">
-                          <Badge className="bg-green-100 text-green-800 px-4 py-2 text-sm font-medium">
-                            ✅ Trip Completed Successfully
-                          </Badge>
-                        </div>
-                      )}
+            {/* Enhanced Action Section */}
+            <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-6">
+                  {/* Current Status Info */}
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600 font-medium">
+                      Current Status
+                    </div>
+                    <div className="text-lg font-bold text-gray-900 mt-1">
+                      {steps[currentIndex]?.label || "Not Started"}
                     </div>
                   </div>
-                </div>
 
-                {/* POD Document Preview with Enhanced Design */}
-                {trip?.podManage?.document?.url && (
-                  <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                        <FileText className="h-5 w-5 mr-2 text-indigo-600" />
-                        POD Document
-                      </h4>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          window.open(trip.podManage.document.url, "_blank")
-                        }
-                        className="hover:bg-indigo-50 hover:border-indigo-300"
+                  {/* Progress Percentage with Circular Progress */}
+                  <div className="text-center">
+                    <div className="relative w-16 h-16">
+                      <svg
+                        className="w-16 h-16 transform -rotate-90"
+                        viewBox="0 0 64 64"
                       >
-                        <Download className="h-4 w-4 mr-2" />
-                        View Full Size
-                      </Button>
+                        <circle
+                          cx="32"
+                          cy="32"
+                          r="28"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          fill="none"
+                          className="text-gray-200"
+                        />
+                        <circle
+                          cx="32"
+                          cy="32"
+                          r="28"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          fill="none"
+                          strokeDasharray={`${2 * Math.PI * 28}`}
+                          strokeDashoffset={`${2 *
+                            Math.PI *
+                            28 *
+                            (1 - (currentIndex + 1) / steps.length)}`}
+                          className="text-indigo-600 transition-all duration-1000 ease-in-out"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-lg font-bold text-indigo-600">
+                          {Math.round(
+                            ((currentIndex + 1) / steps.length) * 100
+                          )}
+                          %
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-center">
-                      <img
-                        src={`${trip.podManage.document.url ||
-                          "/placeholder.svg"}`}
-                        alt="POD Document"
-                        className="max-w-xs rounded-lg border shadow-md hover:shadow-lg transition-shadow cursor-pointer transform hover:scale-105"
-                        onClick={() =>
-                          window.open(trip.podManage.document.url, "_blank")
-                        }
-                      />
+                    <div className="text-xs text-gray-500 mt-1">
+                      Complete
                     </div>
                   </div>
-                )}
 
-                {/* Additional POD Information with Enhanced Cards */}
-                {trip?.podManage && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl shadow-sm border border-blue-200">
-                      <div className="text-sm text-blue-600 font-semibold flex items-center">
-                        <FileText className="h-4 w-4 mr-1" />
-                        POD Number
+                  {/* Next Step Info */}
+                  {currentIndex < steps.length - 1 && (
+                    <div className="text-center">
+                      <div className="text-sm text-gray-600 font-medium">
+                        Next Step
                       </div>
-                      <div className="text-lg font-bold text-blue-900 mt-1">
-                        {trip.podManage.podNumber || "Not assigned"}
+                      <div className="text-md font-semibold text-indigo-600 mt-1">
+                        {steps[currentIndex + 1]?.label}
                       </div>
                     </div>
-                    <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl shadow-sm border border-green-200">
-                      <div className="text-sm text-green-600 font-semibold flex items-center">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        Received Date
-                      </div>
-                      <div className="text-lg font-bold text-green-900 mt-1">
-                        {trip.podManage.receivedDate
-                          ? formatDate(
-                              trip.podManage.receivedDate,
-                              "MMM dd, yyyy"
-                            )
-                          : "Pending"}
-                      </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center space-x-3">
+                  {canManagePOD && currentIndex < steps.length - 1 && (
+                    <Button
+                      onClick={handleStepClick}
+                      disabled={isUpdatingPOD}
+                      className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md px-6 py-2"
+                    >
+                      {isUpdatingPOD ? (
+                        <>
+                          <Clock className="w-4 h-4 mr-2 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>Advance to: {steps[currentIndex + 1]?.label}</>
+                      )}
+                    </Button>
+                  )}
+
+                  {currentIndex === steps.length - 1 && (
+                    <div className="flex items-center space-x-2">
+                      <Badge className="bg-green-100 text-green-800 px-4 py-2 text-sm font-medium">
+                        ✅ Trip Completed Successfully
+                      </Badge>
                     </div>
-                    <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl shadow-sm border border-purple-200">
-                      <div className="text-sm text-purple-600 font-semibold flex items-center">
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Submitted Date
-                      </div>
-                      <div className="text-lg font-bold text-purple-900 mt-1">
-                        {trip.podManage.submittedDate
-                          ? formatDate(
-                              trip.podManage.submittedDate,
-                              "MMM dd, yyyy"
-                            )
-                          : "Pending"}
-                      </div>
-                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* POD Document Preview with Enhanced Design */}
+            {trip?.podManage?.document?.url && (
+              <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <FileText className="h-5 w-5 mr-2 text-indigo-600" />
+                    POD Document
+                  </h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      window.open(trip.podManage.document.url, "_blank")
+                    }
+                    className="hover:bg-indigo-50 hover:border-indigo-300"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    View Full Size
+                  </Button>
+                </div>
+                <div className="flex justify-center">
+                  <img
+                    src={`${trip.podManage.document.url ||
+                      "/placeholder.svg"}`}
+                    alt="POD Document"
+                    className="max-w-xs rounded-lg border shadow-md hover:shadow-lg transition-shadow cursor-pointer transform hover:scale-105"
+                    onClick={() =>
+                      window.open(trip.podManage.document.url, "_blank")
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Additional POD Information with Enhanced Cards */}
+            {trip?.podManage && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl shadow-sm border border-blue-200">
+                  <div className="text-sm text-blue-600 font-semibold flex items-center">
+                    <FileText className="h-4 w-4 mr-1" />
+                    POD Number
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <div className="text-lg font-bold text-blue-900 mt-1">
+                    {trip.podManage.podNumber || "Not assigned"}
+                  </div>
+                </div>
+                <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl shadow-sm border border-green-200">
+                  <div className="text-sm text-green-600 font-semibold flex items-center">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    Received Date
+                  </div>
+                  <div className="text-lg font-bold text-green-900 mt-1">
+                    {trip.podManage.receivedDate
+                      ? formatDate(
+                        trip.podManage.receivedDate,
+                        "MMM dd, yyyy"
+                      )
+                      : "Pending"}
+                  </div>
+                </div>
+                <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl shadow-sm border border-purple-200">
+                  <div className="text-sm text-purple-600 font-semibold flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Submitted Date
+                  </div>
+                  <div className="text-lg font-bold text-purple-900 mt-1">
+                    {trip.podManage.submittedDate
+                      ? formatDate(
+                        trip.podManage.submittedDate,
+                        "MMM dd, yyyy"
+                      )
+                      : "Pending"}
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* POD Upload Dialog */}
         <PODDetailsDialog
@@ -3171,6 +3144,14 @@ console.log(file)
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+
+      <EnhancedEditTripDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSuccess={handleEditSuccess}
+        tripData={trip}
+      />
     </DashboardLayout>
   )
 }
