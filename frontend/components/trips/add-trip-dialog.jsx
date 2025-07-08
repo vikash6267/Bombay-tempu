@@ -200,39 +200,75 @@ const PackagingTypeSelect = ({ value, onChange, error }) => (
 );
 
 // Calculation Summary Component
-const CalculationSummary = ({ clients, overallRate }) => {
+const CalculationSummary = ({ clients, overallRate, isSelfOwned, overallTripCommission }) => {
   const calculations = useMemo(() => {
-    console.log(clients)
-    const totalClientRate = clients.reduce(
-      (sum, client) => sum + (Number(client.rate) || 0),
-      0
-    );
-    const totalTruckHireCost = clients.reduce(
-      (sum, client) => sum + (Number(client.truckHireCost) || 0),
-      0
-    );
-    const overallProfit = totalClientRate - totalTruckHireCost;
+    let totalClientRevenue = 0; // Sum of Client Rate from all clients
+    let totalTruckHireExpenses = 0; // Sum of Truck Hire Cost from all clients
+    let totalAdjustments = 0; // Sum of Adjustment (argestment) from all clients
+    // Let's remove totalCommissionsEarned from here as it caused confusion.
+    // The individual client 'commission' (if present) needs clarification:
+    // Is it a commission *you earn* from the client for handling their load?
+    // For now, let's assume client.commission is NOT there, or is just 0.
+    // The `overallTripCommission` will be the one from the fleet owner.
 
-    const clientProfits = clients.map((client, index) => {
-      const clientRate = Number(client.rate) || 0;
-      const shareOfTruckHireCost = totalTruckHireCost / clients.length;
-      const profit = clientRate - shareOfTruckHireCost;
+    const parsedOverallTripCommission = Number(overallTripCommission) || 0; // Parse the new prop
 
-      return {
-        index: index + 1,
-        rate: clientRate,
-        truckHireCost: shareOfTruckHireCost,
-        profit,
-      };
-    });
+    // Calculate individual client P&L and accumulate totals
+const clientBreakdown = clients.map((client) => {
+  const clientRate = Number(client.rate) || 0;
+  const truckHireCost = Number(client.truckHireCost) || 0;
+  const argestment = Number(client.argestment) || 0;
+
+  totalClientRevenue += clientRate;
+  totalTruckHireExpenses += truckHireCost;
+  totalAdjustments += argestment; // ✅ Always include all adjustments
+
+  const pendingAmount = clientRate - truckHireCost - argestment;
+  const profit = pendingAmount;
+
+  return {
+    clientRate,
+    truckHireCost,
+    argestment,
+    pendingAmount,
+    profit,
+  };
+});
+
+
+
+
+let overallTripProfit = 0;
+
+if (isSelfOwned) {
+  // For Self-Owned Vehicles:
+  overallTripProfit =
+    totalClientRevenue -
+    totalTruckHireExpenses -
+    totalAdjustments +
+    parsedOverallTripCommission;
+} else {
+  // For Non-Self-Owned Vehicles (Hired from Fleet Owner):
+  const parsedOverallRate = Number(overallRate) || 0;
+  overallTripProfit =
+    totalClientRevenue -
+    parsedOverallRate -
+    totalAdjustments + // ✅ INCLUDE adjustments here too
+    parsedOverallTripCommission;
+}
+
 
     return {
-      totalClientRate,
-      totalTruckHireCost,
-      overallProfit,
-      clientProfits,
+      clientBreakdown,
+      totalClientRevenue,
+      totalTruckHireExpenses,
+      totalAdjustments,
+      // We no longer need totalCommissionsEarned as a sum of client-specific ones
+      // since the 3000 is overall. We use parsedOverallTripCommission directly.
+      overallTripProfit,
+      parsedOverallTripCommission, // Pass this to display in summary
     };
-  }, [clients, overallRate]);
+  }, [clients, overallRate, isSelfOwned, overallTripCommission]); // Dependencies for memoization
 
   return (
     <Card className="border-2 border-blue-200 bg-blue-50/50">
@@ -246,19 +282,23 @@ const CalculationSummary = ({ clients, overallRate }) => {
         {/* Individual Client Calculations */}
         <div className="space-y-2">
           <h4 className="font-medium text-sm text-gray-700">
-            Individual Client Profit/Loss:
+            Individual Client Profit/Loss Breakdown:
           </h4>
-          {calculations.clientProfits.map((client) => (
+          {calculations.clientBreakdown.map((client, index) => (
             <div
-              key={client.index}
-              className="flex items-center justify-between p-2 bg-white rounded border"
+              key={index}
+              className="flex flex-wrap items-center justify-between p-2 bg-white rounded border"
             >
-              <span className="text-sm font-medium">
-                Client #{client.index}
-              </span>
-              <div className="flex items-center gap-4 text-sm">
-                <span>Rate: ₹{client.rate.toLocaleString()}</span>
-                <span>Hire: ₹{client.truckHireCost.toLocaleString()}</span>
+              <span className="text-sm font-medium">Client #{index + 1}</span>
+              <div className="flex flex-wrap items-center gap-4 text-sm">
+                <span>Rate: ₹{client.clientRate.toLocaleString()}</span>
+                <span>Hire Cost: ₹{client.truckHireCost.toLocaleString()}</span>
+                <span>Adjustment: ₹{client.argestment.toLocaleString()}</span>
+                {/* Remove client.commission display if it's not relevant for individual profit */}
+                {/* <span>Commission: ₹{client.commission.toLocaleString()}</span> */}
+                <span>
+                  Pending Amt: ₹{client.pendingAmount.toLocaleString()}
+                </span>
                 <div
                   className={`flex items-center gap-1 font-medium ${
                     client.profit >= 0 ? "text-green-600" : "text-red-600"
@@ -283,69 +323,77 @@ const CalculationSummary = ({ clients, overallRate }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center p-3 bg-green-100 rounded-lg">
             <div className="text-sm text-green-700 font-medium">
-              Total Client Rate
+              Total Client Revenue
             </div>
             <div className="text-xl font-bold text-green-800">
-              ₹{calculations.totalClientRate.toLocaleString()}
+              ₹{calculations.totalClientRevenue.toLocaleString()}
             </div>
           </div>
 
-          {
-            <div className="text-center p-3 bg-red-100 rounded-lg">
-              <div className="text-sm text-red-700 font-medium">
-                Total Truck Hire Cost
-              </div>
-              <div className="text-xl font-bold text-red-800">
-                ₹{calculations.totalTruckHireCost.toLocaleString()}
-              </div>
+          <div className="text-center p-3 bg-red-100 rounded-lg">
+            <div className="text-sm text-red-700 font-medium">
+              Total Costs (Hire + Adjustment)
             </div>
-          }
+            <div className="text-xl font-bold text-red-800">
+              ₹{(calculations.totalTruckHireExpenses + calculations.totalAdjustments).toLocaleString()}
+            </div>
+          </div>
 
           <div
             className={`text-center p-3 rounded-lg ${
-              calculations.overallProfit >= 0 ? "bg-blue-100" : "bg-orange-100"
+              calculations.overallTripProfit >= 0 ? "bg-blue-100" : "bg-orange-100"
             }`}
           >
             <div
               className={`text-sm font-medium ${
-                calculations.overallProfit >= 0
+                calculations.overallTripProfit >= 0
                   ? "text-blue-700"
                   : "text-orange-700"
               }`}
             >
-              Overall Profit/Loss
+              Overall Trip Profit/Loss
             </div>
             <div
               className={`text-xl font-bold flex items-center justify-center gap-1 ${
-                calculations.overallProfit >= 0
+                calculations.overallTripProfit >= 0
                   ? "text-blue-800"
                   : "text-orange-800"
               }`}
             >
-              {calculations.overallProfit >= 0 ? (
+              {calculations.overallTripProfit >= 0 ? (
                 <TrendingUp className="h-5 w-5" />
               ) : (
                 <TrendingDown className="h-5 w-5" />
               )}
-              {calculations.overallProfit >= 0 ? "+" : ""}₹
-              {calculations.overallProfit.toLocaleString()}
+              {calculations.overallTripProfit >= 0 ? "+" : ""}₹
+              {calculations.overallTripProfit.toLocaleString()}
             </div>
           </div>
         </div>
 
-        {overallRate > 0 && (
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="text-sm text-yellow-800">
-              <strong>Calculation:</strong> Total Client Rate (₹
-              {calculations.totalClientRate.toLocaleString()}) - Total Truck
-              Hire (₹{calculations.totalTruckHireCost.toLocaleString()}) +
-              Overall Rate (₹
-              {Number(overallRate).toLocaleString()}) =
-              <span className="font-bold">
-                {" "}
-                ₹{calculations.overallProfit.toLocaleString()}
-              </span>
-            </div>
+        {/* Detailed Calculation Explanation */}
+        {isSelfOwned ? (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+            <strong>Calculation for Self-Owned Vehicle:</strong> <br />
+            Total Client Revenue (₹{calculations.totalClientRevenue.toLocaleString()})
+            - Total Truck Hire Costs (₹{calculations.totalTruckHireExpenses.toLocaleString()})
+            - Total Adjustments (₹{calculations.totalAdjustments.toLocaleString()})
+            + Overall Trip Commission (₹{calculations.parsedOverallTripCommission.toLocaleString()})
+            ={" "}
+            <span className="font-bold">
+              ₹{calculations.overallTripProfit.toLocaleString()}
+            </span>
+          </div>
+        ) : (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+            <strong>Calculation for Hired Vehicle:</strong> <br />
+            Total Client Revenue (₹{calculations.totalClientRevenue.toLocaleString()})
+            - Overall Trip Rate (paid to fleet owner: ₹{Number(overallRate).toLocaleString()})
+            + Overall Trip Commission (from fleet owner: ₹{calculations.parsedOverallTripCommission.toLocaleString()})
+            ={" "}
+            <span className="font-bold">
+              ₹{calculations.overallTripProfit.toLocaleString()}
+            </span>
           </div>
         )}
       </CardContent>
@@ -478,7 +526,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
               useEffect(() => {
                 if (!isSelfOwned) {
                   const totalClientRate = formik.values.clients.reduce(
-                    (sum, client) => sum + (Number(client.rate) || 0),
+                    (sum, client) => sum + (Number(client.truckHireCost) || 0),
                     0
                   );
                   formik.setFieldValue("rate", totalClientRate);
@@ -1187,8 +1235,11 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                     (client) => client.rate > 0 || client.truckHireCost > 0
                   ) && (
                     <CalculationSummary
-                      clients={formik.values.clients}
-                      overallRate={formik.values.rate}
+                     clients={formik.values.clients}
+  overallRate={formik.values.rate} // This is the 'rate' from the main form (paid to fleet owner if not self-owned)
+  isSelfOwned={isSelfOwned} // Pass the ownership type
+  overallTripCommission={formik.values.commission} // <--
+
                     />
                   )}
 
