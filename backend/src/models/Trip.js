@@ -118,6 +118,11 @@ const tripSchema = new mongoose.Schema(
           default: 0,
           min: 0,
         },
+        argestment: {
+          type: Number,
+          default: 0,
+          min: 0,
+        },
         dueAmount: {
           type: Number,
           default: 0,

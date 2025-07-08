@@ -1686,7 +1686,7 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
                       </div>
 
                       {/* POD Balance Card */}
-                      <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out col-span-1 md:col-span-2 border border-green-200">
+                      <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out  border border-green-200">
                         <div className="text-sm font-semibold text-green-700 mb-1">
                           POD Balance
                         </div>
@@ -1694,16 +1694,37 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
                           ₹{trip?.podBalance?.toLocaleString() || 0}
                         </div>
                       </div>
-
-                      {/* Total Profile Section - Styled as a prominent card */}
-                      <div className="col-span-1 md:col-span-2 p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-lg border border-purple-200 flex items-center justify-between">
-                        <div className="text-md font-semibold text-purple-700">
-                          Total Profile:
+                      <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out  border border-green-200">
+                        <div className="text-sm font-semibold text-green-700 mb-1">
+                          Total Argestment
                         </div>
-                        <div className="text-2xl font-extrabold text-purple-800">
-                          ₹{(trip.rate - trip.podBalance + trip.commission)?.toLocaleString() || 0}
+                        <div className="text-2xl font-extrabold text-green-800">
+  
+                          ₹{ trip.clients?.reduce((sum, c) => sum + (Number(c?.argestment || c?.adjustment) || 0), 0)}
                         </div>
                       </div>
+
+                      {/* Total Profile Section - Styled as a prominent card */}
+                 {(() => {
+  const totalClientRevenue = trip.clients?.reduce((sum, c) => sum + (Number(c?.rate) || 0), 0);
+  const totalAdjustments = trip.clients?.reduce((sum, c) => sum + (Number(c?.argestment || c?.adjustment) || 0), 0);
+  const tripRate = Number(trip?.rate) || 0;
+  const commission = Number(trip?.commission) || 0;
+
+  const overallProfit = totalClientRevenue - tripRate - totalAdjustments + commission;
+
+  return (
+    <div className="col-span-1 md:col-span-2 p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-lg border border-green-200 flex items-center justify-between mt-4">
+      <div className="text-md font-semibold text-green-700">
+        Overall Trip Profit/Loss:
+      </div>
+      <div className={`text-2xl font-extrabold ${overallProfit >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+        {overallProfit >= 0 ? '+' : '-'}₹{Math.abs(overallProfit).toLocaleString()}
+      </div>
+    </div>
+  );
+})()}
+
                     </div>
                   )}
 
