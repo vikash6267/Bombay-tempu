@@ -471,6 +471,11 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
       client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       client.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const filteredDrivers = drivers.filter(
+    (driver) =>
+      driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      driver.phone.includes(searchQuery) // Phone number search can be exact or partial
+  );
 
   const handleSubmit = useCallback(
     async (values, { resetForm }) => {
@@ -685,6 +690,19 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                 />
                               </SelectTrigger>
                               <SelectContent>
+                                {/* Search Input Field for Drivers */}
+                                <div className="px-2 py-1">
+                                  <Input
+                                    placeholder="Search driver by name or phone..."
+                                    value={searchQuery}
+                                    onChange={(e) =>
+                                      setSearchQuery(e.target.value)
+                                    }
+                                    className="w-full"
+                                  />
+                                </div>
+                                <Separator className="my-1" />
+
                                 <SelectItem value="add_new">
                                   <div className="flex items-center gap-2 text-primary font-medium">
                                     <UserPlus className="h-4 w-4" />
@@ -692,14 +710,20 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                   </div>
                                 </SelectItem>
                                 <Separator className="my-1" />
-                                {drivers.map((driver) => (
-                                  <SelectItem
-                                    key={driver._id}
-                                    value={driver._id}
-                                  >
-                                    {driver.name} ({driver.phone})
-                                  </SelectItem>
-                                ))}
+                                {filteredDrivers.length > 0 ? (
+                                  filteredDrivers.map((driver) => (
+                                    <SelectItem
+                                      key={driver._id}
+                                      value={driver._id}
+                                    >
+                                      {driver.name} ({driver.phone})
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <div className="px-4 py-2 text-center text-gray-500">
+                                    No drivers found.
+                                  </div>
+                                )}
                               </SelectContent>
                             </Select>
                             {formik.errors.driver && (
