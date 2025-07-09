@@ -256,18 +256,28 @@ const userSchema = new mongoose.Schema(
       default: Date.now,
     },
 
-    fleetAdvances: [
-      {
-        trip: { type: mongoose.Schema.Types.ObjectId, ref: "Trip" },
-        amount: Number,
-        reason: String,
-        recipientType: String,
-        recipientName: String,
-        description: String,
-        referenceNumber: String,
-        date: { type: Date, default: Date.now },
-      },
-    ],
+fleetAdvances: [
+  {
+    trip: { type: mongoose.Schema.Types.ObjectId, ref: "Trip" }, // in User schema only
+    amount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    reason: {
+      type: String,
+    },
+    paymentType: {
+      type: String,
+      enum: ["cash", "bank", "upi", "cheque"], // update as per your dropdown
+    },
+    date: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+]
+,
     fleetExpenses: [
       {
         trip: { type: mongoose.Schema.Types.ObjectId, ref: "Trip" },

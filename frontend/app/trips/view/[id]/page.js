@@ -144,13 +144,12 @@ const fleetExpenseSchema = z.object({
 })
 
 // Fleet Owner Advance Payment Form Schema
+
 const fleetAdvanceSchema = z.object({
-  amount: z.number().min(1, "Amount must be greater than 0"),
+  date: z.string().min(1, "Date is required"),
+  paymentType: z.string().min(1, "Payment type is required"),
   reason: z.string().min(1, "Reason is required"),
-  recipientType: z.enum(["driver", "vendor", "fuel_station", "other"]),
-  recipientName: z.string().min(1, "Recipient name is required"),
-  description: z.string().optional(),
-  referenceNumber: z.string().optional()
+  amount: z.number().min(1, "Amount must be greater than 0"),
 })
 
 // Self Owner Expense Form Component
@@ -667,12 +666,10 @@ function FleetAdvanceForm({ handleSubmit, open, onClose }) {
   const form = useForm({
     resolver: zodResolver(fleetAdvanceSchema),
     defaultValues: {
-      amount: 0,
+      date: new Date().toISOString().split("T")[0], // or ""
+      paymentType: "",
       reason: "",
-      recipientType: "driver",
-      recipientName: "",
-      description: "",
-      referenceNumber: ""
+      amount: 0,
     }
   })
 
@@ -697,16 +694,14 @@ function FleetAdvanceForm({ handleSubmit, open, onClose }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="amount"
+                name="date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount (₹)</FormLabel>
+                    <FormLabel>Date</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        placeholder="Enter amount"
+                        type="date"
                         {...field}
-                        onChange={e => field.onChange(Number(e.target.value))}
                         className="focus:ring-green-500 focus:border-green-500"
                       />
                     </FormControl>
@@ -717,66 +712,26 @@ function FleetAdvanceForm({ handleSubmit, open, onClose }) {
 
               <FormField
                 control={form.control}
-                name="recipientType"
+                name="paymentType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Recipient Type</FormLabel>
+                    <FormLabel>Payment Type</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger className="focus:ring-green-500 focus:border-green-500">
-                          <SelectValue placeholder="Select recipient type" />
+                          <SelectValue placeholder="Select payment type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="driver">👨‍💼 Driver</SelectItem>
-                        <SelectItem value="vendor">🏪 Vendor</SelectItem>
-                        <SelectItem value="fuel_station">
-                          ⛽ Fuel Station
-                        </SelectItem>
-                        <SelectItem value="other">📝 Other</SelectItem>
+                        <SelectItem value="cash">💵 Cash</SelectItem>
+                        <SelectItem value="bank">🏦 Bank Transfer</SelectItem>
+                        <SelectItem value="upi">📲 UPI</SelectItem>
+                        <SelectItem value="cheque">📄 Cheque</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="recipientName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Recipient Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter recipient name"
-                        {...field}
-                        className="focus:ring-green-500 focus:border-green-500"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="referenceNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reference Number (Optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter reference/transaction number"
-                        {...field}
-                        className="focus:ring-green-500 focus:border-green-500"
-                      />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -800,17 +755,18 @@ function FleetAdvanceForm({ handleSubmit, open, onClose }) {
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
-              name="description"
+              name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormLabel>Amount (₹)</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Additional details about the advance payment"
+                    <Input
+                      type="number"
+                      placeholder="Enter amount"
                       {...field}
+                      onChange={e => field.onChange(Number(e.target.value))}
                       className="focus:ring-green-500 focus:border-green-500"
                     />
                   </FormControl>
@@ -833,6 +789,7 @@ function FleetAdvanceForm({ handleSubmit, open, onClose }) {
     </Card>
   )
 }
+
 
 const tripSchema = z.object({
   clients: z.array(
@@ -1091,10 +1048,10 @@ export default function TripDetailPage() {
 
 
   const handleDeleteExpense = async (tripId, clientIndex, expenseIndex) => {
-  if (!window.confirm("Are you sure you want to delete this expense?")) return;
+    if (!window.confirm("Are you sure you want to delete this expense?")) return;
 
-  try {
-        const res = await tripsApi.deleteExpense(params.id, {
+    try {
+      const res = await tripsApi.deleteExpense(params.id, {
         clientIndex,
         expenseIndex,
       });
@@ -1102,13 +1059,13 @@ export default function TripDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
 
 
-    toast.success("Expense deleted successfully");
-  
-  } catch (err) {
-    console.error(err);
-    toast.error("Failed to delete expense");
-  }
-};
+      toast.success("Expense deleted successfully");
+
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete expense");
+    }
+  };
 
   const handleESubmit = async (values, index) => {
     const data = { ...values, index: index }
@@ -1161,37 +1118,37 @@ export default function TripDetailPage() {
 
 
   const handleDeleteFleetAdvance = async (advanceIndex) => {
-  if (!window.confirm("Are you sure you want to delete this advance?")) return;
+    if (!window.confirm("Are you sure you want to delete this advance?")) return;
 
-  try {
-   
-      const res = await tripsApi.deleteFleetAdvance(params.id, {advanceIndex})
+    try {
 
-    toast.success("Fleet advance deleted");
+      const res = await tripsApi.deleteFleetAdvance(params.id, { advanceIndex })
+
+      toast.success("Fleet advance deleted");
       queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
 
-  } catch (error) {
-    toast.error(
-      error.response?.data?.message || "Failed to delete advance"
-    );
-  }
-};
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Failed to delete advance"
+      );
+    }
+  };
 
-const handleDeleteSelfExpense = async (expenseIndex) => {
-  const confirmed = window.confirm("Are you sure you want to delete this self expense?");
-  if (!confirmed) return;
+  const handleDeleteSelfExpense = async (expenseIndex) => {
+    const confirmed = window.confirm("Are you sure you want to delete this self expense?");
+    if (!confirmed) return;
 
-  try {
- 
-      const res = await tripsApi.deleteSelfExpense(params.id, {expenseIndex})
+    try {
 
-    toast.success("Expense deleted");
+      const res = await tripsApi.deleteSelfExpense(params.id, { expenseIndex })
+
+      toast.success("Expense deleted");
       queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
 
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Failed to delete self expense");
-  }
-};
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete self expense");
+    }
+  };
 
   // Self Owner Expense Handler
   const handleSelfExpenseSubmit = async values => {
@@ -1699,31 +1656,31 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
                           Total Argestment
                         </div>
                         <div className="text-2xl font-extrabold text-green-800">
-  
-                          ₹{ trip.clients?.reduce((sum, c) => sum + (Number(c?.argestment || c?.adjustment) || 0), 0)}
+
+                          ₹{trip.clients?.reduce((sum, c) => sum + (Number(c?.argestment || c?.adjustment) || 0), 0)}
                         </div>
                       </div>
 
                       {/* Total Profile Section - Styled as a prominent card */}
-                 {(() => {
-  const totalClientRevenue = trip.clients?.reduce((sum, c) => sum + (Number(c?.rate) || 0), 0);
-  const totalAdjustments = trip.clients?.reduce((sum, c) => sum + (Number(c?.argestment || c?.adjustment) || 0), 0);
-  const tripRate = Number(trip?.rate) || 0;
-  const commission = Number(trip?.commission) || 0;
+                      {(() => {
+                        const totalClientRevenue = trip.clients?.reduce((sum, c) => sum + (Number(c?.rate) || 0), 0);
+                        const totalAdjustments = trip.clients?.reduce((sum, c) => sum + (Number(c?.argestment || c?.adjustment) || 0), 0);
+                        const tripRate = Number(trip?.rate) || 0;
+                        const commission = Number(trip?.commission) || 0;
 
-  const overallProfit = totalClientRevenue - tripRate - totalAdjustments + commission;
+                        const overallProfit = totalClientRevenue - tripRate - totalAdjustments + commission;
 
-  return (
-    <div className="col-span-1 md:col-span-2 p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-lg border border-green-200 flex items-center justify-between mt-4">
-      <div className="text-md font-semibold text-green-700">
-        Overall Trip Profit/Loss:
-      </div>
-      <div className={`text-2xl font-extrabold ${overallProfit >= 0 ? 'text-green-800' : 'text-red-800'}`}>
-        {overallProfit >= 0 ? '+' : '-'}₹{Math.abs(overallProfit).toLocaleString()}
-      </div>
-    </div>
-  );
-})()}
+                        return (
+                          <div className="col-span-1 md:col-span-2 p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-lg border border-green-200 flex items-center justify-between mt-4">
+                            <div className="text-md font-semibold text-green-700">
+                              Overall Trip Profit/Loss:
+                            </div>
+                            <div className={`text-2xl font-extrabold ${overallProfit >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                              {overallProfit >= 0 ? '+' : '-'}₹{Math.abs(overallProfit).toLocaleString()}
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                     </div>
                   )}
@@ -1774,14 +1731,22 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
                       </Badge>
                     </div>
                     <div className="flex space-x-2">
-                      <Button
+                       <Button
                         onClick={() => setSelfExpenseForm(!selfExpenseForm)}
                         className="bg-red-600 hover:bg-red-700 shadow-md"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Expense
                       </Button>
-                    
+
+                       <Button
+                        onClick={() => setSelfAdvanceForm(!selfAdvanceForm)}
+                        className="bg-green-600 hover:bg-green-700 shadow-md"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Advance
+                      </Button>
+
                       <Button
                         onClick={() => setShowDriverReceiptDialog(true)}
                         className="bg-blue-600 hover:bg-blue-700 shadow-md"
@@ -1845,31 +1810,31 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
 
                     <Card
                       className={`bg-gradient-to-r hover:shadow-md transition-shadow ${netProfit >= 0
-                          ? "from-blue-100 to-blue-200"
-                          : "from-orange-100 to-orange-200"
+                        ? "from-blue-100 to-blue-200"
+                        : "from-orange-100 to-orange-200"
                         }`}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-2">
                           <TrendingUp
                             className={`h-5 w-5 ${netProfit >= 0
-                                ? "text-blue-600"
-                                : "text-orange-600"
+                              ? "text-blue-600"
+                              : "text-orange-600"
                               }`}
                           />
                           <div>
                             <div
                               className={`text-sm font-medium ${netProfit >= 0
-                                  ? "text-blue-700"
-                                  : "text-orange-700"
+                                ? "text-blue-700"
+                                : "text-orange-700"
                                 }`}
                             >
                               Net Profit
                             </div>
                             <div
                               className={`text-xl font-bold ${netProfit >= 0
-                                  ? "text-blue-800"
-                                  : "text-orange-800"
+                                ? "text-blue-800"
+                                : "text-orange-800"
                                 }`}
                             >
                               {formatCurrency(netProfit)}
@@ -1903,7 +1868,13 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
                         <Receipt className="h-4 w-4" />
                         <span>Expenses ({trip.selfExpenses?.length || 0})</span>
                       </TabsTrigger>
-                    
+    <TabsTrigger
+                        value="advances"
+                        className="flex items-center space-x-2"
+                      >
+                        <CreditCard className="h-4 w-4" />
+                        <span>Advances ({trip.selfAdvances?.length || 0})</span>
+                      </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="expenses">
@@ -1967,17 +1938,17 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
                                     )}
                                   </div>
                                 </div>
-                              <div className="text-right">
-  <div className="text-lg font-bold text-red-600">
-    {formatCurrency(expense.amount)}
-  </div>
-  <button
-    onClick={() => handleDeleteSelfExpense(index)}
-    className="text-red-500 text-sm mt-2 hover:underline"
-  >
-    Delete
-  </button>
-</div>
+                                <div className="text-right">
+                                  <div className="text-lg font-bold text-red-600">
+                                    {formatCurrency(expense.amount)}
+                                  </div>
+                                  <button
+                                    onClick={() => handleDeleteSelfExpense(index)}
+                                    className="text-red-500 text-sm mt-2 hover:underline"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
 
                               </div>
                             ))}
@@ -1993,8 +1964,82 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
                         )}
                       </div>
                     </TabsContent>
+      <TabsContent value="advances">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center border-b pb-2">
+                          <h4 className="font-medium text-gray-700">
+                            Advance Payment Details
+                          </h4>
+                          <p className="font-semibold text-purple-600">
+                            Total: {formatCurrency(totalSelfAdvances)}
+                          </p>
+                        </div>
 
-                  
+                        {trip.selfAdvances && trip.selfAdvances.length > 0 ? (
+                          <div className="space-y-3">
+                            {trip.selfAdvances.map((advance, index) => (
+                              <div
+                                key={index}
+                                className="flex justify-between items-start p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
+                              >
+                                <div className="flex items-start space-x-3">
+                                  <div className="text-2xl">💰</div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <Badge
+                                        className={getRecipientColor(
+                                          advance.paymentFor
+                                        )}
+                                      >
+                                        {getExpenseForIcon(advance.paymentFor)}{" "}
+                                        {advance.paymentFor}
+                                      </Badge>
+                                      <span className="text-sm text-gray-500">
+                                        {formatDate(
+                                          advance.createdAt,
+                                          "MMM dd, yyyy HH:mm"
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div className="font-medium text-gray-900 mb-1">
+                                      {advance.reason}
+                                    </div>
+                                    <div className="text-sm text-gray-600 mb-1">
+                                      To: {advance.recipientName}
+                                    </div>
+                                    {advance.description && (
+                                      <div className="text-sm text-gray-600 mb-1">
+                                        {advance.description}
+                                      </div>
+                                    )}
+                                    {advance.referenceNumber && (
+                                      <div className="text-xs text-blue-600">
+                                        Ref: {advance.referenceNumber}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-bold text-purple-600">
+                                    {formatCurrency(advance.amount)}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                            <p>No advance payments recorded yet</p>
+                            <p className="text-sm">
+                              Click "Add Advance" to start tracking your advance
+                              payments
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+
                   </Tabs>
                 </CardContent>
               </Card>
@@ -2099,31 +2144,31 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
 
                     <Card
                       className={`bg-gradient-to-r hover:shadow-md transition-shadow ${netProfit >= 0
-                          ? "from-blue-100 to-blue-200"
-                          : "from-orange-100 to-orange-200"
+                        ? "from-blue-100 to-blue-200"
+                        : "from-orange-100 to-orange-200"
                         }`}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-2">
                           <TrendingUp
                             className={`h-5 w-5 ${netProfit >= 0
-                                ? "text-blue-600"
-                                : "text-orange-600"
+                              ? "text-blue-600"
+                              : "text-orange-600"
                               }`}
                           />
                           <div>
                             <div
                               className={`text-sm font-medium ${netProfit >= 0
-                                  ? "text-blue-700"
-                                  : "text-orange-700"
+                                ? "text-blue-700"
+                                : "text-orange-700"
                                 }`}
                             >
                               Pending Fleet Owner
                             </div>
                             <div
                               className={`text-xl font-bold ${netProfit >= 0
-                                  ? "text-blue-800"
-                                  : "text-orange-800"
+                                ? "text-blue-800"
+                                : "text-orange-800"
                                 }`}
                             >
                               {formatCurrency(finalAmount)}
@@ -2170,7 +2215,7 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
                       </TabsTrigger>
                     </TabsList>
 
-                   
+
                     <TabsContent value="advances">
                       <div className="space-y-3">
                         <div className="flex justify-between items-center border-b pb-2">
@@ -2182,77 +2227,42 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
                           </p>
                         </div>
 
-                        {trip.fleetAdvances && trip.fleetAdvances.length > 0 ? (
-                          <div className="space-y-3">
-                            {trip.fleetAdvances.map((advance, index) => (
-                              <div
-                                key={index}
-                                className="flex justify-between items-start p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
-                              >
-                                <div className="flex items-start space-x-3">
-                                  <div className="text-2xl">💰</div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      <Badge
-                                        className={getRecipientColor(
-                                          advance.recipientType
-                                        )}
-                                      >
-                                        {advance.recipientType.replace(
-                                          "_",
-                                          " "
-                                        )}
-                                      </Badge>
-                                      <span className="text-sm text-gray-500">
-                                        {formatDate(
-                                          advance.createdAt,
-                                          "MMM dd, yyyy HH:mm"
-                                        )}
-                                      </span>
-                                    </div>
-                                    <div className="font-medium text-gray-900 mb-1">
-                                      {advance.reason}
-                                    </div>
-                                    <div className="text-sm text-gray-600 mb-1">
-                                      To: {advance.recipientName}
-                                    </div>
-                                    {advance.description && (
-                                      <div className="text-sm text-gray-600 mb-1">
-                                        {advance.description}
-                                      </div>
-                                    )}
-                                    {advance.referenceNumber && (
-                                      <div className="text-xs text-blue-600">
-                                        Ref: {advance.referenceNumber}
-                                      </div>
-                                    )}
-                                  </div>
+                        {trip.fleetAdvances.map((advance, index) => (
+                          <div
+                            key={index}
+                            className="flex justify-between items-start p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
+                          >
+                            <div className="flex items-start space-x-3">
+                              <div className="text-2xl">💰</div>
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <Badge className="bg-blue-100 text-blue-800">
+                                    {advance.paymentType?.replace("_", " ").toUpperCase()}
+                                  </Badge>
+                                  <span className="text-sm text-gray-500">
+                                    {formatDate(advance.date, "MMM dd, yyyy")}
+                                  </span>
                                 </div>
-                           <div className="text-right">
-  <div className="text-lg font-bold text-purple-600">
-    {formatCurrency(advance.amount)}
-  </div>
-  <button
-    onClick={() => handleDeleteFleetAdvance(index)}
-    className="text-red-500 text-sm mt-2 hover:underline cursor-pointer"
-  >
-    Delete
-  </button>
-</div>
-
+                                <div className="font-medium text-gray-900 mb-1">
+                                  {advance.reason}
+                                </div>
                               </div>
-                            ))}
+                            </div>
+
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-purple-600">
+                                {formatCurrency(advance.amount)}
+                              </div>
+                              <button
+                                onClick={() => handleDeleteFleetAdvance(index)}
+                                className="text-red-500 text-sm mt-2 hover:underline cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </div>
-                        ) : (
-                          <div className="text-center py-8 text-gray-500">
-                            <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                            <p>No advance payments recorded yet</p>
-                            <p className="text-sm">
-                              Click "Add Advance" to start tracking your advance
-                              payments
-                            </p>
-                          </div>
-                        )}
+                        ))}
+
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -2700,43 +2710,43 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
                           </p>
                         </div>
 
-                 <div className="space-y-2 mb-4">
-  {clientData.expenses?.map((item, expenseIndex) => (
-    <div
-      key={expenseIndex}
-      className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
-    >
-      <div className="flex items-center space-x-3">
-        <div className="w-3 h-3 rounded-full bg-red-500"></div>
-        <div>
-          <p className="text-sm font-medium text-gray-900">
-            Expense #{expenseIndex + 1}
-          </p>
-          <p className="text-xs text-gray-500">
-            {formatDate(item.paidAt, "MMM dd, yyyy HH:mm")}
-          </p>
-        </div>
-      </div>
+                        <div className="space-y-2 mb-4">
+                          {clientData.expenses?.map((item, expenseIndex) => (
+                            <div
+                              key={expenseIndex}
+                              className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    Expense #{expenseIndex + 1}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {formatDate(item.paidAt, "MMM dd, yyyy HH:mm")}
+                                  </p>
+                                </div>
+                              </div>
 
-      <div className="flex items-center space-x-2">
-        <p className="font-semibold text-red-600">
-          {formatCurrency(item.amount)}
-        </p>
+                              <div className="flex items-center space-x-2">
+                                <p className="font-semibold text-red-600">
+                                  {formatCurrency(item.amount)}
+                                </p>
 
-        {/* 🗑 Delete Button */}
-        <button
-          onClick={() =>
-            handleDeleteExpense(params.id, index, expenseIndex)
-          }
-          className="text-red-500 hover:text-red-700 text-xs cursor-pointer"
-          title="Delete Expense"
-        >
-    Remove
-        </button>
-      </div>
-    </div>
-  ))}
-</div>
+                                {/* 🗑 Delete Button */}
+                                <button
+                                  onClick={() =>
+                                    handleDeleteExpense(params.id, index, expenseIndex)
+                                  }
+                                  className="text-red-500 hover:text-red-700 text-xs cursor-pointer"
+                                  title="Delete Expense"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
 
 
                         <Button
@@ -2845,12 +2855,12 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
                       {/* Step Circle with Enhanced Design */}
                       <div
                         className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 transform hover:scale-110 shadow-lg ${isDone
-                            ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-green-200"
-                            : isCurrent
-                              ? "bg-gradient-to-r from-indigo-400 to-indigo-600 text-white shadow-indigo-200 animate-pulse"
-                              : isNext
-                                ? "bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-700 border-2 border-yellow-300 shadow-yellow-100"
-                                : "bg-gray-200 text-gray-400 shadow-gray-100"
+                          ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-green-200"
+                          : isCurrent
+                            ? "bg-gradient-to-r from-indigo-400 to-indigo-600 text-white shadow-indigo-200 animate-pulse"
+                            : isNext
+                              ? "bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-700 border-2 border-yellow-300 shadow-yellow-100"
+                              : "bg-gray-200 text-gray-400 shadow-gray-100"
                           }`}
                       >
                         {isDone ? (
@@ -2875,12 +2885,12 @@ const handleDeleteSelfExpense = async (expenseIndex) => {
                       <div className="text-center max-w-24">
                         <div
                           className={`text-sm font-semibold transition-colors duration-300 ${isDone
-                              ? "text-green-700"
-                              : isCurrent
-                                ? "text-indigo-700"
-                                : isNext
-                                  ? "text-yellow-700"
-                                  : "text-gray-500"
+                            ? "text-green-700"
+                            : isCurrent
+                              ? "text-indigo-700"
+                              : isNext
+                                ? "text-yellow-700"
+                                : "text-gray-500"
                             }`}
                         >
                           {step.label}
