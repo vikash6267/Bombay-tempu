@@ -127,42 +127,67 @@ function ProfitBreakdownCard({ data, isLoading }) {
         <CardDescription>Financial overview for current period</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-            <span className="font-medium text-green-700 dark:text-green-300">
-              Revenue (Before Expenses)
-            </span>
-            <span className="font-bold text-green-700 dark:text-green-300">
-              ₹{data.totalProfitBeforeExpenses.toLocaleString("en-IN")}
-            </span>
-          </div>
+     <div className="space-y-4">
+  {/* Revenue Before Expenses */}
+  <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+    <span className="font-medium text-green-700 dark:text-green-300">
+      Revenue (Before Expenses)
+    </span>
+    <span className="font-bold text-green-700 dark:text-green-300">
+      ₹{data.totalProfitBeforeExpenses.toLocaleString("en-IN")}
+    </span>
+  </div>
 
-          <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950 rounded-lg">
-            <span className="font-medium text-red-700 dark:text-red-300">
-              Total Expenses
-            </span>
-            <span className="font-bold text-red-700 dark:text-red-300">
-              -₹{data.totalExpenses.toLocaleString("en-IN")}
-            </span>
-          </div>
+  {/* Trip Expenses */}
+  <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950 rounded-lg">
+    <span className="font-medium text-red-700 dark:text-red-300">
+      Trip Expenses
+    </span>
+    <span className="font-bold text-red-700 dark:text-red-300">
+      -₹{(data.totalExpenses - data.otherExpense).toLocaleString("en-IN")}
+    </span>
+  </div>
 
-          <div className="border-t pt-3">
-            <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-              <span className="font-bold text-blue-700 dark:text-blue-300">
-                Final Profit
-              </span>
-              <span className="font-bold text-xl text-blue-700 dark:text-blue-300">
-                ₹{data.totalFinalProfit.toLocaleString("en-IN")}
-              </span>
-            </div>
-          </div>
+  {/* Other Expenses */}
+  <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950 rounded-lg">
+    <span className="font-medium text-red-700 dark:text-red-300">
+      Other Expenses
+    </span>
+    <span className="font-bold text-red-700 dark:text-red-300">
+      -₹{data.otherExpense.toLocaleString("en-IN")}
+    </span>
+  </div>
 
-          <div className="text-center pt-2">
-            <Badge variant="secondary" className="text-sm">
-              Profit Margin: {profitMargin}%
-            </Badge>
-          </div>
-        </div>
+  {/* Total Expenses */}
+  <div className="flex justify-between items-center p-3 bg-red-100 dark:bg-red-900 rounded-lg">
+    <span className="font-semibold text-red-800 dark:text-red-200">
+      Total Expenses
+    </span>
+    <span className="font-bold text-red-800 dark:text-red-200">
+      -₹{data.totalExpenses.toLocaleString("en-IN")}
+    </span>
+  </div>
+
+  {/* Final Profit */}
+  <div className="border-t pt-3">
+    <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+      <span className="font-bold text-blue-700 dark:text-blue-300">
+        Final Profit
+      </span>
+      <span className="font-bold text-xl text-blue-700 dark:text-blue-300">
+        ₹{data.totalFinalProfit.toLocaleString("en-IN")}
+      </span>
+    </div>
+  </div>
+
+  {/* Profit Margin */}
+  <div className="text-center pt-2">
+    <Badge variant="secondary" className="text-sm">
+      Profit Margin: {profitMargin}%
+    </Badge>
+  </div>
+</div>
+
       </CardContent>
     </Card>
   )

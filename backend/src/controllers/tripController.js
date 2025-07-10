@@ -8,6 +8,7 @@ const cloudinary = require("../utils/cloudinary");
 const Email = require("../utils/email");
 const { CounterService } = require("../models/Counter");
 const mongoose = require("mongoose");
+const Expense = require('../models/Expenses'); // ✅ Import your Expense model
 
 const { isValidObjectId } = mongoose;
 
@@ -1736,18 +1737,18 @@ const uploadPodDocument = async (req, res) => {
 const getDashboardData = async (req, res) => {
   try {
     const trips = await Trip.find().lean();
+    const otherExpenses = await Expense.find().lean(); // ✅ Fetch other expenses
 
     let totalTrips = trips.length;
     let totalPods = 0;
     let totalProfitBeforeExpenses = 0;
-    let totalExpenses = 0;
+    let totalTripExpenses = 0;
     let pendingPodClientsCount = 0;
 
     trips.forEach(trip => {
       const podBalance = trip.podBalance || 0;
       totalPods += podBalance;
 
-      // ✅ Count pending PODs only if podBalance > 0
       if (podBalance > 0 && Array.isArray(trip.clients)) {
         trip.clients.forEach(client => {
           if (!client.podReceived) {
@@ -1777,11 +1778,15 @@ const getDashboardData = async (req, res) => {
         totalProfitBeforeExpenses += profit;
 
         if (Array.isArray(trip.selfExpenses)) {
-          totalExpenses += trip.selfExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+          totalTripExpenses += trip.selfExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
         }
       }
     });
 
+    // ✅ Sum all other expenses
+    const totalOtherExpense = otherExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+
+    const totalExpenses = totalTripExpenses + totalOtherExpense;
     const totalFinalProfit = totalProfitBeforeExpenses - totalExpenses;
 
     res.status(200).json({
@@ -1791,8 +1796,9 @@ const getDashboardData = async (req, res) => {
         totalPods,
         totalProfitBeforeExpenses,
         totalExpenses,
+        otherExpense: totalOtherExpense, // ✅ Included
         totalFinalProfit,
-        pendingPodClientsCount, // ✅ Final count
+        pendingPodClientsCount,
       },
     });
 
