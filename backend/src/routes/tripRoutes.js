@@ -7,7 +7,7 @@ const upload = require("../middleware/upload");
 
 const router = express.Router();
 
-
+router.use(protect)
 router
   .route("/")
   .get(tripController.getAllTrips)
