@@ -108,6 +108,7 @@ export const usersApi = {
   activate: (id) => apiPatch(`/users/${id}/activate`),
   deactivate: (id) => apiPatch(`/users/${id}/deactivate`),
   userDetails: (id) => apiGet(`/auth/trip-balances/${id}`),
+  driverDetails: (id) => apiGet(`/trips/driver-summary/${id}`),
 
 };
 

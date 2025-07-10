@@ -7,8 +7,6 @@ const upload = require("../middleware/upload");
 
 const router = express.Router();
 
-// Protect all routes
-router.use(protect);
 
 router
   .route("/")
@@ -79,6 +77,7 @@ router.post(
   tripController.uploadPodDocument
 );
 
+router.get("/driver-summary/:driverId", tripController.getDriverSelfSummary);
 
 
 module.exports = router;

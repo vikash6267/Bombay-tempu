@@ -200,7 +200,12 @@ const PackagingTypeSelect = ({ value, onChange, error }) => (
 );
 
 // Calculation Summary Component
-const CalculationSummary = ({ clients, overallRate, isSelfOwned, overallTripCommission }) => {
+const CalculationSummary = ({
+  clients,
+  overallRate,
+  isSelfOwned,
+  overallTripCommission,
+}) => {
   const calculations = useMemo(() => {
     let totalClientRevenue = 0; // Sum of Client Rate from all clients
     let totalTruckHireExpenses = 0; // Sum of Truck Hire Cost from all clients
@@ -214,49 +219,45 @@ const CalculationSummary = ({ clients, overallRate, isSelfOwned, overallTripComm
     const parsedOverallTripCommission = Number(overallTripCommission) || 0; // Parse the new prop
 
     // Calculate individual client P&L and accumulate totals
-const clientBreakdown = clients.map((client) => {
-  const clientRate = Number(client.rate) || 0;
-  const truckHireCost = Number(client.truckHireCost) || 0;
-  const argestment = Number(client.argestment) || 0;
+    const clientBreakdown = clients.map((client) => {
+      const clientRate = Number(client.rate) || 0;
+      const truckHireCost = Number(client.truckHireCost) || 0;
+      const argestment = Number(client.argestment) || 0;
 
-  totalClientRevenue += clientRate;
-  totalTruckHireExpenses += truckHireCost;
-  totalAdjustments += argestment; // ✅ Always include all adjustments
+      totalClientRevenue += clientRate;
+      totalTruckHireExpenses += truckHireCost;
+      totalAdjustments += argestment; // ✅ Always include all adjustments
 
-  const pendingAmount = clientRate - truckHireCost - argestment;
-  const profit = pendingAmount;
+      const pendingAmount = clientRate - truckHireCost - argestment;
+      const profit = pendingAmount;
 
-  return {
-    clientRate,
-    truckHireCost,
-    argestment,
-    pendingAmount,
-    profit,
-  };
-});
+      return {
+        clientRate,
+        truckHireCost,
+        argestment,
+        pendingAmount,
+        profit,
+      };
+    });
 
+    let overallTripProfit = 0;
 
-
-
-let overallTripProfit = 0;
-
-if (isSelfOwned) {
-  // For Self-Owned Vehicles:
-  overallTripProfit =
-    totalClientRevenue -
-    totalTruckHireExpenses -
-    totalAdjustments +
-    parsedOverallTripCommission;
-} else {
-  // For Non-Self-Owned Vehicles (Hired from Fleet Owner):
-  const parsedOverallRate = Number(overallRate) || 0;
-  overallTripProfit =
-    totalClientRevenue -
-    parsedOverallRate -
-    totalAdjustments + // ✅ INCLUDE adjustments here too
-    parsedOverallTripCommission;
-}
-
+    if (isSelfOwned) {
+      // For Self-Owned Vehicles:
+      overallTripProfit =
+        totalClientRevenue -
+        totalTruckHireExpenses -
+        totalAdjustments +
+        parsedOverallTripCommission;
+    } else {
+      // For Non-Self-Owned Vehicles (Hired from Fleet Owner):
+      const parsedOverallRate = Number(overallRate) || 0;
+      overallTripProfit =
+        totalClientRevenue -
+        parsedOverallRate -
+        totalAdjustments + // ✅ INCLUDE adjustments here too
+        parsedOverallTripCommission;
+    }
 
     return {
       clientBreakdown,
@@ -335,13 +336,19 @@ if (isSelfOwned) {
               Total Costs (Hire + Adjustment)
             </div>
             <div className="text-xl font-bold text-red-800">
-              ₹{(calculations.totalTruckHireExpenses + calculations.totalAdjustments).toLocaleString()}
+              ₹
+              {(
+                calculations.totalTruckHireExpenses +
+                calculations.totalAdjustments
+              ).toLocaleString()}
             </div>
           </div>
 
           <div
             className={`text-center p-3 rounded-lg ${
-              calculations.overallTripProfit >= 0 ? "bg-blue-100" : "bg-orange-100"
+              calculations.overallTripProfit >= 0
+                ? "bg-blue-100"
+                : "bg-orange-100"
             }`}
           >
             <div
@@ -375,11 +382,13 @@ if (isSelfOwned) {
         {isSelfOwned ? (
           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
             <strong>Calculation for Self-Owned Vehicle:</strong> <br />
-            Total Client Revenue (₹{calculations.totalClientRevenue.toLocaleString()})
-            - Total Truck Hire Costs (₹{calculations.totalTruckHireExpenses.toLocaleString()})
-            - Total Adjustments (₹{calculations.totalAdjustments.toLocaleString()})
-            + Overall Trip Commission (₹{calculations.parsedOverallTripCommission.toLocaleString()})
-            ={" "}
+            Total Client Revenue (₹
+            {calculations.totalClientRevenue.toLocaleString()}) - Total Truck
+            Hire Costs (₹{calculations.totalTruckHireExpenses.toLocaleString()})
+            - Total Adjustments (₹
+            {calculations.totalAdjustments.toLocaleString()}) + Overall Trip
+            Commission (₹
+            {calculations.parsedOverallTripCommission.toLocaleString()}) ={" "}
             <span className="font-bold">
               ₹{calculations.overallTripProfit.toLocaleString()}
             </span>
@@ -387,10 +396,11 @@ if (isSelfOwned) {
         ) : (
           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
             <strong>Calculation for Hired Vehicle:</strong> <br />
-            Total Client Revenue (₹{calculations.totalClientRevenue.toLocaleString()})
-            - Overall Trip Rate (paid to fleet owner: ₹{Number(overallRate).toLocaleString()})
-            + Overall Trip Commission (from fleet owner: ₹{calculations.parsedOverallTripCommission.toLocaleString()})
-            ={" "}
+            Total Client Revenue (₹
+            {calculations.totalClientRevenue.toLocaleString()}) - Overall Trip
+            Rate (paid to fleet owner: ₹{Number(overallRate).toLocaleString()})
+            + Overall Trip Commission (from fleet owner: ₹
+            {calculations.parsedOverallTripCommission.toLocaleString()}) ={" "}
             <span className="font-bold">
               ₹{calculations.overallTripProfit.toLocaleString()}
             </span>
@@ -407,6 +417,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
   const [showAddDriver, setShowAddDriver] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const { user } = useSelector((state) => state.auth);
+  const [searchQuery, setSearchQuery] = useState(""); // State to hold the search query
 
   // Optimized queries with proper caching
   const {
@@ -450,6 +461,21 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
     [vehiclesData]
   );
   const drivers = useMemo(() => driversData?.data?.users || [], [driversData]);
+
+  const filteredVehicles = vehicles.filter((vehicle) =>
+    vehicle.registrationNumber.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredClients = clients.filter(
+    (client) =>
+      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      client.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const filteredDrivers = drivers.filter(
+    (driver) =>
+      driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      driver.phone.includes(searchQuery) // Phone number search can be exact or partial
+  );
 
   const handleSubmit = useCallback(
     async (values, { resetForm }) => {
@@ -565,6 +591,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                 formik.setFieldValue("podBalance", 0);
                               }
                             }}
+                            value={formik.values.vehicle} // Ensure the selected value is displayed
                           >
                             <SelectTrigger
                               className={
@@ -580,6 +607,19 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                               />
                             </SelectTrigger>
                             <SelectContent>
+                              {/* Search Input Field */}
+                              <div className="px-2 py-1">
+                                <Input
+                                  placeholder="Search vehicle by registration number..."
+                                  value={searchQuery}
+                                  onChange={(e) =>
+                                    setSearchQuery(e.target.value)
+                                  }
+                                  className="w-full"
+                                />
+                              </div>
+                              <Separator className="my-1" />
+
                               <SelectItem value="add_new">
                                 <div className="flex items-center gap-2 text-primary font-medium">
                                   <Plus className="h-4 w-4" />
@@ -587,28 +627,34 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                 </div>
                               </SelectItem>
                               <Separator className="my-1" />
-                              {vehicles.map((vehicle) => (
-                                <SelectItem
-                                  key={vehicle._id}
-                                  value={vehicle._id}
-                                >
-                                  <div className="flex items-center justify-between w-full">
-                                    <span>{vehicle.registrationNumber}</span>
-                                    <span
-                                      className={
-                                        vehicle.status == "available"
-                                          ? "bg-green-500 h-2 w-2 rounded-full ml-2"
-                                          : "bg-primary h-2 w-2 rounded-full ml-2"
-                                      }
-                                    ></span>
-                                    <Badge variant="outline" className="mx-2">
-                                      {vehicle?.ownershipType == "self"
-                                        ? "Own"
-                                        : vehicle.owner.name}
-                                    </Badge>
-                                  </div>
-                                </SelectItem>
-                              ))}
+                              {filteredVehicles.length > 0 ? (
+                                filteredVehicles.map((vehicle) => (
+                                  <SelectItem
+                                    key={vehicle._id}
+                                    value={vehicle._id}
+                                  >
+                                    <div className="flex items-center justify-between w-full">
+                                      <span>{vehicle.registrationNumber}</span>
+                                      <span
+                                        className={
+                                          vehicle.status == "available"
+                                            ? "bg-green-500 h-2 w-2 rounded-full ml-2"
+                                            : "bg-primary h-2 w-2 rounded-full ml-2"
+                                        }
+                                      ></span>
+                                      <Badge variant="outline" className="mx-2">
+                                        {vehicle?.ownershipType == "self"
+                                          ? "Own"
+                                          : vehicle.owner.name}
+                                      </Badge>
+                                    </div>
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <div className="px-4 py-2 text-center text-gray-500">
+                                  No vehicles found.
+                                </div>
+                              )}
                             </SelectContent>
                           </Select>
                           {formik.errors.vehicle && (
@@ -617,7 +663,6 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                             </p>
                           )}
                         </div>
-
                         {isSelfOwned && (
                           <div>
                             <Label>Driver *</Label>
@@ -645,6 +690,19 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                 />
                               </SelectTrigger>
                               <SelectContent>
+                                {/* Search Input Field for Drivers */}
+                                <div className="px-2 py-1">
+                                  <Input
+                                    placeholder="Search driver by name or phone..."
+                                    value={searchQuery}
+                                    onChange={(e) =>
+                                      setSearchQuery(e.target.value)
+                                    }
+                                    className="w-full"
+                                  />
+                                </div>
+                                <Separator className="my-1" />
+
                                 <SelectItem value="add_new">
                                   <div className="flex items-center gap-2 text-primary font-medium">
                                     <UserPlus className="h-4 w-4" />
@@ -652,14 +710,20 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                   </div>
                                 </SelectItem>
                                 <Separator className="my-1" />
-                                {drivers.map((driver) => (
-                                  <SelectItem
-                                    key={driver._id}
-                                    value={driver._id}
-                                  >
-                                    {driver.name} ({driver.phone})
-                                  </SelectItem>
-                                ))}
+                                {filteredDrivers.length > 0 ? (
+                                  filteredDrivers.map((driver) => (
+                                    <SelectItem
+                                      key={driver._id}
+                                      value={driver._id}
+                                    >
+                                      {driver.name} ({driver.phone})
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <div className="px-4 py-2 text-center text-gray-500">
+                                    No drivers found.
+                                  </div>
+                                )}
                               </SelectContent>
                             </Select>
                             {formik.errors.driver && (
@@ -838,6 +902,19 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                             />
                                           </SelectTrigger>
                                           <SelectContent>
+                                            {/* Search Input Field for Clients */}
+                                            <div className="px-2 py-1">
+                                              <Input
+                                                placeholder="Search client by name or email..."
+                                                value={searchQuery}
+                                                onChange={(e) =>
+                                                  setSearchQuery(e.target.value)
+                                                }
+                                                className="w-full"
+                                              />
+                                            </div>
+                                            <Separator className="my-1" />
+
                                             <SelectItem value="add_new">
                                               <div className="flex items-center gap-2 text-primary font-medium">
                                                 <UserPlus className="h-4 w-4" />
@@ -845,19 +922,25 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                               </div>
                                             </SelectItem>
                                             <Separator className="my-1" />
-                                            {clients.map((client) => (
-                                              <SelectItem
-                                                key={client._id}
-                                                value={client._id}
-                                              >
-                                                <div className="flex flex-col">
-                                                  <span>{client.name}</span>
-                                                  <span className="text-sm text-gray-500">
-                                                    {client.email}
-                                                  </span>
-                                                </div>
-                                              </SelectItem>
-                                            ))}
+                                            {filteredClients.length > 0 ? (
+                                              filteredClients.map((client) => (
+                                                <SelectItem
+                                                  key={client._id}
+                                                  value={client._id}
+                                                >
+                                                  <div className="flex flex-col">
+                                                    <span>{client.name}</span>
+                                                    <span className="text-sm text-gray-500">
+                                                      {client.email}
+                                                    </span>
+                                                  </div>
+                                                </SelectItem>
+                                              ))
+                                            ) : (
+                                              <div className="px-4 py-2 text-center text-gray-500">
+                                                No clients found.
+                                              </div>
+                                            )}
                                           </SelectContent>
                                         </Select>
                                         {clientErrors?.client && (
@@ -1235,11 +1318,10 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                     (client) => client.rate > 0 || client.truckHireCost > 0
                   ) && (
                     <CalculationSummary
-                     clients={formik.values.clients}
-  overallRate={formik.values.rate} // This is the 'rate' from the main form (paid to fleet owner if not self-owned)
-  isSelfOwned={isSelfOwned} // Pass the ownership type
-  overallTripCommission={formik.values.commission} // <--
-
+                      clients={formik.values.clients}
+                      overallRate={formik.values.rate} // This is the 'rate' from the main form (paid to fleet owner if not self-owned)
+                      isSelfOwned={isSelfOwned} // Pass the ownership type
+                      overallTripCommission={formik.values.commission} // <--
                     />
                   )}
 

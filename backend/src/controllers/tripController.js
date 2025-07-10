@@ -1576,9 +1576,6 @@ const updatePodDetails = async (req, res) => {
   }
 };
 
-
-// PUT /api/trips/:id/pod-status
-// PUT /api/trips/:tripId/pod-status
 const updatePodStatus = async (req, res) => {
   try {
     const { tripId } = req.params
@@ -1755,6 +1752,86 @@ const getDashboardData = async (req, res) => {
 };
 
 
+const getDriverSelfSummary = async (req, res) => {
+  try {
+    const { driverId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(driverId)) {
+      return res.status(400).json({ error: "Invalid driver ID" });
+    }
+
+    const trips = await Trip.find({ driver: driverId })
+      .populate("vehicle", "number model type registrationNumber")
+      .select("tripNumber scheduledDate vehicle selfExpenses selfAdvances");
+
+    const detailedTrips = [];
+    let totalAdvance = 0;
+    let totalExpense = 0;
+    let totalAdvanceCount = 0;
+    let totalExpenseCount = 0;
+
+    for (const trip of trips) {
+      const selfAdvances = (trip.selfAdvances || []).filter(
+        (adv) => adv.paymentFor?.toLowerCase() === "driver"
+      ).map((adv) => ({
+        amount: adv.amount,
+        reason: adv.reason,
+        paidAt: adv.paidAt,
+        description: adv.description,
+        referenceNumber: adv.referenceNumber
+      }));
+
+      const selfExpenses = (trip.selfExpenses || []).filter(
+        (exp) => exp.expenseFor?.toLowerCase() === "driver"
+      ).map((exp) => ({
+        amount: exp.amount,
+        reason: exp.reason,
+        category: exp.category,
+        paidAt: exp.paidAt,
+        description: exp.description,
+        receiptNumber: exp.receiptNumber
+      }));
+
+      totalAdvance += selfAdvances.reduce((sum, a) => sum + a.amount, 0);
+      totalExpense += selfExpenses.reduce((sum, e) => sum + e.amount, 0);
+      totalAdvanceCount += selfAdvances.length;
+      totalExpenseCount += selfExpenses.length;
+
+      detailedTrips.push({
+        tripId: trip._id,
+        tripNumber: trip.tripNumber,
+        scheduledDate: trip.scheduledDate,
+        vehicle: trip.vehicle || null,
+        selfAdvances,
+        selfExpenses
+      });
+    }
+
+    const driver = await User.findById(driverId).select("name email phone address");
+
+    return res.status(200).json({
+      success: true,
+      message: "Driver trip-wise summary fetched successfully",
+      driver,
+      driverId,
+      totalTrips: trips.length,
+      totalSelfAdvance: totalAdvance,
+      totalSelfAdvanceCount: totalAdvanceCount,
+      totalSelfExpense: totalExpense,
+      totalSelfExpenseCount: totalExpenseCount,
+      trips: detailedTrips
+    });
+  } catch (error) {
+    console.error("Error fetching driver trip summary:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+
 
 
 module.exports = {
@@ -1783,7 +1860,8 @@ module.exports = {
   uploadPodDocument,
   getDashboardData,
   deleteFleetAdvance,
-deleteSelfExpense
+deleteSelfExpense,
+getDriverSelfSummary
 
 
 };
