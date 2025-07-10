@@ -1252,36 +1252,25 @@ const getTripStats = catchAsync(async (req, res, next) => {
 
 const addFleetAdvance = async (req, res) => {
   const { tripId } = req.params;
-  const {
-    amount,
-    reason,
-    recipientType,
-    recipientName,
-    description,
-    referenceNumber,
-  } = req.body;
+  const { date, paymentType, reason, amount } = req.body;
 
   try {
     const trip = await Trip.findById(tripId);
     if (!trip) return res.status(404).json({ message: "Trip not found" });
 
     const newAdvance = {
-      amount,
+      date: date ? new Date(date) : new Date(),
+      paymentType,
       reason,
-      recipientType,
-      recipientName,
-      description,
-      referenceNumber,
-      date: new Date(),
+      amount,
     };
 
     trip.fleetAdvances.push(newAdvance);
     trip.totalFleetAdvance += amount;
 
-    // Save to trip
     await trip.save();
 
-    // Also update fleet owner's user record
+    // Update fleet owner’s record too
     if (
       trip.vehicleOwner &&
       trip.vehicleOwner.ownershipType === "fleet_owner" &&
@@ -1299,10 +1288,11 @@ const addFleetAdvance = async (req, res) => {
 
     res.status(200).json({ success: true, trip });
   } catch (err) {
-    console.log(err)
+    console.error(err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 const deleteFleetAdvance = async (req, res) => {
   const { tripId } = req.params;

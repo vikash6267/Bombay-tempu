@@ -640,31 +640,29 @@ const tripSchema = new mongoose.Schema(
       min: 0,
     },
 
-    fleetAdvances: [
-      {
-        amount: {
-          type: Number,
-          required: true,
-          min: 0,
-        },
-        reason: {
-          type: String,
-        },
-        recipientType: {
-          type: String,
-          enum: ["driver", "owner", "helper", "other"],
-        },
-        recipientName: {
-          type: String,
-        },
-        description: String,
-        referenceNumber: String,
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
+ fleetAdvances: [
+  {
+    amount: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    reason: {
+      type: String,
+      required: true,
+    },
+    paymentType: {
+      type: String,
+      enum: ["cash", "bank", "upi", "cheque"],
+      required: true,
+    },
+    date: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+],
+
 
     fleetExpenses: [
       {
