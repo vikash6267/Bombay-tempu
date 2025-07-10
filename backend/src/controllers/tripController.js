@@ -1535,6 +1535,60 @@ const addSelfAdvance = async (req, res) => {
 };
 
 
+const deleteSelfAdvance = async (req, res) => {
+  const { tripId } = req.params;
+  const { advanceIndex } = req.body;
+
+  try {
+    const trip = await Trip.findById(tripId);
+    if (!trip || !trip.selfAdvances?.[advanceIndex]) {
+      return res.status(404).json({ message: "Trip or advance not found" });
+    }
+
+    const advance = trip.selfAdvances[advanceIndex];
+
+    // Remove from driver history if applicable
+    if (advance.paymentFor === "driver" && trip.driver) {
+      await User.findByIdAndUpdate(trip.driver, {
+        $pull: {
+          advanceDriver: {
+            paidAt: advance.paidAt,
+            amount: advance.amount,
+          },
+        },
+      });
+    }
+
+    // Remove from vehicle history if applicable
+    if (advance.paymentFor === "vehicle" && trip.vehicle) {
+      await Vehicle.findByIdAndUpdate(trip.vehicle, {
+        $pull: {
+          vehicleAdvances: {
+            paidAt: advance.paidAt,
+            amount: advance.amount,
+          },
+        },
+      });
+    }
+
+    // Remove from trip
+    trip.selfAdvances.splice(advanceIndex, 1);
+    await trip.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Self advance deleted successfully",
+      trip,
+    });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+
 
 const updatePodDetails = async (req, res) => {
   const { id } = req.params; // Trip ID
@@ -1861,7 +1915,8 @@ module.exports = {
   getDashboardData,
   deleteFleetAdvance,
 deleteSelfExpense,
-getDriverSelfSummary
+getDriverSelfSummary,
+deleteSelfAdvance
 
 
 };

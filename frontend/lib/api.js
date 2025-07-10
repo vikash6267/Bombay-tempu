@@ -152,6 +152,7 @@ addFleetExpense: (id, data) => apiPost(`/trips/${id}/fleet-expense`, data), // ð
   addSelfExpense: (id, data) => apiPost(`/trips/${id}/self-expense`, data),
   deleteSelfExpense: (id, data) => apiPost(`/trips/${id}/del-self-expense`, data),
   addSelfAdvance: (id, data) => apiPost(`/trips/${id}/self-advance`, data),
+  deleteSelfAdvance: (id, data) => apiPost(`/trips/${id}/del-self-advance`, data),
     updatePodDetails: (id, data) => apiPut(`/trips/${id}/pod-details`, data),
     updatePodStatus: (id, data) => apiPut(`/trips/pod-status/${id}`, data),
     updatePodDocs: (id, data) => apiPost(`/trips/${id}/podDocument`, data),

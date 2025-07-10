@@ -68,6 +68,7 @@ router.post("/:tripId/fleet-expense",  tripController.addFleetExpense);
 router.post("/:tripId/self-expense", tripController.addSelfExpense);
 router.post("/:tripId/del-self-expense", tripController.deleteSelfExpense);
 router.post("/:tripId/self-advance", tripController.addSelfAdvance);
+router.post("/:tripId/del-self-advance", tripController.deleteSelfAdvance);
 // POD DETIALS
 router.put("/:id/pod-details", tripController.updatePodDetails);
 router.put("/pod-status/:tripId", tripController.updatePodStatus);

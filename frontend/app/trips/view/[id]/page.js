@@ -1150,6 +1150,20 @@ export default function TripDetailPage() {
     }
   };
 
+  const handleDeleteSelfAdvance = async (advanceIndex) => {
+  const confirmed = window.confirm("Are you sure you want to delete this self advance?");
+  if (!confirmed) return;
+
+  try {
+    const res = await tripsApi.deleteSelfAdvance(params.id, { advanceIndex });
+    toast.success("Advance deleted");
+    queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Failed to delete self advance");
+  }
+};
+
+
   // Self Owner Expense Handler
   const handleSelfExpenseSubmit = async values => {
     try {
@@ -2019,11 +2033,18 @@ export default function TripDetailPage() {
                                     )}
                                   </div>
                                 </div>
-                                <div className="text-right">
-                                  <div className="text-lg font-bold text-purple-600">
-                                    {formatCurrency(advance.amount)}
-                                  </div>
-                                </div>
+                              <div className="text-right">
+  <div className="text-lg font-bold text-purple-600">
+    {formatCurrency(advance.amount)}
+  </div>
+  <button
+    onClick={() => handleDeleteSelfAdvance(index)}
+    className="text-red-500 text-sm mt-2 hover:underline"
+  >
+    Delete
+  </button>
+</div>
+
                               </div>
                             ))}
                           </div>
