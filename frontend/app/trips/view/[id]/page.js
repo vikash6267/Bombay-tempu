@@ -730,6 +730,8 @@ function FleetAdvanceForm({ handleSubmit, open, onClose }) {
                         <SelectItem value="bank">🏦 Bank Transfer</SelectItem>
                         <SelectItem value="upi">📲 UPI</SelectItem>
                         <SelectItem value="cheque">📄 Cheque</SelectItem>
+                        <SelectItem value="fashtag"> Fashtag</SelectItem>
+                        <SelectItem value="disell-card"> Diesel Card</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -806,13 +808,7 @@ const tripSchema = z.object({
           "perishable",
           "liquid"
         ]),
-        packagingType: z.enum([
-          "boxes",
-          "bags",
-          "loose",
-          "pallets",
-          "containers"
-        ]),
+        packagingType: z.string(),
         specialInstructions: z.string().optional()
       }),
       rate: z.number().min(1, "Rate must be greater than 0"),

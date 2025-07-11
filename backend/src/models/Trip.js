@@ -45,8 +45,7 @@ const tripSchema = new mongoose.Schema(
           },
           weight: {
             type: Number,
-            required: [true, "Load weight is required"],
-            min: [0.1, "Weight must be at least 0.1 tons"],
+            
           },
           quantity: {
             type: Number,
@@ -60,8 +59,7 @@ const tripSchema = new mongoose.Schema(
           },
           packagingType: {
             type: String,
-            enum: ["boxes", "bags", "loose", "pallets", "containers"],
-            default: "boxes",
+                       default: "boxes",
           },
           specialInstructions: String,
         },
@@ -148,12 +146,11 @@ const tripSchema = new mongoose.Schema(
           },
           state: {
             type: String,
-            required: [true, "Origin state is required"],
+          
           },
           pincode: {
             type: String,
-            required: [true, "Origin pincode is required"],
-            match: [/^[0-9]{6}$/, "Please provide a valid 6-digit pincode"],
+          
           },
           coordinates: {
             latitude: Number,
@@ -195,15 +192,7 @@ const tripSchema = new mongoose.Schema(
             },
             pymentMathod: {
               type: String,
-              enum: [
-                "cash",
-                "bank_transfer",
-                "upi",
-                "rtgs",
-                "neft",
-                "imps",
-                "cheque",
-              ],
+             
               default: "cash",
               // required: true,
             },
@@ -653,7 +642,7 @@ const tripSchema = new mongoose.Schema(
     },
     paymentType: {
       type: String,
-      enum: ["cash", "bank", "upi", "cheque"],
+     
       required: true,
     },
     date: {

@@ -52,22 +52,13 @@ const createTripValidationSchema = (selectedVehicle) => {
           loadDetails: Yup.object({
             description: Yup.string().optional(),
             weight: Yup.number()
-              .min(0.1, "Weight must be at least 0.1 tons")
-              .required("Weight is required"),
+             ,
             quantity: Yup.number()
               .min(1, "Quantity must be at least 1")
               .required("Quantity is required"),
-            loadType: Yup.string()
-              .oneOf([
-                "general",
-                "fragile",
-                "hazardous",
-                "perishable",
-                "liquid",
-              ])
-              .required(),
+            loadType: Yup.string(),
             packagingType: Yup.string()
-              .oneOf(["boxes", "bags", "loose", "pallets", "containers"])
+              
               .required(),
             specialInstructions: Yup.string(),
           }),
@@ -180,24 +171,67 @@ const LoadTypeSelect = ({ value, onChange, error }) => (
   </div>
 );
 
-const PackagingTypeSelect = ({ value, onChange, error }) => (
-  <div>
-    <Label>Packaging *</Label>
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className={error ? "border-red-500" : ""}>
-        <SelectValue placeholder="Select packaging" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="boxes">Boxes</SelectItem>
-        <SelectItem value="bags">Bags</SelectItem>
-        <SelectItem value="loose">Loose</SelectItem>
-        <SelectItem value="pallets">Pallets</SelectItem>
-        <SelectItem value="containers">Containers</SelectItem>
-      </SelectContent>
-    </Select>
-    {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
-  </div>
-);
+const defaultOptions = [
+  { value: "boxes", label: "Boxes" },
+  { value: "bags", label: "Bags" },
+  { value: "loose", label: "Loose" },
+  { value: "pallets", label: "Pallets" },
+  { value: "containers", label: "Containers" },
+  { value: "add_new", label: "➕ Add New" },
+];
+
+const PackagingTypeSelect = ({ value, onChange, error }) => {
+  const [customValue, setCustomValue] = useState("");
+
+  useEffect(() => {
+    if (!defaultOptions.find((opt) => opt.value === value)) {
+      setCustomValue(value || "");
+    }
+  }, [value]);
+
+  const handleChange = (val) => {
+    if (val === "add_new") {
+      onChange("");
+    } else {
+      onChange(val);
+      setCustomValue("");
+    }
+  };
+
+  return (
+    <div>
+      <Label>Packaging *</Label>
+      <Select value={value && !customValue ? value : "add_new"} onValueChange={handleChange}>
+        <SelectTrigger className={error ? "border-red-500" : ""}>
+          <SelectValue placeholder="Select packaging" />
+        </SelectTrigger>
+        <SelectContent>
+          {defaultOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {value === "" || customValue ? (
+        <div className="mt-2">
+          <Input
+            placeholder="Enter custom packaging type"
+            value={customValue}
+            onChange={(e) => {
+              const val = e.target.value;
+              setCustomValue(val);
+              onChange(val);
+            }}
+          />
+        </div>
+      ) : null}
+
+      {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+};
 
 // Calculation Summary Component
 const CalculationSummary = ({
@@ -930,9 +964,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                                 >
                                                   <div className="flex flex-col">
                                                     <span>{client.name}</span>
-                                                    <span className="text-sm text-gray-500">
-                                                      {client.email}
-                                                    </span>
+                                                  
                                                   </div>
                                                 </SelectItem>
                                               ))
@@ -1166,27 +1198,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                         )}
                                       </div>
                                       <div>
-                                        <Label>Weight (tons) *</Label>
-                                        <Input
-                                          type="number"
-                                          step="0.1"
-                                          value={
-                                            formik.values.clients[index]
-                                              .loadDetails.weight
-                                          }
-                                          onChange={(e) =>
-                                            formik.setFieldValue(
-                                              `clients.${index}.loadDetails.weight`,
-                                              Number(e.target.value)
-                                            )
-                                          }
-                                          placeholder="0.0"
-                                          className={
-                                            clientErrors?.loadDetails?.weight
-                                              ? "border-red-500"
-                                              : ""
-                                          }
-                                        />
+                                      
                                         {clientErrors?.loadDetails?.weight && (
                                           <p className="text-sm text-red-500 mt-1">
                                             {clientErrors.loadDetails.weight}
@@ -1223,21 +1235,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                         )}
                                       </div>
 
-                                      <LoadTypeSelect
-                                        value={
-                                          formik.values.clients[index]
-                                            .loadDetails.loadType
-                                        }
-                                        onChange={(value) =>
-                                          formik.setFieldValue(
-                                            `clients.${index}.loadDetails.loadType`,
-                                            value
-                                          )
-                                        }
-                                        error={
-                                          clientErrors?.loadDetails?.loadType
-                                        }
-                                      />
+                                   
 
                                       <PackagingTypeSelect
                                         value={

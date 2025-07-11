@@ -182,11 +182,11 @@ const createTrip = catchAsync(async (req, res, next) => {
         status: { $in: ["booked", "in_progress"] },
       });
 
-      if (activeTrip) {
-        return next(
-          new AppError("Driver is already assigned to another active trip", 400)
-        );
-      }
+      // if (activeTrip) {
+      //   return next(
+      //     new AppError("Driver is already assigned to another active trip", 400)
+      //   );
+      // }
     }
 
     const { number: tripNumber } = await CounterService.getNext("trip");
@@ -387,11 +387,11 @@ const updateTrip = catchAsync(async (req, res, next) => {
           status: { $in: ["booked", "in_progress"] },
         });
 
-        if (activeTrip) {
-          return next(
-            new AppError("Driver is already assigned to another active trip", 400)
-          );
-        }
+        // if (activeTrip) {
+        //   return next(
+        //     new AppError("Driver is already assigned to another active trip", 400)
+        //   );
+        // }
 
         trip.driver = driver;
       } else {

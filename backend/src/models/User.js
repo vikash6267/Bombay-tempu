@@ -269,7 +269,7 @@ fleetAdvances: [
     },
     paymentType: {
       type: String,
-      enum: ["cash", "bank", "upi", "cheque"], // update as per your dropdown
+     
     },
     date: {
       type: Date,
