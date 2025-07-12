@@ -45,7 +45,6 @@ const tripSchema = new mongoose.Schema(
           },
           weight: {
             type: Number,
-            
           },
           quantity: {
             type: Number,
@@ -59,7 +58,7 @@ const tripSchema = new mongoose.Schema(
           },
           packagingType: {
             type: String,
-                       default: "boxes",
+            default: "boxes",
           },
           specialInstructions: String,
         },
@@ -146,11 +145,9 @@ const tripSchema = new mongoose.Schema(
           },
           state: {
             type: String,
-          
           },
           pincode: {
             type: String,
-          
           },
           coordinates: {
             latitude: Number,
@@ -192,7 +189,7 @@ const tripSchema = new mongoose.Schema(
             },
             pymentMathod: {
               type: String,
-             
+
               default: "cash",
               // required: true,
             },
@@ -394,25 +391,28 @@ const tripSchema = new mongoose.Schema(
       default: "booked",
     },
 
-
-
-   podManage: {
-  status: {
-    type: String,
-    enum: ["started", "complete", "pod_received", "pod_submitted", "settled"],
-    default: "started",
-  },
-  date: {
-    type: Date,
-    default: Date.now,
-  },
-  document: {
-    url: { type: String }, // optional
-    fileType: { type: String }, // optional (e.g., "pdf", "jpg")
-    uploadedAt: { type: Date }, // optional
-  },
-}
-,
+    podManage: {
+      status: {
+        type: String,
+        enum: [
+          "started",
+          "complete",
+          "pod_received",
+          "pod_submitted",
+          "settled",
+        ],
+        default: "started",
+      },
+      date: {
+        type: Date,
+        default: Date.now,
+      },
+      document: {
+        url: { type: String }, // optional
+        fileType: { type: String }, // optional (e.g., "pdf", "jpg")
+        uploadedAt: { type: Date }, // optional
+      },
+    },
     // Timeline
     timeline: {
       bookedAt: {
@@ -595,8 +595,6 @@ const tripSchema = new mongoose.Schema(
       ],
     },
 
-
-
     // Performance metrics
     actualDistance: Number,
     actualDuration: Number, // in hours
@@ -629,29 +627,28 @@ const tripSchema = new mongoose.Schema(
       min: 0,
     },
 
- fleetAdvances: [
-  {
-    amount: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-    reason: {
-      type: String,
-      required: true,
-    },
-    paymentType: {
-      type: String,
-     
-      required: true,
-    },
-    date: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-],
+    fleetAdvances: [
+      {
+        amount: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+        reason: {
+          type: String,
+          required: true,
+        },
+        paymentType: {
+          type: String,
 
+          required: true,
+        },
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
 
     fleetExpenses: [
       {

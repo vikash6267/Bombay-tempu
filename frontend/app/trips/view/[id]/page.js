@@ -105,26 +105,28 @@ const selfExpenseSchema = z.object({
     "food",
     "other"
   ]),
-  expenseFor: z.enum(
-    ["driver", "vehicle"],
-    "Please specify if this expense is for driver or vehicle"
-  ),
-  description: z.string().optional(),
-  receiptNumber: z.string().optional()
+  expenseFor: z.enum(["driver", "vehicle"], {
+    message: "Please specify if this expense is for driver or vehicle"
+  }),
+  paymentType: z.enum(["cash", "bank", "upi"], {
+    message: "Select a valid payment method"
+  }),
+  date: z.string().min(1, "Date is required"),
+  description: z.string().optional()
 })
+
 
 // Self Owner Advance Payment Form Schema
 const selfAdvanceSchema = z.object({
   amount: z.number().min(1, "Amount must be greater than 0"),
   reason: z.string().min(1, "Reason is required"),
-  paymentFor: z.enum(
-    ["driver", "vehicle"],
-    "Please specify if this payment is for driver or vehicle"
-  ),
-  recipientName: z.string().min(1, "Recipient name is required"),
-  description: z.string().optional(),
-  referenceNumber: z.string().optional()
+  paymentType: z.enum(["cash", "bank", "upi"], {
+    message: "Select a valid payment method"
+  }),
+  date: z.string().min(1, "Date is required"),
+  description: z.string().optional()
 })
+
 
 // Fleet Owner Expense Form Schema
 const fleetExpenseSchema = z.object({
@@ -161,8 +163,9 @@ function SelfExpenseForm({ handleSubmit, open, onClose }) {
       reason: "",
       category: "fuel",
       expenseFor: "vehicle",
-      description: "",
-      receiptNumber: ""
+      paymentType: "cash",
+      date: new Date().toISOString().split("T")[0],
+      description: ""
     }
   })
 
@@ -249,13 +252,9 @@ function SelfExpenseForm({ handleSubmit, open, onClose }) {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="fuel">⛽ Fuel</SelectItem>
-                        <SelectItem value="maintenance">
-                          🔧 Maintenance
-                        </SelectItem>
+                        <SelectItem value="maintenance">🔧 Maintenance</SelectItem>
                         <SelectItem value="toll">🛣️ Toll</SelectItem>
-                        <SelectItem value="driver_payment">
-                          👨‍💼 Driver Payment
-                        </SelectItem>
+                        <SelectItem value="driver_payment">👨‍💼 Driver Payment</SelectItem>
                         <SelectItem value="insurance">🛡️ Insurance</SelectItem>
                         <SelectItem value="permit">📋 Permit</SelectItem>
                         <SelectItem value="food">🍽️ Food</SelectItem>
@@ -269,22 +268,48 @@ function SelfExpenseForm({ handleSubmit, open, onClose }) {
 
               <FormField
                 control={form.control}
-                name="receiptNumber"
+                name="paymentType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Receipt Number (Optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter receipt/bill number"
-                        {...field}
-                        className="focus:ring-red-500 focus:border-red-500"
-                      />
-                    </FormControl>
+                    <FormLabel>Payment Type</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="focus:ring-red-500 focus:border-red-500">
+                          <SelectValue placeholder="Select payment method" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="cash">💵 Cash</SelectItem>
+                        <SelectItem value="bank">🏦 Bank</SelectItem>
+                        <SelectItem value="upi">📱 UPI</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      {...field}
+                      className="focus:ring-red-500 focus:border-red-500"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -337,6 +362,7 @@ function SelfExpenseForm({ handleSubmit, open, onClose }) {
   )
 }
 
+
 // Self Owner Advance Payment Form Component
 function SelfAdvanceForm({ handleSubmit, open, onClose }) {
   const form = useForm({
@@ -344,10 +370,9 @@ function SelfAdvanceForm({ handleSubmit, open, onClose }) {
     defaultValues: {
       amount: 0,
       reason: "",
-      paymentFor: "driver",
-      recipientName: "",
-      description: "",
-      referenceNumber: ""
+      paymentType: "cash",
+      date: new Date().toISOString().split("T")[0],
+      description: ""
     }
   })
 
@@ -392,22 +417,23 @@ function SelfAdvanceForm({ handleSubmit, open, onClose }) {
 
               <FormField
                 control={form.control}
-                name="paymentFor"
+                name="paymentType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Payment For</FormLabel>
+                    <FormLabel>Payment Type</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger className="focus:ring-green-500 focus:border-green-500">
-                          <SelectValue placeholder="Select payment type" />
+                          <SelectValue placeholder="Select payment mode" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="driver">👨‍💼 Driver</SelectItem>
-                        <SelectItem value="vehicle">🚛 Vehicle</SelectItem>
+                        <SelectItem value="cash">💵 Cash</SelectItem>
+                        <SelectItem value="bank">🏦 Bank Transfer</SelectItem>
+                        <SelectItem value="upi">📱 UPI</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -416,43 +442,23 @@ function SelfAdvanceForm({ handleSubmit, open, onClose }) {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="recipientName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Recipient Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter recipient name"
-                        {...field}
-                        className="focus:ring-green-500 focus:border-green-500"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="referenceNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reference Number (Optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter reference/transaction number"
-                        {...field}
-                        className="focus:ring-green-500 focus:border-green-500"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      {...field}
+                      className="focus:ring-green-500 focus:border-green-500"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -504,6 +510,8 @@ function SelfAdvanceForm({ handleSubmit, open, onClose }) {
     </Card>
   )
 }
+
+
 
 // Fleet Owner Expense Form Component
 function FleetExpenseForm({ handleSubmit, open, onClose }) {
