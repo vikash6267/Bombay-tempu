@@ -7,7 +7,7 @@ const upload = require("../middleware/upload");
 
 const router = express.Router();
 
-router.use(protect)
+// router.use(protect)
 router
   .route("/")
   .get(tripController.getAllTrips)
@@ -79,6 +79,8 @@ router.post(
 );
 
 router.get("/driver-summary/:driverId", tripController.getDriverSelfSummary);
+// In routes/trip.js or wherever appropriate
+router.get("/argestment/:clientId", tripController.getClientArgestment);
 
 
 module.exports = router;

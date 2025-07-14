@@ -26,6 +26,32 @@ exports.createExpense = async (req, res) => {
   }
 };
 
+
+exports.deleteExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleted = await Expense.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Expense not found or already deleted.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Expense deleted successfully.",
+      data: deleted,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error: " + error.message,
+    });
+  }
+};
 // ✅ Update Expense
 exports.updateExpense = async (req, res) => {
   try {

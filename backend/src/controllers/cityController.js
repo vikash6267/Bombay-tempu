@@ -461,20 +461,47 @@ const getAllCities = catchAsync(async (req, res, next) => {
   });
 });
 
-const addCity = catchAsync(async (req, res, next) => {
-  const {city, state, pincode} = req.body;
-  if (!city ) {
-    return res.status(400).json({message: "All fields are required"});
-  }
-  const newcity = await City.create(req.body);
+const addCity = async (req, res) => {
+  try {
+    let { city, state, pincode } = req.body;
 
-  res.status(201).json({
-    status: "success",
-    data: {
-      newcity,
-    },
-  });
-});
+    if (!city) {
+      return res.status(400).json({ message: "City name is required" });
+    }
+
+    // If no pincode provided, generate a unique one
+    if (!pincode) {
+      let isUnique = false;
+      while (!isUnique) {
+        const randomPincode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
+        const existing = await City.findOne({ pincode: randomPincode });
+        if (!existing) {
+          pincode = randomPincode;
+          isUnique = true;
+        }
+      }
+    }
+
+    const newCity = await City.create({ city, state, pincode });
+
+    res.status(201).json({
+      status: "success",
+      data: {
+        newCity,
+      },
+    });
+  } catch (error) {
+    console.error("Error adding city:", error);
+    res.status(500).json({
+      status: "error",
+      message: error.message || "Failed to add city",
+    });
+  }
+};
+  
+
+
+
 
 module.exports = {
   getAllCities,

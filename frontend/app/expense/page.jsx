@@ -37,7 +37,8 @@ import {
   Plus,
   Wallet,
   Receipt,
-  Calendar
+  Calendar,
+  Trash2
 } from "lucide-react"
 import {
   format,
@@ -66,6 +67,11 @@ export default function ExpenseDashboard() {
     paidAt: new Date().toISOString().split("T")[0]
   })
 
+
+
+  // const fetchVechile = async()=>{
+  //   vehiclesApi.getAll
+  // }
   const fetchExpenses = async () => {
     try {
       setLoading(true)
@@ -146,18 +152,19 @@ export default function ExpenseDashboard() {
   }, [expenses])
 
   // Common expense types for the create form
-  const commonExpenseTypes = [
-    "food",
-    "fuel",
-    "chai",
-    "transport",
-    "shopping",
-    "bills",
-    "entertainment",
-    "medical",
-    "education",
-    "other"
-  ]
+ const [commonExpenseTypes, setCommonExpenseTypes] = useState([
+  "food",
+  "fuel",
+  "chai",
+  "transport",
+  "shopping",
+  "bills",
+  "entertainment",
+  "medical",
+  "education",
+  "other"
+]);
+
 
   // Filter expenses based on selected filters
   const filteredExpenses = useMemo(() => {
@@ -258,6 +265,28 @@ export default function ExpenseDashboard() {
     return Object.entries(grouped).sort(([, a], [, b]) => b.total - a.total)
   }, [filteredExpenses])
 
+
+
+
+  const handleDeleteExpense = async (id) => {
+  const confirm = window.confirm("Are you sure you want to delete this expense?");
+  if (!confirm) return;
+
+  try {
+    const res = await expensesApi.delete(id);
+    console.log(res)
+    if (res.success) {
+      toast.success("Expense deleted.");
+      setExpenses((prev) => prev.filter((e) => e._id !== id));
+    } else {
+      toast.error(res.message || "Delete failed.");
+    }
+  } catch (err) {
+    toast.error("An error occurred while deleting.");
+    console.error(err);
+  }
+};
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -321,26 +350,43 @@ export default function ExpenseDashboard() {
                     }
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="type">Expense Type</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={value =>
-                      setFormData({ ...formData, type: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select expense type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {commonExpenseTypes.map(type => (
-                        <SelectItem key={type} value={type}>
-                          {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="grid gap-2">
+  <Label htmlFor="type">Expense Type</Label>
+  <Select
+    value={formData.type}
+    onValueChange={(value) => {
+      if (value === "add_new") {
+        const newType = prompt("Enter new expense type:");
+        if (newType) {
+          const formatted = newType.trim().toLowerCase();
+          if (!commonExpenseTypes.includes(formatted)) {
+            setCommonExpenseTypes((prev) => [...prev, formatted]);
+            setFormData({ ...formData, type: formatted });
+          } else {
+            setFormData({ ...formData, type: formatted });
+          }
+        }
+      } else {
+        setFormData({ ...formData, type: value });
+      }
+    }}
+  >
+    <SelectTrigger>
+      <SelectValue placeholder="Select expense type" />
+    </SelectTrigger>
+    <SelectContent>
+      {commonExpenseTypes.map((type) => (
+        <SelectItem key={type} value={type}>
+          {type.charAt(0).toUpperCase() + type.slice(1)}
+        </SelectItem>
+      ))}
+      <SelectItem value="add_new" className="text-blue-500">
+        ➕ Add new type
+      </SelectItem>
+    </SelectContent>
+  </Select>
+</div>
+
                 <div className="grid gap-2">
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea
@@ -611,7 +657,16 @@ export default function ExpenseDashboard() {
                     <div className="text-xs text-muted-foreground">
                       {format(parseISO(expense.createdAt), "HH:mm")}
                     </div>
+
+                       <button
+              className=" cursor-pointer p-1 rounded-full hover:bg-red-100 text-red-500"
+              onClick={() => handleDeleteExpense(expense._id)}
+              title="Delete"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
                   </div>
+                
                 </div>
               ))}
             </div>

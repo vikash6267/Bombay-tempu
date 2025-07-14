@@ -6,7 +6,7 @@ const citySchema = new mongoose.Schema(
     state: { type: String},
     pincode: {
       type: Number,
-      sparse: true, 
+
     },
   },
   { timestamps: true }

@@ -206,6 +206,7 @@ export const reportsApi = {
 
 export const expensesApi = {
   getAll: (params) => apiGet("/expenses/getAll", params),
+  delete: (params) => apiDelete(`/expenses/delete/${params}`, params),
   create: (data) => apiPost("/expenses/create", data),
   update: (id, data) => apiPatch(`/expenses/edit/${id}`, data),
 

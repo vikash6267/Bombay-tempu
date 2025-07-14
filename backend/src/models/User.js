@@ -136,6 +136,11 @@ const userSchema = new mongoose.Schema(
         return this.role === "fleet_owner" ? 10 : undefined;
       },
     },
+    totalPayArgestment: {
+      type: Number,
+      default:0
+    
+    },
     gstNumber: {
       type: String,
       validate: {

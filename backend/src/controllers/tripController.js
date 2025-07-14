@@ -1894,6 +1894,76 @@ const getDriverSelfSummary = async (req, res) => {
 
 
 
+const getClientArgestment = async (req, res) => {
+  const { clientId } = req.params;
+
+  if (!clientId) {
+    return res.status(400).json({ message: "Client ID is required" });
+  }
+
+  try {
+    const trips = await Trip.aggregate([
+      { $unwind: "$clients" },
+      { $match: { "clients.client": new mongoose.Types.ObjectId(clientId) } },
+      {
+        $lookup: {
+          from: "vehicles", // ✅ CORRECT: lowercase, plural
+          localField: "vehicle",
+          foreignField: "_id",
+          as: "vehicleInfo"
+        }
+      },
+      { $unwind: { path: "$vehicleInfo", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          tripNumber: 1,
+          loadDate: "$clients.loadDate",
+          argestment: "$clients.argestment",
+          origin: "$clients.origin.city",
+          destination: "$clients.destination.city",
+          vehicleNumber: "$vehicleInfo.registrationNumber"
+        }
+      }
+    ]);
+
+    const totalArgestment = trips.reduce((sum, trip) => sum + (trip.argestment || 0), 0);
+    const totalTripsWithArgestment = trips.filter(t => t.argestment > 0).length;
+
+    const client = await User.findById(clientId).select("name totalPayArgestment");
+
+    res.status(200).json({
+      success: true,
+      client: {
+        _id: client._id,
+        name: client.name,
+        totalPayArgestment: client.totalPayArgestment || 0,
+      },
+      summary: {
+        totalTrips: trips.length,
+        totalArgestment,
+        totalTripsWithArgestment,
+        totalPayArgestment: client.totalPayArgestment || 0,
+      },
+      trips: trips.map(trip => ({
+        tripNumber: trip.tripNumber,
+        vehicleNumber: trip.vehicleNumber || "N/A",
+        loadDate: trip.loadDate,
+        route: `${trip.origin} → ${trip.destination}`,
+        argestment: trip.argestment || 0,
+      })),
+    });
+
+  } catch (error) {
+    console.error("Error fetching client argestment:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Something went wrong",
+    });
+  }
+};
+
+
+
 module.exports = {
   getAllTrips,
   getTrip,
@@ -1922,7 +1992,8 @@ module.exports = {
   deleteFleetAdvance,
 deleteSelfExpense,
 getDriverSelfSummary,
-deleteSelfAdvance
+deleteSelfAdvance,
+getClientArgestment
 
 
 };

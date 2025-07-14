@@ -162,7 +162,7 @@ function SelfExpenseForm({ handleSubmit, open, onClose }) {
       amount: 0,
       reason: "",
       category: "fuel",
-      expenseFor: "vehicle",
+      expenseFor: "driver",
       paymentType: "cash",
       date: new Date().toISOString().split("T")[0],
       description: ""
@@ -208,7 +208,7 @@ function SelfExpenseForm({ handleSubmit, open, onClose }) {
                 )}
               />
 
-              <FormField
+              {/* <FormField
                 control={form.control}
                 name="expenseFor"
                 render={({ field }) => (
@@ -231,7 +231,7 @@ function SelfExpenseForm({ handleSubmit, open, onClose }) {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> */}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1296,6 +1296,44 @@ export default function TripDetailPage() {
       setIsUpdatingPOD(false)
     }
   }
+
+
+
+const handleStepBack = async () => {
+  if (isUpdatingPOD || currentIndex <= 0) return;
+
+  const previousStep = steps[currentIndex - 1];
+
+  setIsUpdatingPOD(true);
+
+  try {
+    const toastId = toast.loading(`Reverting to: ${previousStep.label}...`);
+
+    const data = await tripsApi.updatePodStatus(trip._id, {
+      status: previousStep.key
+    });
+
+    if (data.success) {
+      setCurrentIndex(currentIndex - 1);
+
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+
+      toast.dismiss(toastId);
+      toast.success(`🔙 Reverted to: ${previousStep.label}`);
+    } else {
+      toast.dismiss(toastId);
+      toast.error("Failed to revert POD status");
+    }
+  } catch (err) {
+    console.error("Error reverting POD status:", err);
+    toast.error("Something went wrong while reverting POD status");
+  } finally {
+    setIsUpdatingPOD(false);
+  }
+};
+
+
+
 
 
   const API_BASE_URL =
@@ -3026,7 +3064,59 @@ export default function TripDetailPage() {
                 </div>
 
                 {/* Action Buttons */}
+
+
+
                 <div className="flex items-center space-x-3">
+  {/* Back Button */}
+  {canManagePOD && currentIndex > 0 && (
+    <Button
+      onClick={handleStepBack}
+      disabled={isUpdatingPOD}
+      className="bg-gradient-to-r from-gray-400 to-gray-600 hover:from-gray-500 hover:to-gray-700 shadow-md px-6 py-2"
+    >
+      {isUpdatingPOD ? (
+        <>
+          <Clock className="w-4 h-4 mr-2 animate-spin" />
+          Reverting...
+        </>
+      ) : (
+        <>Back to: {steps[currentIndex - 1]?.label}</>
+      )}
+    </Button>
+  )}
+
+  {/* Forward Button */}
+  {canManagePOD && currentIndex < steps.length - 1 && (
+    <Button
+      onClick={handleStepClick}
+      disabled={isUpdatingPOD}
+      className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md px-6 py-2"
+    >
+      {isUpdatingPOD ? (
+        <>
+          <Clock className="w-4 h-4 mr-2 animate-spin" />
+          Updating...
+        </>
+      ) : (
+        <>Advance to: {steps[currentIndex + 1]?.label}</>
+      )}
+    </Button>
+  )}
+
+  {/* Completed Badge */}
+  {currentIndex === steps.length - 1 && (
+    <div className="flex items-center space-x-2">
+      <Badge className="bg-green-100 text-green-800 px-4 py-2 text-sm font-medium">
+        ✅ Trip Completed Successfully
+      </Badge>
+    </div>
+  )}
+</div>
+
+
+
+                {/* <div className="flex items-center space-x-3">
                   {canManagePOD && currentIndex < steps.length - 1 && (
                     <Button
                       onClick={handleStepClick}
@@ -3051,7 +3141,7 @@ export default function TripDetailPage() {
                       </Badge>
                     </div>
                   )}
-                </div>
+                </div> */}
               </div>
             </div>
 

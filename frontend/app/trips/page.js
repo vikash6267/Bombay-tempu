@@ -178,12 +178,12 @@ export default function TripsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Trip Number</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Vehicle</TableHead>
                   <TableHead>Route</TableHead>
                   <TableHead>Client</TableHead>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Balance</TableHead>
+                  {/* <TableHead>Balance</TableHead> */}
                   {/* <TableHead>Actions</TableHead>
                    */}
                 </TableRow>
@@ -200,6 +200,30 @@ export default function TripsPage() {
                         #{trip.tripNumber}
                       </Link>
                     </TableCell>
+
+
+                      <TableCell>
+                      <div className="flex items-center space-x-1 text-sm">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          {new Date(trip.scheduledDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </TableCell>
+
+
+  <TableCell>
+                      <div className="text-sm">
+                        <div className="font-medium">
+                          {trip.vehicle?.registrationNumber}
+                        </div>
+                        <div className="text-muted-foreground">
+                          {trip.driver?.name}
+                        </div>
+                      </div>
+                    </TableCell>
+
+
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <MapPin className="h-3 w-3" />
@@ -218,30 +242,14 @@ export default function TripsPage() {
                         : "N/A"}
                     </TableCell>
 
-                    <TableCell>
-                      <div className="text-sm">
-                        <div className="font-medium">
-                          {trip.vehicle?.registrationNumber}
-                        </div>
-                        <div className="text-muted-foreground">
-                          {trip.driver?.name}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1 text-sm">
-                        <Calendar className="h-3 w-3" />
-                        <span>
-                          {new Date(trip.scheduledDate).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </TableCell>
+                  
+                  
                     <TableCell>
                       <TripStatusBadge status={trip.status} />
                     </TableCell>
-                    <TableCell className="text-destructive">
+                    {/* <TableCell className="text-destructive">
                       ₹{trip.balanceAmount?.toLocaleString()}
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell>
                       {/* <DropdownMenu>
                         <DropdownMenuTrigger asChild>
