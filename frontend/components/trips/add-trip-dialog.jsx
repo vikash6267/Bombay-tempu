@@ -41,6 +41,7 @@ import { getErrorMessage } from "@/lib/utils";
 import { useSelector } from "react-redux";
 import { AddVehicleDialog } from "components/vehicles/add-vehicle-dialog";
 import { AddUserDialog } from "./add-user-dialog";
+import CommissionSelector from "./CommissionSelector";
 
 const createTripValidationSchema = (selectedVehicle) => {
   const isSelfOwned = selectedVehicle?.ownershipType === "self";
@@ -817,29 +818,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                               )}
                             </div>
 
-                            <div>
-                              <Label>Commission *</Label>
-                              <Input
-                                type="number"
-                                value={formik.values.commission}
-                                onChange={(e) =>
-                                  formik.setFieldValue(
-                                    "commission",
-                                    e.target.value
-                                  )
-                                }
-                                className={
-                                  formik.errors.commission
-                                    ? "border-red-500"
-                                    : ""
-                                }
-                              />
-                              {formik.errors.commission && (
-                                <p className="text-sm text-red-500 mt-1">
-                                  {formik.errors.commission}
-                                </p>
-                              )}
-                            </div>
+                       <CommissionSelector formik={formik}  />
 
                             <div>
                               <Label>POD Balance *</Label>

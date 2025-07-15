@@ -35,7 +35,7 @@ export function APaymentForm({handleSubmit, open, index}) {
     initialValues: {
       amount: 0,
       pymentMathod: "cash",
-      paidTo: "",
+      paidTo: "admin",
       paidAt: new Date(),
       purpose: "general",
       notes: "",
@@ -104,24 +104,7 @@ export function APaymentForm({handleSubmit, open, index}) {
             <p className="text-sm text-red-500">{formik.errors.pymentMathod}</p>
           )}
         </div>
-        {/* Paid To Field */}
-        <div>
-          <Label>Paid To</Label>
-          <Select
-            onValueChange={(value) => formik.setFieldValue("paidTo", value)}
-            value={formik.values.paidTo}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select recipient" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="driver">Driver</SelectItem>
-              <SelectItem value="admin">admin</SelectItem>
-            </SelectContent>
-          </Select>
-          {formik.errors.paidTo && (
-            <p className="text-sm text-red-500">{formik.errors.paidTo}</p>
-          )}
-        </div>
+      
         {/* Purpose Field */}
         <div>
           <Label>Purpose</Label>

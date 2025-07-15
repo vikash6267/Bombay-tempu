@@ -238,7 +238,7 @@ export function AddPaymentDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="paidTo">Paid To *</Label>
+                <Label htmlFor="paidTo">Paid   *</Label>
                 <Select
                   value={formik.values.paidTo}
                   onValueChange={(value) =>
