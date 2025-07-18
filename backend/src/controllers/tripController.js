@@ -1642,6 +1642,17 @@ const updatePodStatus = async (req, res) => {
     console.log(req.body)
     const trip = await Trip.findById(tripId)
 
+
+    if(status === "booked" || status === "in_progress"){
+        if (trip.vehicle) {
+        await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "booked" });
+      }
+      trip.status = "booked"
+      // ✅ Make driver available
+      if (trip.driver) {
+        await User.findByIdAndUpdate(trip.driver, { status: "booked" });
+      }
+    }
     if (status === "complete") {
       // ✅ Make vehicle available
       if (trip.vehicle) {
@@ -1961,7 +1972,34 @@ const getClientArgestment = async (req, res) => {
     });
   }
 };
+const payClientAdjustment = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const { amount } = req.body;
 
+    if (!amount || isNaN(amount)) {
+      return res.status(400).json({ success: false, message: "Valid amount is required." });
+    }
+
+    const user = await User.findById(clientId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Client not found." });
+    }
+
+    // Update or append payment logic
+    user.totalPayArgestment += Number(amount); // or += amount if cumulative
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Pay adjustment saved successfully.",
+      totalPayArgestment: user.totalPayArgestment,
+    });
+  } catch (error) {
+    console.error("payClientAdjustment error:", error);
+    res.status(500).json({ success: false, message: "Server error: " + error.message });
+  }
+};
 
 
 module.exports = {
@@ -1993,7 +2031,8 @@ module.exports = {
 deleteSelfExpense,
 getDriverSelfSummary,
 deleteSelfAdvance,
-getClientArgestment
+getClientArgestment,
+payClientAdjustment
 
 
 };

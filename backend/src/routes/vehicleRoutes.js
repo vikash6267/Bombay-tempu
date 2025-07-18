@@ -386,5 +386,6 @@ router.post("/:id/documents", upload.single("file"), vehicleController.uploadDoc
  *         description: Maintenance records retrieved successfully
  */
 router.get("/:id/maintenance", vehicleController.getMaintenanceRecords)
+router.get("/:vehicleId/finace", vehicleController.getVehicleMonthlyFinance)
 
 module.exports = router

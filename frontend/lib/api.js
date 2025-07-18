@@ -109,6 +109,11 @@ export const usersApi = {
   deactivate: (id) => apiPatch(`/users/${id}/deactivate`),
   userDetails: (id) => apiGet(`/auth/trip-balances/${id}`),
   driverDetails: (id) => apiGet(`/trips/driver-summary/${id}`),
+    getAdujstmetn: (clientId) => apiGet(`/trips/argestment/${clientId}`),
+    payAdjustment: (clientId, amount) =>
+  apiPatch(`/trips/argestment/${clientId}/pay`, { amount }),
+
+
 
 };
 
@@ -126,6 +131,9 @@ export const vehiclesApi = {
     apiGet("/vehicles/expiring-documents", params),
   getEMIDue: () => apiGet("/vehicles/emi-due"),
   getExpenses: (id) => apiGet(`/auth/${id}/expenses`),
+
+  getFinace: (id, params) => apiGet(`/vehicles/${id}/finace`, params),
+
 };
 
 // Trips API

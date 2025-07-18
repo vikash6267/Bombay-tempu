@@ -1,24 +1,24 @@
-"use client"
-import { useState, useEffect, useMemo } from "react"
+"use client";
+import { useState, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
-} from "@/components/ui/card"
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
-} from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -26,8 +26,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
-} from "@/components/ui/dialog"
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   CalendarDays,
   DollarSign,
@@ -38,8 +38,8 @@ import {
   Wallet,
   Receipt,
   Calendar,
-  Trash2
-} from "lucide-react"
+  Trash2,
+} from "lucide-react";
 import {
   format,
   startOfWeek,
@@ -47,189 +47,211 @@ import {
   startOfMonth,
   endOfMonth,
   isWithinInterval,
-  parseISO
-} from "date-fns"
-import { expensesApi } from "@/lib/api"
-import { toast } from "sonner"
-import { DashboardLayout } from "components/layout/dashboard-layout"
+  parseISO,
+} from "date-fns";
+import { expensesApi } from "@/lib/api";
+import { toast } from "sonner";
+import { DashboardLayout } from "components/layout/dashboard-layout";
+import { vehiclesApi } from "lib/api";
 
 export default function ExpenseDashboard() {
-  const [expenses, setExpenses] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [selectedType, setSelectedType] = useState("all")
-  const [selectedPeriod, setSelectedPeriod] = useState("all")
-  const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [createLoading, setCreateLoading] = useState(false)
+  const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedType, setSelectedType] = useState("all");
+  const [selectedPeriod, setSelectedPeriod] = useState("all");
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
   const [formData, setFormData] = useState({
     amount: "",
     type: "",
     notes: "",
-    paidAt: new Date().toISOString().split("T")[0]
-  })
+    paidAt: new Date().toISOString().split("T")[0],
+  });
 
+  const [ownVehicles, setOwnVehicles] = useState([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
 
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const res = await vehiclesApi.getAll();
+        const allVehicles = res?.data?.vehicles || [];
 
-  // const fetchVechile = async()=>{
-  //   vehiclesApi.getAll
-  // }
+        // Filter vehicles where ownershipType === "self"
+        const ownedOnly = allVehicles.filter((v) => v.ownershipType === "self");
+
+        setOwnVehicles(ownedOnly);
+        console.log("Self-owned vehicles:", ownedOnly);
+      } catch (error) {
+        console.error("Error fetching vehicles:", error);
+      }
+    };
+
+    fetchVehicles();
+  }, []);
+
   const fetchExpenses = async () => {
     try {
-      setLoading(true)
-      const res = await expensesApi.getAll()
-      console.log("API Response:", res)
+      setLoading(true);
+      const res = await expensesApi.getAll();
+      console.log("API Response:", res);
 
       if (res.success) {
-        setExpenses(res.data)
+        setExpenses(res.data);
       }
     } catch (err) {
-      console.error("Failed to fetch expenses", err)
+      console.error("Failed to fetch expenses", err);
       toast({
         title: "Error",
         description: "Failed to fetch expenses. Please try again.",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleCreateExpense = async () => {
     try {
-      setCreateLoading(true)
+      setCreateLoading(true);
 
       if (!formData.amount || !formData.type || !formData.notes) {
         toast({
           title: "Validation Error",
           description: "Please fill in all required fields.",
-          variant: "destructive"
-        })
-        return
+          variant: "destructive",
+        });
+        return;
       }
 
       const expenseData = {
         amount: Number.parseFloat(formData.amount),
         type: formData.type,
         notes: formData.notes,
-        paidAt: new Date(formData.paidAt).toISOString()
-      }
+        paidAt: new Date(formData.paidAt).toISOString(),
+        ...(formData.type === "vehicle" &&
+          selectedVehicleId && {
+            vehicleId: selectedVehicleId,
+          }),
+      };
 
-      const res = await expensesApi.create(expenseData)
+      const res = await expensesApi.create(expenseData);
 
       if (res.success) {
         toast({
           title: "Success",
-          description: "Expense created successfully!"
-        })
-        setCreateModalOpen(false)
+          description: "Expense created successfully!",
+        });
+        setCreateModalOpen(false);
         setFormData({
           amount: "",
           type: "",
           notes: "",
-          paidAt: new Date().toISOString().split("T")[0]
-        })
-        fetchExpenses() // Refresh the list
+          paidAt: new Date().toISOString().split("T")[0],
+        });
+        fetchExpenses(); // Refresh the list
       }
     } catch (err) {
-      console.error("Failed to create expense", err)
+      console.error("Failed to create expense", err);
       toast({
         title: "Error",
         description: "Failed to create expense. Please try again.",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setCreateLoading(false)
+      setCreateLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchExpenses()
-  }, [])
+    fetchExpenses();
+  }, []);
 
   // Get unique expense types
   const expenseTypes = useMemo(() => {
-    const types = [...new Set(expenses.map(expense => expense.type))]
-    return [...types.sort(), "other"]
-  }, [expenses])
+    const types = [...new Set(expenses.map((expense) => expense.type))];
+    return [...types.sort(), "other"];
+  }, [expenses]);
 
   // Common expense types for the create form
- const [commonExpenseTypes, setCommonExpenseTypes] = useState([
-  "food",
-  "fuel",
-  "chai",
-  "transport",
-  "shopping",
-  "bills",
-  "entertainment",
-  "medical",
-  "education",
-  "other"
-]);
-
+  const [commonExpenseTypes, setCommonExpenseTypes] = useState([
+    "food",
+    "fuel",
+    "chai",
+    "transport",
+    "shopping",
+    "bills",
+    "entertainment",
+    "medical",
+    "education",
+    "vehicle",
+    "other",
+  ]);
 
   // Filter expenses based on selected filters
   const filteredExpenses = useMemo(() => {
-    let filtered = expenses
+    let filtered = expenses;
 
     // Filter by type
     if (selectedType !== "all") {
       if (selectedType === "other") {
-        const knownTypes = expenseTypes.filter(type => type !== "other")
+        const knownTypes = expenseTypes.filter((type) => type !== "other");
         filtered = filtered.filter(
-          expense => !knownTypes.includes(expense.type)
-        )
+          (expense) => !knownTypes.includes(expense.type)
+        );
       } else {
-        filtered = filtered.filter(expense => expense.type === selectedType)
+        filtered = filtered.filter((expense) => expense.type === selectedType);
       }
     }
 
     // Filter by period
     if (selectedPeriod !== "all") {
-      const now = new Date()
-      let dateRange
+      const now = new Date();
+      let dateRange;
 
       switch (selectedPeriod) {
         case "week":
           dateRange = {
             start: startOfWeek(now),
-            end: endOfWeek(now)
-          }
-          break
+            end: endOfWeek(now),
+          };
+          break;
         case "month":
           dateRange = {
             start: startOfMonth(now),
-            end: endOfMonth(now)
-          }
-          break
+            end: endOfMonth(now),
+          };
+          break;
         default:
-          return filtered
+          return filtered;
       }
 
-      filtered = filtered.filter(expense => {
-        const expenseDate = parseISO(expense.paidAt)
-        return isWithinInterval(expenseDate, dateRange)
-      })
+      filtered = filtered.filter((expense) => {
+        const expenseDate = parseISO(expense.paidAt);
+        return isWithinInterval(expenseDate, dateRange);
+      });
     }
 
     return filtered.sort(
       (a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime()
-    )
-  }, [expenses, selectedType, selectedPeriod, expenseTypes])
+    );
+  }, [expenses, selectedType, selectedPeriod, expenseTypes]);
 
   // Calculate summaries
   const summaries = useMemo(() => {
-    const now = new Date()
-    const weekRange = { start: startOfWeek(now), end: endOfWeek(now) }
-    const monthRange = { start: startOfMonth(now), end: endOfMonth(now) }
+    const now = new Date();
+    const weekRange = { start: startOfWeek(now), end: endOfWeek(now) };
+    const monthRange = { start: startOfMonth(now), end: endOfMonth(now) };
 
-    const weeklyExpenses = expenses.filter(expense => {
-      const expenseDate = parseISO(expense.paidAt)
-      return isWithinInterval(expenseDate, weekRange)
-    })
+    const weeklyExpenses = expenses.filter((expense) => {
+      const expenseDate = parseISO(expense.paidAt);
+      return isWithinInterval(expenseDate, weekRange);
+    });
 
-    const monthlyExpenses = expenses.filter(expense => {
-      const expenseDate = parseISO(expense.paidAt)
-      return isWithinInterval(expenseDate, monthRange)
-    })
+    const monthlyExpenses = expenses.filter((expense) => {
+      const expenseDate = parseISO(expense.paidAt);
+      return isWithinInterval(expenseDate, monthRange);
+    });
 
     return {
       total: expenses.reduce((sum, expense) => sum + expense.amount, 0),
@@ -246,46 +268,45 @@ export default function ExpenseDashboard() {
         total: expenses.length,
         weekly: weeklyExpenses.length,
         monthly: monthlyExpenses.length,
-        filtered: filteredExpenses.length
-      }
-    }
-  }, [expenses, filteredExpenses])
+        filtered: filteredExpenses.length,
+      },
+    };
+  }, [expenses, filteredExpenses]);
 
   // Group expenses by type for summary
   const expensesByType = useMemo(() => {
     const grouped = filteredExpenses.reduce((acc, expense) => {
       if (!acc[expense.type]) {
-        acc[expense.type] = { count: 0, total: 0 }
+        acc[expense.type] = { count: 0, total: 0 };
       }
-      acc[expense.type].count += 1
-      acc[expense.type].total += expense.amount
-      return acc
-    }, {})
+      acc[expense.type].count += 1;
+      acc[expense.type].total += expense.amount;
+      return acc;
+    }, {});
 
-    return Object.entries(grouped).sort(([, a], [, b]) => b.total - a.total)
-  }, [filteredExpenses])
-
-
-
+    return Object.entries(grouped).sort(([, a], [, b]) => b.total - a.total);
+  }, [filteredExpenses]);
 
   const handleDeleteExpense = async (id) => {
-  const confirm = window.confirm("Are you sure you want to delete this expense?");
-  if (!confirm) return;
+    const confirm = window.confirm(
+      "Are you sure you want to delete this expense?"
+    );
+    if (!confirm) return;
 
-  try {
-    const res = await expensesApi.delete(id);
-    console.log(res)
-    if (res.success) {
-      toast.success("Expense deleted.");
-      setExpenses((prev) => prev.filter((e) => e._id !== id));
-    } else {
-      toast.error(res.message || "Delete failed.");
+    try {
+      const res = await expensesApi.delete(id);
+      console.log(res);
+      if (res.success) {
+        toast.success("Expense deleted.");
+        setExpenses((prev) => prev.filter((e) => e._id !== id));
+      } else {
+        toast.error(res.message || "Delete failed.");
+      }
+    } catch (err) {
+      toast.error("An error occurred while deleting.");
+      console.error(err);
     }
-  } catch (err) {
-    toast.error("An error occurred while deleting.");
-    console.error(err);
-  }
-};
+  };
 
   if (loading) {
     return (
@@ -297,7 +318,7 @@ export default function ExpenseDashboard() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -345,47 +366,81 @@ export default function ExpenseDashboard() {
                     type="number"
                     placeholder="Enter amount"
                     value={formData.amount}
-                    onChange={e =>
+                    onChange={(e) =>
                       setFormData({ ...formData, amount: e.target.value })
                     }
                   />
                 </div>
-              <div className="grid gap-2">
-  <Label htmlFor="type">Expense Type</Label>
-  <Select
-    value={formData.type}
-    onValueChange={(value) => {
-      if (value === "add_new") {
-        const newType = prompt("Enter new expense type:");
-        if (newType) {
-          const formatted = newType.trim().toLowerCase();
-          if (!commonExpenseTypes.includes(formatted)) {
-            setCommonExpenseTypes((prev) => [...prev, formatted]);
-            setFormData({ ...formData, type: formatted });
-          } else {
-            setFormData({ ...formData, type: formatted });
-          }
-        }
-      } else {
-        setFormData({ ...formData, type: value });
-      }
-    }}
-  >
-    <SelectTrigger>
-      <SelectValue placeholder="Select expense type" />
-    </SelectTrigger>
-    <SelectContent>
-      {commonExpenseTypes.map((type) => (
-        <SelectItem key={type} value={type}>
-          {type.charAt(0).toUpperCase() + type.slice(1)}
-        </SelectItem>
-      ))}
-      <SelectItem value="add_new" className="text-blue-500">
-        ➕ Add new type
-      </SelectItem>
-    </SelectContent>
-  </Select>
-</div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="type">Expense Type</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value) => {
+                      if (value === "add_new") {
+                        const newType = prompt("Enter new expense type:");
+                        if (newType) {
+                          const formatted = newType.trim().toLowerCase();
+                          if (!commonExpenseTypes.includes(formatted)) {
+                            setCommonExpenseTypes((prev) => [
+                              ...prev,
+                              formatted,
+                            ]);
+                          }
+                          setFormData({ ...formData, type: formatted });
+                        }
+                      } else {
+                        setFormData({ ...formData, type: value });
+                        if (value !== "vehicle") {
+                          setSelectedVehicleId(""); // clear selection if not vehicle
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select expense type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {commonExpenseTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="add_new" className="text-blue-500">
+                        ➕ Add new type
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.type === "vehicle" && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="vehicle">Select Vehicle</Label>
+                    <select
+                      id="vehicle"
+                      className="border rounded p-2"
+                      value={selectedVehicleId}
+                      onChange={(e) => setSelectedVehicleId(e.target.value)}
+                    >
+                      <option value="">-- Select Vehicle --</option>
+                      {ownVehicles.map((vehicle) => (
+                        <option key={vehicle._id} value={vehicle._id}>
+                          {vehicle.registrationNumber} ({vehicle.vehicleType})
+                        </option>
+                      ))}
+                    </select>
+
+                    {selectedVehicleId && (
+                      <p className="text-sm text-muted-foreground">
+                        Selected:{" "}
+                        {
+                          ownVehicles.find((v) => v._id === selectedVehicleId)
+                            ?.registrationNumber
+                        }
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid gap-2">
                   <Label htmlFor="notes">Notes</Label>
@@ -393,7 +448,7 @@ export default function ExpenseDashboard() {
                     id="notes"
                     placeholder="Add notes about this expense"
                     value={formData.notes}
-                    onChange={e =>
+                    onChange={(e) =>
                       setFormData({ ...formData, notes: e.target.value })
                     }
                   />
@@ -404,7 +459,7 @@ export default function ExpenseDashboard() {
                     id="paidAt"
                     type="date"
                     value={formData.paidAt}
-                    onChange={e =>
+                    onChange={(e) =>
                       setFormData({ ...formData, paidAt: e.target.value })
                     }
                   />
@@ -538,7 +593,7 @@ export default function ExpenseDashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  {expenseTypes.map(type => (
+                  {expenseTypes.map((type) => (
                     <SelectItem key={type} value={type}>
                       {type.charAt(0).toUpperCase() + type.slice(1)}
                     </SelectItem>
@@ -628,7 +683,7 @@ export default function ExpenseDashboard() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredExpenses.map(expense => (
+              {filteredExpenses.map((expense) => (
                 <div
                   key={expense._id}
                   className="flex items-center justify-between p-4 border rounded-xl hover:shadow-md transition-all duration-200 bg-gradient-to-r from-background to-muted/20"
@@ -658,15 +713,14 @@ export default function ExpenseDashboard() {
                       {format(parseISO(expense.createdAt), "HH:mm")}
                     </div>
 
-                       <button
-              className=" cursor-pointer p-1 rounded-full hover:bg-red-100 text-red-500"
-              onClick={() => handleDeleteExpense(expense._id)}
-              title="Delete"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+                    <button
+                      className=" cursor-pointer p-1 rounded-full hover:bg-red-100 text-red-500"
+                      onClick={() => handleDeleteExpense(expense._id)}
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
-                
                 </div>
               ))}
             </div>
@@ -674,5 +728,5 @@ export default function ExpenseDashboard() {
         </CardContent>
       </Card>
     </DashboardLayout>
-  )
+  );
 }

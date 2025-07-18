@@ -1,12 +1,121 @@
 
 
 const Vehicle = require("../models/Vehicle");
+const Trip = require("../models/Trip");
 const User = require("../models/User");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const APIFeatures = require("../utils/apiFeatures");
 const cloudinary = require("../utils/cloudinary");
 const { default: mongoose } = require("mongoose");
+
+
+
+const getVehicleMonthlyFinance = async (req, res) => {
+  try {
+    const { vehicleId } = req.params;
+    const { month } = req.query;
+
+    if (!vehicleId || !mongoose.Types.ObjectId.isValid(vehicleId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid vehicleId is required.",
+      });
+    }
+
+    // 1. Parse month
+    let monthStart, monthEnd;
+    if (month) {
+      const [year, mon] = month.split("-");
+      if (!year || !mon) {
+        return res.status(400).json({
+          success: false,
+          message: "Month format must be YYYY-MM",
+        });
+      }
+      monthStart = new Date(`${year}-${mon}-01T00:00:00.000Z`);
+      monthEnd = new Date(new Date(monthStart).setMonth(monthStart.getMonth() + 1));
+    }
+
+    // 2. Fetch Vehicle
+    const vehicle = await Vehicle.findById(vehicleId);
+    console.log(vehicle)
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: "Vehicle not found.",
+      });
+    }
+
+    // 3. Filter Expenses
+    const expenses = vehicle.vehicleExpenseHistoryMain || [];
+    const filteredExpenses = month
+      ? expenses.filter((e) => {
+          const date = new Date(e.paidAt);
+          return date >= monthStart && date < monthEnd;
+        })
+      : expenses;
+
+    const totalExpense = filteredExpenses.reduce(
+      (sum, e) => sum + (e.amount || 0),
+      0
+    );
+
+    // 4. Fetch Trips based on scheduledDate
+    const tripQuery = {
+      vehicle: vehicleId,
+    };
+
+    if (monthStart && monthEnd) {
+      tripQuery.scheduledDate = { $gte: monthStart, $lt: monthEnd };
+    }
+
+    const trips = await Trip.find(tripQuery).select(
+      "tripNumber timeline scheduledDate totalClientAmount rate"
+    );
+
+    console.log(trips)
+    // 5. Compute Income
+    let totalIncome = 0;
+    const incomeDetails = [];
+
+    for (const trip of trips) {
+      const amount =
+        trip?.totalClientAmount ??
+        trip?.rate ??
+        0;
+
+      totalIncome += amount;
+
+      incomeDetails.push({
+        tripId: trip._id,
+        tripNumber: trip.tripNumber,
+        amount,
+        date: trip.scheduledDate || trip.createdAt,
+      });
+    }
+
+    // 6. Respond
+    res.status(200).json({
+      success: true,
+      vehicleId,
+      month: month || "all",
+      totalIncome,
+      totalExpense,
+      incomeDetails,
+      expenseDetails: filteredExpenses,
+    });
+  } catch (error) {
+    console.error("getVehicleMonthlyFinance error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error: " + error.message,
+    });
+  }
+};
+
+
+
 
 const getAllVehicles = catchAsync(async (req, res, next) => {
   const filter = {};
@@ -531,4 +640,5 @@ module.exports = {
   getEMIDueVehicles,
   getVehiclesByOwnership,
   getVehicleExpenseTotal,
+  getVehicleMonthlyFinance
 };

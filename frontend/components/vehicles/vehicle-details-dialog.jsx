@@ -9,6 +9,7 @@ import { DollarSign, Filter, Fuel, Truck, User, Wrench } from "lucide-react"
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { useEffect, useState } from "react"
 import { vehiclesApi } from "lib/api"
+import VehicleFinanceSummary from "./FinaceVechile"
 
 export function VehicleDetailsDialog({ open, onOpenChange, vehicle }) {
   if (!vehicle) return null
@@ -222,7 +223,7 @@ const filteredExpenses =
           </TabsContent>
 
            <TabsContent value="expenses" className="space-y-4">
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Wrench className="h-5 w-5" />
@@ -278,7 +279,10 @@ const filteredExpenses =
             </ul>
           )}
         </CardContent>
-      </Card>
+      </Card> */}
+
+      <VehicleFinanceSummary vehicleId={vehicle?._id}/>
+
     </TabsContent>
         </Tabs>
       </DialogContent>

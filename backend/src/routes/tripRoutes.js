@@ -82,5 +82,6 @@ router.get("/driver-summary/:driverId", tripController.getDriverSelfSummary);
 // In routes/trip.js or wherever appropriate
 router.get("/argestment/:clientId", tripController.getClientArgestment);
 
+router.patch("/argestment/:clientId/pay", tripController.payClientAdjustment);
 
 module.exports = router;

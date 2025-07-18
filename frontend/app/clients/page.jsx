@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
@@ -14,55 +13,33 @@ import {
   User,
   CalendarDays,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
 } from "lucide-react"
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { DataTable } from "@/components/ui/data-table"
 import { StatementTable } from "./clientstatment"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { usersApi } from "@/lib/api"
 import { useSelector } from "react-redux"
+import ClientAdjustmentPanel from "./ClientAdjustmentPanel"
 
 export default function ClientsPage() {
   const router = useRouter()
-  const { user } = useSelector(state => state.auth)
+  const { user } = useSelector((state) => state.auth)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClient, setSelectedClient] = useState(null)
   const [clientTrips, setClientTrips] = useState([])
   const [apiResponse, setApiResponse] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLoadingTrips, setIsLoadingTrips] = useState(false)
-
   // Filter states
   const [dateFrom, setDateFrom] = useState(null)
   const [dateTo, setDateTo] = useState(null)
@@ -71,28 +48,25 @@ export default function ClientsPage() {
 
   const { data: clientsData, isLoading } = useQuery({
     queryKey: ["users", "clients"],
-    queryFn: () => usersApi.getAll({ role: "client" })
+    queryFn: () => usersApi.getAll({ role: "client" }),
   })
-
   const clients = clientsData?.data?.users || []
 
   const filteredClients = clients.filter(
-    client =>
+    (client) =>
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchTerm.toLowerCase())
+      client.email.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   // Filter and sort trips based on date and amount filters
   const filteredAndSortedTrips = useMemo(() => {
     let filtered = [...clientTrips]
-
     // Date filtering
     if (dateFrom || dateTo) {
-      filtered = filtered.filter(trip => {
+      filtered = filtered.filter((trip) => {
         const tripDate = new Date(trip.tripDate)
         const fromDate = dateFrom ? new Date(dateFrom) : null
         const toDate = dateTo ? new Date(dateTo) : null
-
         if (fromDate && toDate) {
           return tripDate >= fromDate && tripDate <= toDate
         } else if (fromDate) {
@@ -103,51 +77,33 @@ export default function ClientsPage() {
         return true
       })
     }
-
     // Amount filtering/sorting
     if (amountFilter === "highest") {
-      filtered.sort(
-        (a, b) =>
-          (b.clientTripDetails?.balance || 0) -
-          (a.clientTripDetails?.balance || 0)
-      )
+      filtered.sort((a, b) => (b.clientTripDetails?.balance || 0) - (a.clientTripDetails?.balance || 0))
     } else if (amountFilter === "lowest") {
-      filtered.sort(
-        (a, b) =>
-          (a.clientTripDetails?.balance || 0) -
-          (b.clientTripDetails?.balance || 0)
-      )
+      filtered.sort((a, b) => (a.clientTripDetails?.balance || 0) - (b.clientTripDetails?.balance || 0))
     }
-
     return filtered
   }, [clientTrips, dateFrom, dateTo, amountFilter])
 
   // Calculate summary statistics
   const tripSummary = useMemo(() => {
     const totalTrips = filteredAndSortedTrips.length
-    const totalPending = filteredAndSortedTrips.reduce(
-      (sum, trip) => sum + (trip.clientTripDetails?.balance || 0),
-      0
-    )
-    const totalAdvance = filteredAndSortedTrips.reduce(
-      (sum, trip) => sum + (trip.clientTripDetails?.advance || 0),
-      0
-    )
-
+    const totalPending = filteredAndSortedTrips.reduce((sum, trip) => sum + (trip.clientTripDetails?.balance || 0), 0)
+    const totalAdvance = filteredAndSortedTrips.reduce((sum, trip) => sum + (trip.clientTripDetails?.advance || 0), 0)
     return {
       totalTrips,
       totalPending,
-      totalAdvance
+      totalAdvance,
     }
   }, [filteredAndSortedTrips])
 
-  const handleViewDetails = async clientId => {
+  const handleViewDetails = async (clientId) => {
     try {
       setIsLoadingTrips(true)
       const res = await usersApi.userDetails(clientId)
       console.log("API Response:", res)
-
-      const client = clients.find(c => c._id === clientId)
+      const client = clients.find((c) => c._id === clientId)
       setSelectedClient(client)
       setApiResponse(res)
       setClientTrips(res.tripBalances || [])
@@ -159,7 +115,7 @@ export default function ClientsPage() {
     }
   }
 
-  const handleTripClick = tripId => {
+  const handleTripClick = (tripId) => {
     router.push(`/trips/view/${tripId}`)
     setIsModalOpen(false)
   }
@@ -170,49 +126,58 @@ export default function ClientsPage() {
     setAmountFilter("all")
   }
 
-  const formatDate = dateString => {
+  const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
-      year: "numeric"
+      year: "numeric",
     })
   }
 
-  const formatCurrency = amount => {
+  const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-      minimumFractionDigits: 0
+      minimumFractionDigits: 0,
     }).format(amount)
   }
+
+  const [selectedClientId, setSelectedClientId] = useState(null)
+  // const [openClientId, setOpenClientId] = useState(null); // This state is not used and can be removed
 
   const columns = [
     {
       accessorKey: "name",
-      header: "Name"
+      header: "Name",
     },
     {
       accessorKey: "email",
-      header: "Email"
+      header: "Email",
     },
     {
       accessorKey: "phone",
-      header: "Phone"
+      header: "Phone",
     },
     {
-      accessorKey: "active",
-      header: "Status",
-      cell: ({ row }) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs ${
-            row.getValue("active")
-              ? "bg-green-100 text-green-800"
-              : "bg-red-100 text-red-800"
-          }`}
-        >
-          {row.getValue("active") ? "Active" : "Inactive"}
-        </span>
-      )
+      accessorKey: "adjustment",
+      header: "Actions",
+    },
+    {
+      id: "adjustment-button", // Changed to unique id
+      header: "Adjustment",
+      cell: ({ row }) => {
+        const client = row.original
+        const isOpen = selectedClientId === client._id
+        return (
+          <Button
+            variant={isOpen ? "destructive" : "outline"}
+            size="sm"
+            onClick={() => setSelectedClientId(isOpen ? null : client._id)}
+          >
+            {isOpen ? "Close Adjustment" : "View Adjustment"}
+          </Button>
+        )
+      },
     },
     {
       id: "actions",
@@ -225,8 +190,8 @@ export default function ClientsPage() {
         >
           View Statement
         </Button>
-      )
-    }
+      ),
+    },
   ]
 
   return (
@@ -234,12 +199,8 @@ export default function ClientsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Clients
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Manage your client database and statements
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Clients</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your client database and statements</p>
           </div>
           {user?.role === "admin" && (
             <Button onClick={() => router.push("/clients/new")}>
@@ -248,13 +209,10 @@ export default function ClientsPage() {
             </Button>
           )}
         </div>
-
         <Card>
           <CardHeader>
             <CardTitle>All Clients</CardTitle>
-            <CardDescription>
-              A list of all registered clients with statement access
-            </CardDescription>
+            <CardDescription>A list of all registered clients with statement access</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2 mb-4">
@@ -263,7 +221,7 @@ export default function ClientsPage() {
                 <Input
                   placeholder="Search clients..."
                   value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -272,14 +230,9 @@ export default function ClientsPage() {
                 Filter
               </Button>
             </div>
-            <DataTable
-              columns={columns}
-              data={filteredClients}
-              loading={isLoading}
-            />
+            <DataTable columns={columns} data={filteredClients} loading={isLoading} />
           </CardContent>
         </Card>
-
         {/* Client Statement Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className=" max-h-[95vh] overflow-y-auto min-w-[66%]">
@@ -290,11 +243,8 @@ export default function ClientsPage() {
                 </div>
                 {selectedClient?.name} - Trip Statement
               </DialogTitle>
-              <DialogDescription>
-                Trip details with filtering and summary information
-              </DialogDescription>
+              <DialogDescription>Trip details with filtering and summary information</DialogDescription>
             </DialogHeader>
-
             {isLoadingTrips ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -309,29 +259,23 @@ export default function ClientsPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-gray-600">Total Trips</p>
-                          <p className="text-2xl font-bold">
-                            {tripSummary.totalTrips}
-                          </p>
+                          <p className="text-2xl font-bold">{tripSummary.totalTrips}</p>
                         </div>
                         <Truck className="h-8 w-8 text-blue-500" />
                       </div>
                     </CardContent>
                   </Card>
-
                   <Card>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-gray-600">Total Pending</p>
-                          <p className="text-2xl font-bold text-red-600">
-                            {formatCurrency(tripSummary.totalPending)}
-                          </p>
+                          <p className="text-2xl font-bold text-red-600">{formatCurrency(tripSummary.totalPending)}</p>
                         </div>
                         <IndianRupee className="h-8 w-8 text-red-500" />
                       </div>
                     </CardContent>
                   </Card>
-
                   <Card>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
@@ -346,17 +290,12 @@ export default function ClientsPage() {
                     </CardContent>
                   </Card>
                 </div>
-
                 {/* Filters */}
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">Filters</CardTitle>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowFilters(!showFilters)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
                         <Filter className="h-4 w-4 mr-2" />
                         {showFilters ? "Hide" : "Show"} Filters
                       </Button>
@@ -367,19 +306,12 @@ export default function ClientsPage() {
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         {/* Date From */}
                         <div>
-                          <label className="text-sm font-medium mb-2 block">
-                            From Date
-                          </label>
+                          <label className="text-sm font-medium mb-2 block">From Date</label>
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="w-full justify-start bg-transparent"
-                              >
+                              <Button variant="outline" className="w-full justify-start bg-transparent">
                                 <CalendarDays className="h-4 w-4 mr-2" />
-                                {dateFrom
-                                  ? formatDate(dateFrom)
-                                  : "Select date"}
+                                {dateFrom ? formatDate(dateFrom) : "Select date"}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
@@ -392,42 +324,25 @@ export default function ClientsPage() {
                             </PopoverContent>
                           </Popover>
                         </div>
-
                         {/* Date To */}
                         <div>
-                          <label className="text-sm font-medium mb-2 block">
-                            To Date
-                          </label>
+                          <label className="text-sm font-medium mb-2 block">To Date</label>
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="w-full justify-start bg-transparent"
-                              >
+                              <Button variant="outline" className="w-full justify-start bg-transparent">
                                 <CalendarDays className="h-4 w-4 mr-2" />
                                 {dateTo ? formatDate(dateTo) : "Select date"}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
-                              <CalendarComponent
-                                mode="single"
-                                selected={dateTo}
-                                onSelect={setDateTo}
-                                initialFocus
-                              />
+                              <CalendarComponent mode="single" selected={dateTo} onSelect={setDateTo} initialFocus />
                             </PopoverContent>
                           </Popover>
                         </div>
-
                         {/* Amount Filter */}
                         <div>
-                          <label className="text-sm font-medium mb-2 block">
-                            Amount Filter
-                          </label>
-                          <Select
-                            value={amountFilter}
-                            onValueChange={setAmountFilter}
-                          >
+                          <label className="text-sm font-medium mb-2 block">Amount Filter</label>
+                          <Select value={amountFilter} onValueChange={setAmountFilter}>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
@@ -448,14 +363,9 @@ export default function ClientsPage() {
                             </SelectContent>
                           </Select>
                         </div>
-
                         {/* Clear Filters */}
                         <div className="flex items-end">
-                          <Button
-                            variant="outline"
-                            onClick={clearFilters}
-                            className="w-full bg-transparent"
-                          >
+                          <Button variant="outline" onClick={clearFilters} className="w-full bg-transparent">
                             Clear Filters
                           </Button>
                         </div>
@@ -463,7 +373,6 @@ export default function ClientsPage() {
                     </CardContent>
                   )}
                 </Card>
-
                 {/* Statement Card */}
                 {apiResponse?.statement && (
                   <Card>
@@ -481,19 +390,14 @@ export default function ClientsPage() {
                     </CardContent>
                   </Card>
                 )}
-
                 <Separator />
-
                 {/* Trips List Section */}
                 <div>
                   <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                     <Truck className="h-5 w-5" />
                     Trip Details ({filteredAndSortedTrips.length} trips)
-                    {(dateFrom || dateTo || amountFilter !== "all") && (
-                      <Badge variant="secondary">Filtered</Badge>
-                    )}
+                    {(dateFrom || dateTo || amountFilter !== "all") && <Badge variant="secondary">Filtered</Badge>}
                   </h3>
-
                   {filteredAndSortedTrips.length === 0 ? (
                     <Card>
                       <CardContent className="py-8">
@@ -514,7 +418,7 @@ export default function ClientsPage() {
                     </Card>
                   ) : (
                     <div className="grid gap-3">
-                      {filteredAndSortedTrips.map(trip => (
+                      {filteredAndSortedTrips.map((trip) => (
                         <Card
                           key={trip.tripId}
                           className="cursor-pointer hover:shadow-md transition-all hover:bg-gray-50 dark:hover:bg-gray-800 border-l-4 border-l-blue-500"
@@ -527,84 +431,52 @@ export default function ClientsPage() {
                                 <div className="flex items-center space-x-2">
                                   <Calendar className="h-4 w-4 text-blue-500" />
                                   <div>
-                                    <p className="text-xs text-gray-500">
-                                      Trip Date
-                                    </p>
-                                    <p className="font-medium">
-                                      {formatDate(trip.tripDate)}
-                                    </p>
+                                    <p className="text-xs text-gray-500">Trip Date</p>
+                                    <p className="font-medium">{formatDate(trip.tripDate)}</p>
                                   </div>
                                 </div>
-
                                 {/* Vehicle */}
                                 <div className="flex items-center space-x-2">
                                   <Truck className="h-4 w-4 text-green-500" />
                                   <div>
-                                    <p className="text-xs text-gray-500">
-                                      Vehicle
-                                    </p>
-                                    <p className="font-medium">
-                                      {trip.vehicleNumber}
-                                    </p>
+                                    <p className="text-xs text-gray-500">Vehicle</p>
+                                    <p className="font-medium">{trip.vehicleNumber}</p>
                                   </div>
                                 </div>
-
                                 {/* Destination */}
                                 <div className="flex items-center space-x-2">
                                   <MapPin className="h-4 w-4 text-red-500" />
                                   <div>
-                                    <p className="text-xs text-gray-500">
-                                      Destination
-                                    </p>
+                                    <p className="text-xs text-gray-500">Destination</p>
                                     <p className="font-medium">
-                                      {
-                                        trip.clientTripDetails?.destination
-                                          ?.city
-                                      }
-                                      ,{" "}
-                                      {
-                                        trip.clientTripDetails?.destination
-                                          ?.state
-                                      }
+                                      {trip.clientTripDetails?.destination?.city},{" "}
+                                      {trip.clientTripDetails?.destination?.state}
                                     </p>
                                   </div>
                                 </div>
-
                                 {/* Status */}
                                 <div>
-                                  <p className="text-xs text-gray-500">
-                                    Status
-                                  </p>
-                                  <Badge
-                                    variant="outline"
-                                    className="capitalize"
-                                  >
+                                  <p className="text-xs text-gray-500">Status</p>
+                                  <Badge variant="outline" className="capitalize">
                                     {trip.tripStatus}
                                   </Badge>
                                 </div>
                               </div>
-
                               {/* Balance */}
                               <div className="flex items-center space-x-2">
                                 <IndianRupee className="h-4 w-4 text-orange-500" />
                                 <div className="text-right">
-                                  <p className="text-xs text-gray-500">
-                                    Trip Balance
-                                  </p>
+                                  <p className="text-xs text-gray-500">Trip Balance</p>
                                   <p className="font-bold text-lg text-red-600">
-                                    {formatCurrency(
-                                      trip.clientTripDetails?.balance || 0
-                                    )}
+                                    {formatCurrency(trip.clientTripDetails?.balance || 0)}
                                   </p>
                                 </div>
                               </div>
                             </div>
-
                             {/* Trip Number */}
                             <div className="mt-3 pt-3 border-t">
                               <p className="text-sm text-gray-600">
-                                <span className="font-medium">Trip ID:</span>{" "}
-                                {trip.tripNumber}
+                                <span className="font-medium">Trip ID:</span> {trip.tripNumber}
                               </p>
                             </div>
                           </CardContent>
@@ -617,6 +489,18 @@ export default function ClientsPage() {
             )}
           </DialogContent>
         </Dialog>
+        {/* Client Adjustment Panel Dialog */}
+        {selectedClientId && (
+          <Dialog open={!!selectedClientId} onOpenChange={(isOpen) => !isOpen && setSelectedClientId(null)}>
+            <DialogContent className="max-h-[95vh] overflow-y-auto min-w-[66%]">
+              <DialogHeader>
+                <DialogTitle>Client Adjustment</DialogTitle>
+                <DialogDescription>Manage financial adjustments for this client.</DialogDescription>
+              </DialogHeader>
+              <ClientAdjustmentPanel clientId={selectedClientId} />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </DashboardLayout>
   )

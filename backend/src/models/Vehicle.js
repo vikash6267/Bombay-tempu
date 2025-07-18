@@ -113,6 +113,18 @@ const vehicleSchema = new mongoose.Schema(
       },
     },
 
+    vehicleExpenseHistoryMain: [
+      {
+        amount: Number,
+        reason: String,
+        category: String,
+        expenseFor: String,
+        description: String,
+        receiptNumber: String,
+        paidAt: Date,
+      },
+    ],
+
     vehicleAdvances: [vehicleAdvanceSchema],
     vehicleExpenseHistory: [vehicleExpenseSchema],
 
@@ -149,7 +161,7 @@ const vehicleSchema = new mongoose.Schema(
       },
       name: {
         type: String,
-         function () {
+        function() {
           return this.ownershipType === "self";
         },
       },
