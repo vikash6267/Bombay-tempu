@@ -1791,6 +1791,9 @@ const getDashboardData = async (req, res) => {
         if (Array.isArray(trip.selfExpenses)) {
           totalTripExpenses += trip.selfExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
         }
+          if (Array.isArray(trip.selfAdvances)) {
+          totalTripExpenses += trip.selfAdvances.reduce((sum, adv) => sum + (adv.amount || 0), 0);
+        }
       }
     });
 
