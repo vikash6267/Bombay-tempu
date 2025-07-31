@@ -31,302 +31,206 @@ const tripSchema = new mongoose.Schema(
     },
 
     // Multiple Clients Support
-    clients: [
+   clients: [
+  {
+    client: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      required: [true, "Client is required"],
+    },
+    loadDetails: {
+      description: { type: String, required: true },
+      weight: { type: Number },
+      quantity: { type: Number, default: 1, min: 1 },
+      loadType: {
+        type: String,
+        enum: ["general", "fragile", "hazardous", "perishable", "liquid"],
+        default: "general",
+      },
+      packagingType: { type: String, default: "boxes" },
+      specialInstructions: String,
+    },
+    rate: { type: Number, required: true, min: 0 },
+    paidAmount: { type: Number, default: 0, min: 0 },
+    dueAmount: { type: Number, default: 0, min: 0 },
+    totalExpense: { type: Number, default: 0, min: 0 },
+    totalRate: { type: Number, default: 0, min: 0 },
+    commission: { type: Number, default: 0, min: 0 },
+    truckHireCost: { type: Number, default: 0, min: 0 },
+    invoiceGenerated: { type: Boolean, default: false },
+    invoiceNumber: String,
+    invoiceDate: Date,
+    invoiceDocument: String, // URL
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "partial", "completed"],
+      default: "pending",
+    },
+    argestment: { 
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    loadNumber: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    loadDate: { type: Date, default: Date.now },
+    // Origin and destination
+    origin: {
+      city: { type: String, required: true },
+      state: String,
+      pincode: String,
+      coordinates: {
+        latitude: Number,
+        longitude: Number,
+      },
+    },
+    destination: {
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      pincode: {
+        type: String,
+        required: true,
+        match: [/^[0-9]{6}$/, "Please provide a valid 6-digit pincode"],
+      },
+      coordinates: {
+        latitude: Number,
+        longitude: Number,
+      },
+    },
+    advances: [
       {
-        client: {
-          type: mongoose.Schema.ObjectId,
-          ref: "User",
-          required: [true, "Client is required"],
-        },
-        loadDetails: {
-          description: {
-            type: String,
-            required: [true, "Load description is required"],
-          },
-          weight: {
-            type: Number,
-          },
-          quantity: {
-            type: Number,
-            default: 1,
-            min: 1,
-          },
-          loadType: {
-            type: String,
-            enum: ["general", "fragile", "hazardous", "perishable", "liquid"],
-            default: "general",
-          },
-          packagingType: {
-            type: String,
-            default: "boxes",
-          },
-          specialInstructions: String,
-        },
-        rate: {
-          type: Number,
-          required: [true, "Client rate is required"],
-          min: [0, "Client rate must be positive"],
-        },
-        paidAmount: {
-          type: Number,
-          default: 0,
-          min: 0,
-        },
-        dueAmount: {
-          type: Number,
-          default: 0,
-          min: 0,
-        },
-        totalExpense: {
-          type: Number,
-          default: 0,
-          min: 0,
-        },
-        totalRate: {
-          type: Number,
-          default: 0,
-          min: 0,
-        },
-
-        commission: {
-          type: Number,
-          default: 0,
-          min: 0,
-        },
-        truckHireCost: {
-          type: Number,
-          default: 0,
-          min: 0,
-        },
-        invoiceGenerated: {
-          type: Boolean,
-          default: false,
-        },
-        invoiceNumber: String,
-        invoiceDate: Date,
-        invoiceDocument: String, // URL to invoice document
-        paymentStatus: {
+        amount: { type: Number, required: true, min: 0 },
+        paidBy: {
           type: String,
-          enum: ["pending", "partial", "completed"],
-          default: "pending",
+          enum: ["client", "admin"],
+          default: "client",
         },
-        paidAmount: {
-          type: Number,
-          default: 0,
-          min: 0,
-        },
-        argestment: {
-          type: Number,
-          default: 0,
-          min: 0,
-        },
-        dueAmount: {
-          type: Number,
-          default: 0,
-          min: 0,
-        },
-        // Additional fields for client's load
-        loadNumber: {
+        pymentMathod : { // corrected spelling
           type: String,
-          unique: true,
-          sparse: true,
-          // required: [true, "Load number is required"],
+          default: "cash",
         },
-        loadDate: {
-          type: Date,
-          default: Date.now,
-        },
-
-        // Origin and destination for this load
-        origin: {
-          city: {
-            type: String,
-            required: [true, "Origin city is required"],
-          },
-          state: {
-            type: String,
-          },
-          pincode: {
-            type: String,
-          },
-          coordinates: {
-            latitude: Number,
-            longitude: Number,
-          },
-        },
-        destination: {
-          city: {
-            type: String,
-            required: [true, "Destination city is required"],
-          },
-          state: {
-            type: String,
-            required: [true, "Destination state is required"],
-          },
-          pincode: {
-            type: String,
-            required: [true, "Destination pincode is required"],
-            match: [/^[0-9]{6}$/, "Please provide a valid 6-digit pincode"],
-          },
-          coordinates: {
-            latitude: Number,
-            longitude: Number,
-          },
-        },
-        // Advance payments
-        advances: [
-          {
-            amount: {
-              type: Number,
-              required: true,
-              min: 0,
-            },
-            paidBy: {
-              type: String,
-              enum: ["client", "admin"],
-              default: "client",
-              // required: true,
-            },
-            pymentMathod: {
-              type: String,
-
-              default: "cash",
-              // required: true,
-            },
-            paidTo: {
-              type: String,
-              enum: ["driver", "admin"],
-              required: true,
-            },
-            paidAt: {
-              type: Date,
-              default: Date.now,
-            },
-            purpose: {
-              type: String,
-              enum: ["fuel", "toll", "loading", "general", "advances"],
-              default: "general",
-            },
-            notes: String,
-          },
-        ],
-        // Expenses
-        expenses: [
-          {
-            type: {
-              type: String,
-              required: true,
-            },
-            amount: {
-              type: Number,
-              required: true,
-              min: 0,
-            },
-            description: String,
-            receipt: String, // URL to receipt image
-            paidBy: {
-              type: String,
-              enum: ["driver", "admin"],
-              required: true,
-            },
-            paidAt: {
-              type: Date,
-              default: Date.now,
-            },
-          },
-        ],
-        // Enhanced Documents with POD
-        documents: {
-          loadingReceipt: {
-            url: String,
-            uploadedAt: Date,
-            uploadedBy: {
-              type: mongoose.Schema.ObjectId,
-              ref: "User",
-            },
-          },
-          deliveryReceipt: {
-            url: String,
-            uploadedAt: Date,
-            uploadedBy: {
-              type: mongoose.Schema.ObjectId,
-              ref: "User",
-            },
-          },
-          // Proof of Delivery (POD) - Critical for trip completion
-          proofOfDelivery: {
-            url: String,
-            uploadedAt: Date,
-            uploadedBy: {
-              type: mongoose.Schema.ObjectId,
-              ref: "User",
-            },
-            verifiedBy: {
-              type: mongoose.Schema.ObjectId,
-              ref: "User",
-            },
-            verifiedAt: Date,
-            status: {
-              type: String,
-              enum: ["pending", "verified", "rejected"],
-              default: "pending",
-            },
-            rejectionReason: String,
-          },
-          invoices: [
-            {
-              clientId: {
-                type: mongoose.Schema.ObjectId,
-                ref: "User",
-              },
-              url: String,
-              invoiceNumber: String,
-              type: {
-                type: String,
-                enum: ["client_invoice", "vehicle_owner_invoice"],
-              },
-              uploadedAt: Date,
-            },
-          ],
-          photos: [
-            {
-              url: String,
-              description: String,
-              uploadedAt: Date,
-              uploadedBy: {
-                type: mongoose.Schema.ObjectId,
-                ref: "User",
-              },
-            },
-          ],
-        },
-        // Status tracking
-        status: {
+        paidTo: {
           type: String,
-          enum: [
-            "booked",
-            "in_progress",
-            "completed",
-            "cancelled",
-            "billed",
-            "paid",
-          ],
-          default: "booked",
+          enum: ["driver", "admin"],
+          required: true,
         },
-        // Timeline
-        timeline: {
-          bookedAt: {
-            type: Date,
-            default: Date.now,
-          },
-          startedAt: Date,
-          completedAt: Date,
-          billedAt: Date,
-          paidAt: Date,
-          cancelledAt: Date,
+        paidAt: { type: Date, default: Date.now },
+        purpose: {
+          type: String,
+          enum: ["fuel", "toll", "loading", "general", "advances"],
+          default: "general",
         },
+        notes: String,
       },
     ],
+    expenses: [
+      {
+        type: { type: String, required: true },
+        amount: { type: Number, required: true, min: 0 },
+        description: String,
+        receipt: String, // URL
+        paidBy: {
+          type: String,
+          enum: ["driver", "admin"],
+          required: true,
+        },
+        paidAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    // *** Yahan se per-client documents & podManage ***
+    documents: {
+      loadingReceipt: {
+        url: String,
+        uploadedAt: Date,
+        uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+      },
+      deliveryReceipt: {
+        url: String,
+        uploadedAt: Date,
+        uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+      },
+      proofOfDelivery: {
+        url: String,
+        uploadedAt: Date,
+        uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+        verifiedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+        verifiedAt: Date,
+        status: {
+          type: String,
+          enum: ["pending", "verified", "rejected"],
+          default: "pending",
+        },
+        rejectionReason: String,
+      },
+      invoices: [
+        {
+          clientId: { type: mongoose.Schema.ObjectId, ref: "User" },
+          url: String,
+          invoiceNumber: String,
+          type: {
+            type: String,
+            enum: ["client_invoice", "vehicle_owner_invoice"],
+          },
+          uploadedAt: Date,
+        },
+      ],
+      photos: [
+        {
+          url: String,
+          description: String,
+          uploadedAt: Date,
+          uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+        },
+      ],
+    },
+    podManage: {
+      status: {
+        type: String,
+        enum: [
+          "started",
+          "complete",
+          "pod_received",
+          "pod_submitted",
+          "settled",
+        ],
+        default: "started",
+      },
+      date: { type: Date, default: Date.now },
+      document: {
+        url: { type: String }, // optional
+        fileType: { type: String }, // optional (pdf, jpg, etc.)
+        uploadedAt: { type: Date },
+      },
+    },
+    // Status tracking
+    status: {
+      type: String,
+      enum: [
+        "booked",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "billed",
+        "paid",
+      ],
+      default: "booked",
+    },
+    // Timeline
+    timeline: {
+      bookedAt: { type: Date, default: Date.now },
+      startedAt: Date,
+      completedAt: Date,
+      billedAt: Date,
+      paidAt: Date,
+      cancelledAt: Date,
+    },
+  }
+],
+
 
     selfExpenses: [selfExpenseSchema],
     selfAdvances: [selfAdvanceSchema],

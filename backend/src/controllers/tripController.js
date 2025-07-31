@@ -436,115 +436,6 @@ const updateTrip = catchAsync(async (req, res, next) => {
 });
 
 
-const updateTripStatus = catchAsync(async (req, res, next) => {
-  const { status } = req.body;
-  const filter = { _id: req.params.id };
-
-  // Apply role-based filtering and status change permissions
-  switch (req.user.role) {
-    case "driver":
-      filter.driver = req.user.id;
-      // Drivers can only change status from booked to in_progress
-      if (!["in_progress"].includes(status)) {
-        return next(new AppError("Drivers can only start trips", 403));
-      }
-      break;
-    case "fleet_owner":
-      filter["vehicleOwner.ownerId"] = req.user.id;
-      filter["vehicleOwner.ownershipType"] = "fleet_owner";
-      break;
-    case "client":
-      filter["clients.client"] = req.user.id;
-      // Clients can only cancel booked trips
-      if (status !== "cancelled") {
-        return next(new AppError("Clients can only cancel trips", 403));
-      }
-      break;
-    // admin can change any status
-  }
-
-  const trip = await Trip.findOne(filter);
-  if (!trip) {
-    return next(new AppError("No trip found with that ID", 404));
-  }
-
-  // Validate status transitions
-  const validTransitions = {
-    booked: ["in_progress", "cancelled"],
-    in_progress: ["completed", "cancelled"], // Note: completed requires POD
-    completed: ["billed"],
-    billed: ["paid"],
-    cancelled: [],
-    paid: [],
-  };
-
-  if (!validTransitions[trip.status].includes(status)) {
-    return next(
-      new AppError(`Cannot change status from ${trip.status} to ${status}`, 400)
-    );
-  }
-
-  // Special handling for completion - requires POD
-  if (status === "completed") {
-    if (
-      !trip.documents.proofOfDelivery ||
-      !trip.documents.proofOfDelivery.url
-    ) {
-      return next(
-        new AppError(
-          "Proof of Delivery (POD) is required to complete the trip",
-          400
-        )
-      );
-    }
-
-    if (trip.documents.proofOfDelivery.status !== "verified") {
-      // Auto-verify POD if uploaded by admin or if admin is updating status
-      if (req.user.role === "admin") {
-        await trip.verifyPODAndComplete(req.user.id);
-      } else {
-        return next(
-          new AppError("POD must be verified before trip can be completed", 400)
-        );
-      }
-    } else {
-      // Update trip status
-      await trip.updateStatus(status, req.user.id);
-    }
-  } else {
-    // Update trip status
-    await trip.updateStatus(status, req.user.id);
-  }
-
-  // Update vehicle status based on trip status
-  if (status === "completed" || status === "cancelled") {
-    await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
-  }
-
-  // Send notifications for completed trips
-  if (status === "completed") {
-    try {
-      // Notify all clients
-      for (const clientData of trip.clients) {
-        const client = await User.findById(clientData.client);
-        await new Email(client, "").sendTripNotification(
-          trip,
-          "trip_completed"
-        );
-      }
-    } catch (error) {
-      console.error("Error sending completion notification:", error);
-    }
-  }
-
-  res.status(200).json({
-    status: "success",
-    data: {
-      trip,
-    },
-  });
-});
-
 const uploadPOD = catchAsync(async (req, res, next) => {
   if (!req.file) {
     return next(new AppError("Please upload a POD file", 400));
@@ -552,13 +443,12 @@ const uploadPOD = catchAsync(async (req, res, next) => {
 
   const filter = { _id: req.params.id };
 
-  // Apply role-based filtering - only driver and admin can upload POD
+  // Role based filter (driver/admin)
   switch (req.user.role) {
     case "driver":
       filter.driver = req.user.id;
       break;
     case "admin":
-      // Admin can upload POD for any trip
       break;
     default:
       return next(new AppError("Only drivers and admin can upload POD", 403));
@@ -569,40 +459,65 @@ const uploadPOD = catchAsync(async (req, res, next) => {
     return next(new AppError("No trip found with that ID", 404));
   }
 
-  // Check if trip is in progress
   if (trip.status !== "in_progress") {
     return next(
       new AppError("POD can only be uploaded for trips in progress", 400)
     );
   }
 
+  // ---------- UPDATED START ----------
+  const { clientIndex } = req.body;
+  if (
+    typeof clientIndex !== "number" ||
+    !trip.clients ||
+    !trip.clients[clientIndex]
+  ) {
+    return next(new AppError("Invalid client index", 400));
+  }
+
   // Upload to cloudinary
   const result = await cloudinary.uploader.upload(req.file.path, {
-    folder: `trips/${trip._id}/pod`,
+    folder: `trips/${trip._id}/clients/${clientIndex}/pod`,
     resource_type: "auto",
   });
 
-  // Upload POD
-  await trip.uploadPOD({ url: result.secure_url }, req.user.id);
+  // Save POD in client object (not trip.documents)
+  trip.clients[clientIndex].documents = trip.clients[clientIndex].documents || {};
+  trip.clients[clientIndex].documents.proofOfDelivery = {
+    url: result.secure_url,
+    uploadedAt: new Date(),
+    uploadedBy: req.user.id,
+    status: "pending",
+  };
+  trip.markModified(`clients.${clientIndex}.documents`);
+  await trip.save();
 
-  // If admin uploaded, auto-verify and complete
+  // Admin auto-verifies and completes POD
   if (req.user.role === "admin") {
-    await trip.verifyPODAndComplete(req.user.id);
+    trip.clients[clientIndex].documents.proofOfDelivery.status = "verified";
+    trip.clients[clientIndex].documents.proofOfDelivery.verifiedBy = req.user.id;
+    trip.clients[clientIndex].documents.proofOfDelivery.verifiedAt = new Date();
+    trip.markModified(`clients.${clientIndex}.documents`);
+    await trip.save();
 
-    // Update vehicle status
-    await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
+    // Check if ALL client PODs verified, then mark trip as completed
+    const allVerified = trip.clients.every(
+      c => c.documents?.proofOfDelivery?.status === "verified"
+    );
+    if (allVerified) {
+      trip.status = "completed";
+      await trip.save();
+      await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
 
-    // Send completion notifications
-    try {
-      for (const clientData of trip.clients) {
-        const client = await User.findById(clientData.client);
-        await new Email(client, "").sendTripNotification(
-          trip,
-          "trip_completed"
-        );
+      // Notify all clients
+      try {
+        for (const clientData of trip.clients) {
+          const client = await User.findById(clientData.client);
+          await new Email(client, "").sendTripNotification(trip, "trip_completed");
+        }
+      } catch (error) {
+        console.error("Error sending completion notification:", error);
       }
-    } catch (error) {
-      console.error("Error sending completion notification:", error);
     }
   }
 
@@ -613,25 +528,25 @@ const uploadPOD = catchAsync(async (req, res, next) => {
       podUrl: result.secure_url,
       message:
         req.user.role === "admin"
-          ? "POD uploaded and trip completed"
+          ? "POD uploaded and client POD verified"
           : "POD uploaded successfully. Awaiting verification.",
     },
   });
 });
+// ---------- UPDATED END ----------
 
+// ---- CUT HERE ----
+// Per-client POD VERIFY/REJECT
+// ---- REPLACE YOUR verifyPOD FUNCTION WITH THIS ----
 const verifyPOD = catchAsync(async (req, res, next) => {
-  const { action, rejectionReason } = req.body; // action: 'verify' or 'reject'
+  const { action, rejectionReason, clientIndex } = req.body; // now get clientIndex
 
   if (!action || !["verify", "reject"].includes(action)) {
-    return next(
-      new AppError("Valid action is required (verify or reject)", 400)
-    );
+    return next(new AppError("Valid action is required (verify or reject)", 400));
   }
 
   if (action === "reject" && !rejectionReason) {
-    return next(
-      new AppError("Rejection reason is required when rejecting POD", 400)
-    );
+    return next(new AppError("Rejection reason is required when rejecting POD", 400));
   }
 
   const trip = await Trip.findById(req.params.id);
@@ -639,39 +554,56 @@ const verifyPOD = catchAsync(async (req, res, next) => {
     return next(new AppError("No trip found with that ID", 404));
   }
 
-  if (!trip.documents.proofOfDelivery || !trip.documents.proofOfDelivery.url) {
-    return next(new AppError("No POD found for this trip", 404));
+  // ---------- UPDATED START ----------
+  if (
+    typeof clientIndex !== "number" ||
+    !trip.clients ||
+    !trip.clients[clientIndex]
+  ) {
+    return next(new AppError("Invalid client index", 400));
   }
 
-  if (trip.documents.proofOfDelivery.status !== "pending") {
+  const pod = trip.clients[clientIndex].documents?.proofOfDelivery;
+  if (!pod || !pod.url) {
+    return next(new AppError("No POD found for this client", 404));
+  }
+  if (pod.status !== "pending") {
     return next(new AppError("POD has already been processed", 400));
   }
 
   if (action === "verify") {
-    // Verify POD and complete trip
-    await trip.verifyPODAndComplete(req.user.id);
+    pod.status = "verified";
+    pod.verifiedBy = req.user.id;
+    pod.verifiedAt = new Date();
+    trip.markModified(`clients.${clientIndex}.documents`);
+    await trip.save();
 
-    // Update vehicle status
-    await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
+    // Check if ALL client PODs verified, then mark trip as completed
+    const allVerified = trip.clients.every(
+      c => c.documents?.proofOfDelivery?.status === "verified"
+    );
+    if (allVerified) {
+      trip.status = "completed";
+      await trip.save();
+      await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
 
-    // Send completion notifications
-    try {
-      for (const clientData of trip.clients) {
-        const client = await User.findById(clientData.client);
-        await new Email(client, "").sendTripNotification(
-          trip,
-          "trip_completed"
-        );
+      // Notify all clients
+      try {
+        for (const clientData of trip.clients) {
+          const client = await User.findById(clientData.client);
+          await new Email(client, "").sendTripNotification(trip, "trip_completed");
+        }
+      } catch (error) {
+        console.error("Error sending completion notification:", error);
       }
-    } catch (error) {
-      console.error("Error sending completion notification:", error);
     }
   } else {
-    // Reject POD
-    trip.documents.proofOfDelivery.status = "rejected";
-    trip.documents.proofOfDelivery.rejectionReason = rejectionReason;
-    trip.documents.proofOfDelivery.verifiedBy = req.user.id;
-    trip.documents.proofOfDelivery.verifiedAt = new Date();
+    // reject
+    pod.status = "rejected";
+    pod.rejectionReason = rejectionReason;
+    pod.verifiedBy = req.user.id;
+    pod.verifiedAt = new Date();
+    trip.markModified(`clients.${clientIndex}.documents`);
     await trip.save();
   }
 
@@ -681,12 +613,12 @@ const verifyPOD = catchAsync(async (req, res, next) => {
       trip,
       message:
         action === "verify"
-          ? "POD verified and trip completed"
-          : "POD rejected",
+          ? "POD verified for client"
+          : "POD rejected for client",
     },
   });
 });
-
+// ---------- UPDATED END ----------
 const addPaidAmount = catchAsync(async (req, res, next) => {
   const { amount, tripId } = req.body;
 
@@ -2005,6 +1937,51 @@ const payClientAdjustment = async (req, res) => {
 };
 
 
+const updateTripStatus = catchAsync(async (req, res, next) => {
+  const { id } = req.params; // Trip ID
+  const { status } = req.body;
+
+  const trip = await Trip.findById(id);
+  if (!trip) {
+    return next(new AppError("Trip not found", 404));
+  }
+
+  // POD complete check logic
+  if (status === "completed") {
+    const allClientsPODVerified = trip.clients.every(
+      c => c.documents?.proofOfDelivery?.status === "verified"
+    );
+    if (!allClientsPODVerified) {
+      return next(new AppError("All client PODs must be verified to complete the trip", 400));
+    }
+    // Make vehicle available
+    if (trip.vehicle) {
+      await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
+    }
+    trip.status = "completed";
+    if (trip.driver) {
+      await User.findByIdAndUpdate(trip.driver, { status: "available" });
+    }
+  }
+
+  if (status === "booked" || status === "in_progress") {
+    if (trip.vehicle) {
+      await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "booked" });
+    }
+    trip.status = status;
+    if (trip.driver) {
+      await User.findByIdAndUpdate(trip.driver, { status: "booked" });
+    }
+  }
+
+  await trip.save();
+  res.status(200).json({
+    status: "success",
+    data: { trip },
+  });
+});
+
+
 module.exports = {
   getAllTrips,
   getTrip,
@@ -2036,6 +2013,4 @@ getDriverSelfSummary,
 deleteSelfAdvance,
 getClientArgestment,
 payClientAdjustment
-
-
 };
