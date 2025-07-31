@@ -31,205 +31,227 @@ const tripSchema = new mongoose.Schema(
     },
 
     // Multiple Clients Support
-   clients: [
-  {
-    client: {
-      type: mongoose.Schema.ObjectId,
-      ref: "User",
-      required: [true, "Client is required"],
-    },
-    loadDetails: {
-      description: { type: String, required: true },
-      weight: { type: Number },
-      quantity: { type: Number, default: 1, min: 1 },
-      loadType: {
-        type: String,
-        enum: ["general", "fragile", "hazardous", "perishable", "liquid"],
-        default: "general",
-      },
-      packagingType: { type: String, default: "boxes" },
-      specialInstructions: String,
-    },
-    rate: { type: Number, required: true, min: 0 },
-    paidAmount: { type: Number, default: 0, min: 0 },
-    dueAmount: { type: Number, default: 0, min: 0 },
-    totalExpense: { type: Number, default: 0, min: 0 },
-    totalRate: { type: Number, default: 0, min: 0 },
-    commission: { type: Number, default: 0, min: 0 },
-    truckHireCost: { type: Number, default: 0, min: 0 },
-    invoiceGenerated: { type: Boolean, default: false },
-    invoiceNumber: String,
-    invoiceDate: Date,
-    invoiceDocument: String, // URL
-    paymentStatus: {
-      type: String,
-      enum: ["pending", "partial", "completed"],
-      default: "pending",
-    },
-    argestment: { 
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    loadNumber: {
-      type: String,
-      unique: true,
-      sparse: true,
-    },
-    loadDate: { type: Date, default: Date.now },
-    // Origin and destination
-    origin: {
-      city: { type: String, required: true },
-      state: String,
-      pincode: String,
-      coordinates: {
-        latitude: Number,
-        longitude: Number,
-      },
-    },
-    destination: {
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      pincode: {
-        type: String,
-        required: true,
-        match: [/^[0-9]{6}$/, "Please provide a valid 6-digit pincode"],
-      },
-      coordinates: {
-        latitude: Number,
-        longitude: Number,
-      },
-    },
-    advances: [
+    clients: [
       {
-        amount: { type: Number, required: true, min: 0 },
-        paidBy: {
-          type: String,
-          enum: ["client", "admin"],
-          default: "client",
+        client: {
+          type: mongoose.Schema.ObjectId,
+          ref: "User",
+          required: [true, "Client is required"],
         },
-        pymentMathod : { // corrected spelling
-          type: String,
-          default: "cash",
-        },
-        paidTo: {
-          type: String,
-          enum: ["driver", "admin"],
-          required: true,
-        },
-        paidAt: { type: Date, default: Date.now },
-        purpose: {
-          type: String,
-          enum: ["fuel", "toll", "loading", "general", "advances"],
-          default: "general",
-        },
-        notes: String,
-      },
-    ],
-    expenses: [
-      {
-        type: { type: String, required: true },
-        amount: { type: Number, required: true, min: 0 },
-        description: String,
-        receipt: String, // URL
-        paidBy: {
-          type: String,
-          enum: ["driver", "admin"],
-          required: true,
-        },
-        paidAt: { type: Date, default: Date.now },
-      },
-    ],
 
-    // *** Yahan se per-client documents & podManage ***
-    documents: {
-      loadingReceipt: {
-        url: String,
-        uploadedAt: Date,
-        uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
-      },
-      deliveryReceipt: {
-        url: String,
-        uploadedAt: Date,
-        uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
-      },
-      proofOfDelivery: {
-        url: String,
-        uploadedAt: Date,
-        uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
-        verifiedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
-        verifiedAt: Date,
-        status: {
+
+        podManage: {
+          status: {
+            type: String,
+            enum: [
+              "started",
+              "complete",
+              "pod_received",
+              "pod_submitted",
+              "settled",
+            ],
+            default: "started",
+          },
+          date: { type: Date, default: Date.now },
+          document: {
+            url: { type: String }, // optional
+            fileType: { type: String }, // optional (pdf, jpg, etc.)
+            uploadedAt: { type: Date },
+          },
+        },
+
+        loadDetails: {
+          description: { type: String, required: true },
+          weight: { type: Number },
+          quantity: { type: Number, default: 1, min: 1 },
+          loadType: {
+            type: String,
+            enum: ["general", "fragile", "hazardous", "perishable", "liquid"],
+            default: "general",
+          },
+          packagingType: { type: String, default: "boxes" },
+          specialInstructions: String,
+        },
+        rate: { type: Number, required: true, min: 0 },
+        paidAmount: { type: Number, default: 0, min: 0 },
+        dueAmount: { type: Number, default: 0, min: 0 },
+        totalExpense: { type: Number, default: 0, min: 0 },
+        totalRate: { type: Number, default: 0, min: 0 },
+        commission: { type: Number, default: 0, min: 0 },
+        truckHireCost: { type: Number, default: 0, min: 0 },
+        invoiceGenerated: { type: Boolean, default: false },
+        invoiceNumber: String,
+        invoiceDate: Date,
+        invoiceDocument: String, // URL
+        paymentStatus: {
           type: String,
-          enum: ["pending", "verified", "rejected"],
+          enum: ["pending", "partial", "completed"],
           default: "pending",
         },
-        rejectionReason: String,
-      },
-      invoices: [
-        {
-          clientId: { type: mongoose.Schema.ObjectId, ref: "User" },
-          url: String,
-          invoiceNumber: String,
-          type: {
-            type: String,
-            enum: ["client_invoice", "vehicle_owner_invoice"],
+        argestment: {
+          type: Number,
+          default: 0,
+          min: 0,
+        },
+        loadNumber: {
+          type: String,
+          unique: true,
+          sparse: true,
+        },
+        loadDate: { type: Date, default: Date.now },
+        // Origin and destination
+        origin: {
+          city: { type: String, required: true },
+          state: String,
+          pincode: String,
+          coordinates: {
+            latitude: Number,
+            longitude: Number,
           },
-          uploadedAt: Date,
         },
-      ],
-      photos: [
-        {
-          url: String,
-          description: String,
-          uploadedAt: Date,
-          uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+        destination: {
+          city: { type: String, required: true },
+          state: { type: String, required: true },
+          pincode: {
+            type: String,
+            required: true,
+            match: [/^[0-9]{6}$/, "Please provide a valid 6-digit pincode"],
+          },
+          coordinates: {
+            latitude: Number,
+            longitude: Number,
+          },
         },
-      ],
-    },
-    podManage: {
-      status: {
-        type: String,
-        enum: [
-          "started",
-          "complete",
-          "pod_received",
-          "pod_submitted",
-          "settled",
+        advances: [
+          {
+            amount: { type: Number, required: true, min: 0 },
+            paidBy: {
+              type: String,
+              enum: ["client", "admin"],
+              default: "client",
+            },
+            pymentMathod: { // corrected spelling
+              type: String,
+              default: "cash",
+            },
+            paidTo: {
+              type: String,
+              enum: ["driver", "admin"],
+              required: true,
+            },
+            paidAt: { type: Date, default: Date.now },
+            purpose: {
+              type: String,
+              enum: ["fuel", "toll", "loading", "general", "advances"],
+              default: "general",
+            },
+            notes: String,
+          },
         ],
-        default: "started",
-      },
-      date: { type: Date, default: Date.now },
-      document: {
-        url: { type: String }, // optional
-        fileType: { type: String }, // optional (pdf, jpg, etc.)
-        uploadedAt: { type: Date },
-      },
-    },
-    // Status tracking
-    status: {
-      type: String,
-      enum: [
-        "booked",
-        "in_progress",
-        "completed",
-        "cancelled",
-        "billed",
-        "paid",
-      ],
-      default: "booked",
-    },
-    // Timeline
-    timeline: {
-      bookedAt: { type: Date, default: Date.now },
-      startedAt: Date,
-      completedAt: Date,
-      billedAt: Date,
-      paidAt: Date,
-      cancelledAt: Date,
-    },
-  }
-],
+        expenses: [
+          {
+            type: { type: String, required: true },
+            amount: { type: Number, required: true, min: 0 },
+            description: String,
+            receipt: String, // URL
+            paidBy: {
+              type: String,
+              enum: ["driver", "admin"],
+              required: true,
+            },
+            paidAt: { type: Date, default: Date.now },
+          },
+        ],
+
+        // *** Yahan se per-client documents & podManage ***
+        documents: {
+          loadingReceipt: {
+            url: String,
+            uploadedAt: Date,
+            uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+          },
+          deliveryReceipt: {
+            url: String,
+            uploadedAt: Date,
+            uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+          },
+          proofOfDelivery: {
+            url: String,
+            uploadedAt: Date,
+            uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+            verifiedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+            verifiedAt: Date,
+            status: {
+              type: String,
+              enum: ["pending", "verified", "rejected"],
+              default: "pending",
+            },
+            rejectionReason: String,
+          },
+          invoices: [
+            {
+              clientId: { type: mongoose.Schema.ObjectId, ref: "User" },
+              url: String,
+              invoiceNumber: String,
+              type: {
+                type: String,
+                enum: ["client_invoice", "vehicle_owner_invoice"],
+              },
+              uploadedAt: Date,
+            },
+          ],
+          photos: [
+            {
+              url: String,
+              description: String,
+              uploadedAt: Date,
+              uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+            },
+          ],
+        },
+        podManage: {
+          status: {
+            type: String,
+            enum: [
+              "started",
+              "complete",
+              "pod_received",
+              "pod_submitted",
+              "settled",
+            ],
+            default: "started",
+          },
+          date: { type: Date, default: Date.now },
+          document: {
+            url: { type: String }, // optional
+            fileType: { type: String }, // optional (pdf, jpg, etc.)
+            uploadedAt: { type: Date },
+          },
+        },
+        // Status tracking
+        status: {
+          type: String,
+          enum: [
+            "booked",
+            "in_progress",
+            "completed",
+            "cancelled",
+            "billed",
+            "paid",
+          ],
+          default: "booked",
+        },
+        // Timeline
+        timeline: {
+          bookedAt: { type: Date, default: Date.now },
+          startedAt: Date,
+          completedAt: Date,
+          billedAt: Date,
+          paidAt: Date,
+          cancelledAt: Date,
+        },
+      }
+    ],
 
 
     selfExpenses: [selfExpenseSchema],
@@ -627,9 +649,9 @@ tripSchema.virtual("netProfit").get(function () {
 tripSchema.virtual("totalWeight").get(function () {
   return this.clients
     ? this.clients.reduce(
-        (total, client) => total + client.loadDetails.weight,
-        0
-      )
+      (total, client) => total + client.loadDetails.weight,
+      0
+    )
     : 0;
 });
 
