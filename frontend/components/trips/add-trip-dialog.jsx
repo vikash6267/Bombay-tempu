@@ -153,24 +153,7 @@ const initialValues = {
   commission: 0,
 };
 
-const LoadTypeSelect = ({ value, onChange, error }) => (
-  <div>
-    <Label>Load Type *</Label>
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className={error ? "border-red-500" : ""}>
-        <SelectValue placeholder="Select type" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="general">General</SelectItem>
-        <SelectItem value="fragile">Fragile</SelectItem>
-        <SelectItem value="hazardous">Hazardous</SelectItem>
-        <SelectItem value="perishable">Perishable</SelectItem>
-        <SelectItem value="liquid">Liquid</SelectItem>
-      </SelectContent>
-    </Select>
-    {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
-  </div>
-);
+
 
 const defaultOptions = [
   { value: "boxes", label: "Boxes" },

@@ -1,10 +1,10 @@
-const express = require("express")
-const { protect } = require("../middleware/auth")
-const authController = require("../controllers/authController")
+const express = require("express");
+const { protect } = require("../middleware/auth");
+const authController = require("../controllers/authController");
 const tripController = require("../controllers/tripController");
-const vehicleController = require("../controllers/vehicleController")
+const vehicleController = require("../controllers/vehicleController");
 
-const router = express.Router()
+const router = express.Router();
 
 /**
  * @swagger
@@ -43,7 +43,7 @@ const router = express.Router()
  *       400:
  *         description: Invalid input data
  */
-router.post("/register", authController.register)
+router.post("/register", authController.register);
 
 /**
  * @swagger
@@ -72,9 +72,9 @@ router.post("/register", authController.register)
  *       401:
  *         description: Invalid credentials
  */
-router.post("/login", authController.login)
+router.post("/login", authController.login);
 router.get("/dashboard", tripController.getDashboardData);
-router.get("/:vehicleId/expenses", vehicleController.getVehicleExpenseTotal)
+router.get("/:vehicleId/expenses", vehicleController.getVehicleExpenseTotal);
 
 /**
  * @swagger
@@ -88,7 +88,7 @@ router.get("/:vehicleId/expenses", vehicleController.getVehicleExpenseTotal)
  *       200:
  *         description: Logout successful
  */
-router.post("/logout", authController.logout)
+router.post("/logout", authController.logout);
 
 /**
  * @swagger
@@ -112,7 +112,7 @@ router.post("/logout", authController.logout)
  *       200:
  *         description: Password reset email sent
  */
-router.post("/forgot-password", authController.forgotPassword)
+router.post("/forgot-password", authController.forgotPassword);
 
 /**
  * @swagger
@@ -146,7 +146,7 @@ router.post("/forgot-password", authController.forgotPassword)
  *       200:
  *         description: Password reset successful
  */
-router.patch("/reset-password/:token", authController.resetPassword)
+router.patch("/reset-password/:token", authController.resetPassword);
 
 /**
  * @swagger
@@ -164,11 +164,11 @@ router.patch("/reset-password/:token", authController.resetPassword)
  *       200:
  *         description: Email verified successfully
  */
-router.get("/verify-email/:token", authController.verifyEmail)
+router.get("/verify-email/:token", authController.verifyEmail);
 router.get("/trip-balances/:clientId", authController.getClientTripBalances);
 
 // Protected routes
-router.use(protect)
+router.use(protect);
 
 /**
  * @swagger
@@ -182,7 +182,7 @@ router.use(protect)
  *       200:
  *         description: User profile retrieved successfully
  */
-router.get("/me", authController.getMe)
+router.get("/me", authController.getMe);
 
 /**
  * @swagger
@@ -215,6 +215,6 @@ router.get("/me", authController.getMe)
  *       200:
  *         description: Password updated successfully
  */
-router.patch("/update-password", authController.updatePassword)
+router.patch("/update-password", authController.updatePassword);
 
-module.exports = router
+module.exports = router;

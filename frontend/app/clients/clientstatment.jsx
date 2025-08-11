@@ -6,7 +6,8 @@ import {
   IndianRupee,
   User,
   Phone,
-  Mail
+  Mail,
+  MapPin
 } from "lucide-react"
 import {
   Card,
@@ -399,41 +400,59 @@ const downloadPDF = () => {
         </Card>
       </div> */}
 
-      {/* Client Info Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Client Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center space-x-3">
-              <User className="h-4 w-4 text-gray-500" />
-              <div>
-                <p className="text-sm text-gray-500">Name</p>
-                <p className="font-medium">{clientInfo.name}</p>
-              </div>
-            </div>
-          
-            {clientInfo.phone && (
-              <div className="flex items-center space-x-3">
-                <Phone className="h-4 w-4 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-500">Phone</p>
-                  <p className="font-medium">{clientInfo.phone}</p>
-                </div>
-              </div>
-            )}
+ {/* Client Info Card */}
+<Card>
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2">
+      <User className="h-5 w-5" />
+      Client Information
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="flex items-center space-x-3">
+        <User className="h-4 w-4 text-gray-500" />
+        <div>
+          <p className="text-sm text-gray-500">Name</p>
+          <p className="font-medium">{clientInfo.name}</p>
+        </div>
+      </div>
+
+      {clientInfo.phone && (
+        <div className="flex items-center space-x-3">
+          <Phone className="h-4 w-4 text-gray-500" />
+          <div>
+            <p className="text-sm text-gray-500">Phone</p>
+            <p className="font-medium">{clientInfo.phone}</p>
           </div>
-          <div className="mt-4">
-            <Badge variant={clientInfo.active ? "default" : "secondary"}>
-              {clientInfo.active ? "Active Client" : "Inactive Client"}
-            </Badge>
+        </div>
+      )}
+
+      {/* Address tab sirf jab data ho */}
+      {clientInfo.address && Object.keys(clientInfo.address).length > 0 && (
+        <div className="flex items-center space-x-3">
+          <MapPin className="h-4 w-4 text-gray-500" />
+          <div>
+            <p className="text-sm text-gray-500">Address</p>
+            <p className="font-medium">
+              {clientInfo.address.street && `${clientInfo.address.street}, `}
+              {clientInfo.address.city && `${clientInfo.address.city}, `}
+              {clientInfo.address.state && `${clientInfo.address.state}, `}
+              {clientInfo.address.pincode && clientInfo.address.pincode}
+            </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
+    </div>
+
+    <div className="mt-4">
+      <Badge variant={clientInfo.active ? "default" : "secondary"}>
+        {clientInfo.active ? "Active Client" : "Inactive Client"}
+      </Badge>
+    </div>
+  </CardContent>
+</Card>
+
 
       {/* Statement Table */}
       <Card>

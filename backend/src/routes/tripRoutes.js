@@ -23,7 +23,7 @@ router
   .patch(tripController.updateTrip)
   .delete(restrictTo("admin"), tripController.deleteTrip);
 
-router.patch("/:id/status", tripController.updateTripStatus);
+router.patch("/:tripId/status", tripController.updateTripStatus);
 
 router.post(
   "/:id/pod",
@@ -72,11 +72,21 @@ router.post("/:tripId/del-self-advance", tripController.deleteSelfAdvance);
 // POD DETIALS
 router.put("/:id/pod-details", tripController.updatePodDetails);
 router.put("/pod-status/:tripId", tripController.updatePodStatus);
+router.put("/client-pod-status/:tripId/:clientId", tripController.clientUpdatePodStatus);
+
+
+
+
+
+
 router.post(
   "/:tripId/podDocument",
   upload.single("file"),
   tripController.uploadPodDocument
 );
+
+router.post("/:tripId/client/podDocument", upload.single("file"), tripController.uploadPodDocumentForClient);
+
 
 router.get("/driver-summary/:driverId", tripController.getDriverSelfSummary);
 // In routes/trip.js or wherever appropriate

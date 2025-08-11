@@ -39,7 +39,6 @@ const tripSchema = new mongoose.Schema(
           required: [true, "Client is required"],
         },
 
-
         podManage: {
           status: {
             type: String,
@@ -53,13 +52,27 @@ const tripSchema = new mongoose.Schema(
             default: "started",
           },
           date: { type: Date, default: Date.now },
-          document: {
-            url: { type: String }, // optional
-            fileType: { type: String }, // optional (pdf, jpg, etc.)
-            uploadedAt: { type: Date },
-          },
+          documents: [
+            {
+              url: { type: String },
+              fileType: { type: String },
+              uploadedAt: { type: Date },
+              stepKey: { type: String }, // optional: useful for tracking stage
+            },
+          ],
         },
-
+       documents: {
+  type: [
+    {
+      url: String,
+      fileType: String,
+      uploadedAt: Date,
+      stepKey: String,
+    },
+  ],
+  default: [],
+}
+,
         loadDetails: {
           description: { type: String, required: true },
           weight: { type: Number },
@@ -130,7 +143,8 @@ const tripSchema = new mongoose.Schema(
               enum: ["client", "admin"],
               default: "client",
             },
-            pymentMathod: { // corrected spelling
+            pymentMathod: {
+              // corrected spelling
               type: String,
               default: "cash",
             },
@@ -164,51 +178,51 @@ const tripSchema = new mongoose.Schema(
         ],
 
         // *** Yahan se per-client documents & podManage ***
-        documents: {
-          loadingReceipt: {
-            url: String,
-            uploadedAt: Date,
-            uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
-          },
-          deliveryReceipt: {
-            url: String,
-            uploadedAt: Date,
-            uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
-          },
-          proofOfDelivery: {
-            url: String,
-            uploadedAt: Date,
-            uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
-            verifiedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
-            verifiedAt: Date,
-            status: {
-              type: String,
-              enum: ["pending", "verified", "rejected"],
-              default: "pending",
-            },
-            rejectionReason: String,
-          },
-          invoices: [
-            {
-              clientId: { type: mongoose.Schema.ObjectId, ref: "User" },
-              url: String,
-              invoiceNumber: String,
-              type: {
-                type: String,
-                enum: ["client_invoice", "vehicle_owner_invoice"],
-              },
-              uploadedAt: Date,
-            },
-          ],
-          photos: [
-            {
-              url: String,
-              description: String,
-              uploadedAt: Date,
-              uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
-            },
-          ],
-        },
+        // documents: {
+        //   loadingReceipt: {
+        //     url: String,
+        //     uploadedAt: Date,
+        //     uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+        //   },
+        //   deliveryReceipt: {
+        //     url: String,
+        //     uploadedAt: Date,
+        //     uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+        //   },
+        //   proofOfDelivery: {
+        //     url: String,
+        //     uploadedAt: Date,
+        //     uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+        //     verifiedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+        //     verifiedAt: Date,
+        //     status: {
+        //       type: String,
+        //       enum: ["pending", "verified", "rejected"],
+        //       default: "pending",
+        //     },
+        //     rejectionReason: String,
+        //   },
+        //   invoices: [
+        //     {
+        //       clientId: { type: mongoose.Schema.ObjectId, ref: "User" },
+        //       url: String,
+        //       invoiceNumber: String,
+        //       type: {
+        //         type: String,
+        //         enum: ["client_invoice", "vehicle_owner_invoice"],
+        //       },
+        //       uploadedAt: Date,
+        //     },
+        //   ],
+        //   photos: [
+        //     {
+        //       url: String,
+        //       description: String,
+        //       uploadedAt: Date,
+        //       uploadedBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+        //     },
+        //   ],
+        // },
         podManage: {
           status: {
             type: String,
@@ -250,9 +264,8 @@ const tripSchema = new mongoose.Schema(
           paidAt: Date,
           cancelledAt: Date,
         },
-      }
+      },
     ],
-
 
     selfExpenses: [selfExpenseSchema],
     selfAdvances: [selfAdvanceSchema],
@@ -306,14 +319,7 @@ const tripSchema = new mongoose.Schema(
     // Status tracking
     status: {
       type: String,
-      enum: [
-        "booked",
-        "in_progress",
-        "completed",
-        "cancelled",
-        "billed",
-        "paid",
-      ],
+     
       default: "booked",
     },
 
@@ -649,9 +655,9 @@ tripSchema.virtual("netProfit").get(function () {
 tripSchema.virtual("totalWeight").get(function () {
   return this.clients
     ? this.clients.reduce(
-      (total, client) => total + client.loadDetails.weight,
-      0
-    )
+        (total, client) => total + client.loadDetails.weight,
+        0
+      )
     : 0;
 });
 

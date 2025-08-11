@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useParams, useRouter } from "next/navigation"
-import { useForm, useFieldArray } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   ArrowLeft,
   Edit,
@@ -33,64 +33,64 @@ import {
   Clock,
   AlertCircle,
   MemoryStickIcon as Memo,
-  ReceiptText
-} from "lucide-react"
-import { toast } from "react-hot-toast"
+  ReceiptText,
+} from "lucide-react";
+import { toast } from "react-hot-toast";
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { Button } from "@/components/ui/button"
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
-} from "@/components/ui/select"
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
-} from "@/components/ui/form"
+  FormMessage,
+} from "@/components/ui/form";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { APaymentForm } from "@/components/trips/clientLoadAdvance"
-import { EPaymentForm } from "@/components/trips/clientLoadExpenses"
-import AddLoadDialog from "@/components/trips/add-load-dialog"
-import { tripsApi, usersApi, vehiclesApi } from "@/lib/api"
-import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils"
-import { useSelector } from "react-redux"
-import { FleetReceiptDialog } from "components/fleet-receipt-dialog"
-import PODDetailsDialog from "components/trips/PODUploadDialog"
-import { DriverReceiptDialog } from "components/driver-reciept-dialog"
-import { CollectionMemoDialog } from "@/components/memos/collection-memo"
-import { BalanceMemoDialog } from "@/components/memos/balance-memo-dialog"
-import { ClientStatementGenerator } from "@/components/memos/client-statment"
-import { PODStepUpload } from "@/components/memos/pod-step-upload"
-import axios from "axios"
-import { EnhancedEditTripDialog } from "components/trips/enhanced-edit-trip-dialog"
-import PodStatusCard from "../ClientPod"
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { APaymentForm } from "@/components/trips/clientLoadAdvance";
+import { EPaymentForm } from "@/components/trips/clientLoadExpenses";
+import AddLoadDialog from "@/components/trips/add-load-dialog";
+import { tripsApi, usersApi, vehiclesApi } from "@/lib/api";
+import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils";
+import { useSelector } from "react-redux";
+import { FleetReceiptDialog } from "components/fleet-receipt-dialog";
+import PODDetailsDialog from "components/trips/PODUploadDialog";
+import { DriverReceiptDialog } from "components/driver-reciept-dialog";
+import { CollectionMemoDialog } from "@/components/memos/collection-memo";
+import { BalanceMemoDialog } from "@/components/memos/balance-memo-dialog";
+import { ClientStatementGenerator } from "@/components/memos/client-statment";
+import { PODStepUpload } from "@/components/memos/pod-step-upload";
+import axios from "axios";
+import { EnhancedAddEditTripDialog } from "components/trips/enhanced-edit-trip-dialog";
+import PodStatusCard from "../ClientPod";
 
 // Self Owner Expense Form Schema
 const selfExpenseSchema = z.object({
@@ -104,30 +104,28 @@ const selfExpenseSchema = z.object({
     "insurance",
     "permit",
     "food",
-    "other"
+    "other",
   ]),
   expenseFor: z.enum(["driver", "vehicle"], {
-    message: "Please specify if this expense is for driver or vehicle"
+    message: "Please specify if this expense is for driver or vehicle",
   }),
   paymentType: z.enum(["cash", "bank", "upi"], {
-    message: "Select a valid payment method"
+    message: "Select a valid payment method",
   }),
   date: z.string().min(1, "Date is required"),
-  description: z.string().optional()
-})
-
+  description: z.string().optional(),
+});
 
 // Self Owner Advance Payment Form Schema
 const selfAdvanceSchema = z.object({
   amount: z.number().min(1, "Amount must be greater than 0"),
   reason: z.string().min(1, "Reason is required"),
   paymentType: z.enum(["cash", "bank", "upi"], {
-    message: "Select a valid payment method"
+    message: "Select a valid payment method",
   }),
   date: z.string().min(1, "Date is required"),
-  description: z.string().optional()
-})
-
+  description: z.string().optional(),
+});
 
 // Fleet Owner Expense Form Schema
 const fleetExpenseSchema = z.object({
@@ -140,11 +138,11 @@ const fleetExpenseSchema = z.object({
     "driver_payment",
     "insurance",
     "permit",
-    "other"
+    "other",
   ]),
   description: z.string().optional(),
-  receiptNumber: z.string().optional()
-})
+  receiptNumber: z.string().optional(),
+});
 
 // Fleet Owner Advance Payment Form Schema
 
@@ -153,7 +151,7 @@ const fleetAdvanceSchema = z.object({
   paymentType: z.string().min(1, "Payment type is required"),
   reason: z.string().min(1, "Reason is required"),
   amount: z.number().min(1, "Amount must be greater than 0"),
-})
+});
 
 // Self Owner Expense Form Component
 function SelfExpenseForm({ handleSubmit, open, onClose }) {
@@ -166,16 +164,16 @@ function SelfExpenseForm({ handleSubmit, open, onClose }) {
       expenseFor: "driver",
       paymentType: "cash",
       date: new Date().toISOString().split("T")[0],
-      description: ""
-    }
-  })
+      description: "",
+    },
+  });
 
-  const onSubmit = data => {
-    handleSubmit(data)
-    form.reset()
-  }
+  const onSubmit = (data) => {
+    handleSubmit(data);
+    form.reset();
+  };
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <Card className="mt-4 border-l-4 border-l-red-500">
@@ -200,7 +198,7 @@ function SelfExpenseForm({ handleSubmit, open, onClose }) {
                         type="number"
                         placeholder="Enter amount"
                         {...field}
-                        onChange={e => field.onChange(Number(e.target.value))}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
                         className="focus:ring-red-500 focus:border-red-500"
                       />
                     </FormControl>
@@ -253,9 +251,13 @@ function SelfExpenseForm({ handleSubmit, open, onClose }) {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="fuel">⛽ Fuel</SelectItem>
-                        <SelectItem value="maintenance">🔧 Maintenance</SelectItem>
+                        <SelectItem value="maintenance">
+                          🔧 Maintenance
+                        </SelectItem>
                         <SelectItem value="toll">🛣️ Toll</SelectItem>
-                        <SelectItem value="driver_payment">👨‍💼 Driver Payment</SelectItem>
+                        <SelectItem value="driver_payment">
+                          👨‍💼 Driver Payment
+                        </SelectItem>
                         <SelectItem value="insurance">🛡️ Insurance</SelectItem>
                         <SelectItem value="permit">📋 Permit</SelectItem>
                         <SelectItem value="food">🍽️ Food</SelectItem>
@@ -360,9 +362,8 @@ function SelfExpenseForm({ handleSubmit, open, onClose }) {
         </Form>
       </CardContent>
     </Card>
-  )
+  );
 }
-
 
 // Self Owner Advance Payment Form Component
 function SelfAdvanceForm({ handleSubmit, open, onClose }) {
@@ -373,16 +374,16 @@ function SelfAdvanceForm({ handleSubmit, open, onClose }) {
       reason: "",
       paymentType: "cash",
       date: new Date().toISOString().split("T")[0],
-      description: ""
-    }
-  })
+      description: "",
+    },
+  });
 
-  const onSubmit = data => {
-    handleSubmit(data)
-    form.reset()
-  }
+  const onSubmit = (data) => {
+    handleSubmit(data);
+    form.reset();
+  };
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <Card className="mt-4 border-l-4 border-l-green-500">
@@ -407,7 +408,7 @@ function SelfAdvanceForm({ handleSubmit, open, onClose }) {
                         type="number"
                         placeholder="Enter amount"
                         {...field}
-                        onChange={e => field.onChange(Number(e.target.value))}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
                         className="focus:ring-green-500 focus:border-green-500"
                       />
                     </FormControl>
@@ -509,10 +510,8 @@ function SelfAdvanceForm({ handleSubmit, open, onClose }) {
         </Form>
       </CardContent>
     </Card>
-  )
+  );
 }
-
-
 
 // Fleet Owner Expense Form Component
 function FleetExpenseForm({ handleSubmit, open, onClose }) {
@@ -523,16 +522,16 @@ function FleetExpenseForm({ handleSubmit, open, onClose }) {
       reason: "",
       category: "fuel",
       description: "",
-      receiptNumber: ""
-    }
-  })
+      receiptNumber: "",
+    },
+  });
 
-  const onSubmit = data => {
-    handleSubmit(data)
-    form.reset()
-  }
+  const onSubmit = (data) => {
+    handleSubmit(data);
+    form.reset();
+  };
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <Card className="mt-4 border-l-4 border-l-red-500">
@@ -557,7 +556,7 @@ function FleetExpenseForm({ handleSubmit, open, onClose }) {
                         type="number"
                         placeholder="Enter amount"
                         {...field}
-                        onChange={e => field.onChange(Number(e.target.value))}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
                         className="focus:ring-red-500 focus:border-red-500"
                       />
                     </FormControl>
@@ -667,7 +666,7 @@ function FleetExpenseForm({ handleSubmit, open, onClose }) {
         </Form>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // Fleet Owner Advance Payment Form Component
@@ -679,15 +678,15 @@ function FleetAdvanceForm({ handleSubmit, open, onClose }) {
       paymentType: "",
       reason: "",
       amount: 0,
-    }
-  })
+    },
+  });
 
-  const onSubmit = data => {
-    handleSubmit(data)
-    form.reset()
-  }
+  const onSubmit = (data) => {
+    handleSubmit(data);
+    form.reset();
+  };
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <Card className="mt-4 border-l-4 border-l-green-500">
@@ -740,7 +739,10 @@ function FleetAdvanceForm({ handleSubmit, open, onClose }) {
                         <SelectItem value="upi">📲 UPI</SelectItem>
                         <SelectItem value="cheque">📄 Cheque</SelectItem>
                         <SelectItem value="fashtag"> Fashtag</SelectItem>
-                        <SelectItem value="disell-card"> Diesel Card</SelectItem>
+                        <SelectItem value="disell-card">
+                          {" "}
+                          Diesel Card
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -777,7 +779,7 @@ function FleetAdvanceForm({ handleSubmit, open, onClose }) {
                       type="number"
                       placeholder="Enter amount"
                       {...field}
-                      onChange={e => field.onChange(Number(e.target.value))}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
                       className="focus:ring-green-500 focus:border-green-500"
                     />
                   </FormControl>
@@ -798,9 +800,8 @@ function FleetAdvanceForm({ handleSubmit, open, onClose }) {
         </Form>
       </CardContent>
     </Card>
-  )
+  );
 }
-
 
 const tripSchema = z.object({
   clients: z.array(
@@ -815,10 +816,10 @@ const tripSchema = z.object({
           "fragile",
           "hazardous",
           "perishable",
-          "liquid"
+          "liquid",
         ]),
         packagingType: z.string(),
-        specialInstructions: z.string().optional()
+        specialInstructions: z.string().optional(),
       }),
       rate: z.number().min(1, "Rate must be greater than 0"),
       contactPerson: z
@@ -826,17 +827,17 @@ const tripSchema = z.object({
           loading: z
             .object({
               name: z.string().optional(),
-              phone: z.string().optional()
+              phone: z.string().optional(),
             })
             .optional(),
           unloading: z
             .object({
               name: z.string().optional(),
-              phone: z.string().optional()
+              phone: z.string().optional(),
             })
-            .optional()
+            .optional(),
         })
-        .optional()
+        .optional(),
     })
   ),
   vehicle: z.string().min(1, "Vehicle is required"),
@@ -845,114 +846,126 @@ const tripSchema = z.object({
     address: z.string().min(1, "Origin address is required"),
     city: z.string().min(1, "City is required"),
     state: z.string().min(1, "State is required"),
-    pincode: z.string().min(1, "Pincode is required")
+    pincode: z.string().min(1, "Pincode is required"),
   }),
   destination: z.object({
     address: z.string().min(1, "Destination address is required"),
     city: z.string().min(1, "City is required"),
     state: z.string().min(1, "State is required"),
-    pincode: z.string().min(1, "Pincode is required")
+    pincode: z.string().min(1, "Pincode is required"),
   }),
   scheduledDate: z.string().min(1, "Scheduled date is required"),
   estimatedDuration: z.number().optional(),
   estimatedDistance: z.number().optional(),
-  specialInstructions: z.string().optional()
-})
+  specialInstructions: z.string().optional(),
+});
 
 export default function TripDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const { user } = useSelector(state => state.auth)
-  const queryClient = useQueryClient()
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
-  const [showPODDialog, setShowPODDialog] = useState(false)
-  const [advancePay, setAdvancePay] = useState(false)
-  const [expensesPay, setExpensesPay] = useState(false)
-  const [fleetExpenseForm, setFleetExpenseForm] = useState(false)
-  const [fleetAdvanceForm, setFleetAdvanceForm] = useState(false)
-  const [selfExpenseForm, setSelfExpenseForm] = useState(false)
-  const [selfAdvanceForm, setSelfAdvanceForm] = useState(false)
-  const [selectedTrip, setSelectedTrip] = useState(null)
-  const [addLoad, setAddLoad] = useState(false)
-  const [showReceiptDialog, setShowReceiptDialog] = useState(false)
-  const [showDriverReceiptDialog, setShowDriverReceiptDialog] = useState(false)
-  const [isUpdatingPOD, setIsUpdatingPOD] = useState(false)
-  const [showCollectionMemoDialog, setShowCollectionMemoDialog] = useState(
-    false
-  )
-  const [showBalanceMemoDialog, setShowBalanceMemoDialog] = useState(false)
-  const [selectedClientForMemo, setSelectedClientForMemo] = useState(null)
-  const [showEditDialog, setShowEditDialog] = useState(false) // New state for edit dialog
+  const params = useParams();
+  const router = useRouter();
+  const { user } = useSelector((state) => state.auth);
+  const queryClient = useQueryClient();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showPODDialog, setShowPODDialog] = useState(false);
+  const [advancePay, setAdvancePay] = useState(false);
+  const [expensesPay, setExpensesPay] = useState(false);
+  const [fleetExpenseForm, setFleetExpenseForm] = useState(false);
+  const [fleetAdvanceForm, setFleetAdvanceForm] = useState(false);
+  const [selfExpenseForm, setSelfExpenseForm] = useState(false);
+  const [selfAdvanceForm, setSelfAdvanceForm] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState(null);
+  const [addLoad, setAddLoad] = useState(false);
+  const [showReceiptDialog, setShowReceiptDialog] = useState(false);
+  const [showDriverReceiptDialog, setShowDriverReceiptDialog] = useState(false);
+  const [isUpdatingPOD, setIsUpdatingPOD] = useState(false);
+  const [showCollectionMemoDialog, setShowCollectionMemoDialog] =
+    useState(false);
+  const [showBalanceMemoDialog, setShowBalanceMemoDialog] = useState(false);
+  const [selectedClientForMemo, setSelectedClientForMemo] = useState(null);
+  const [showEditDialog, setShowEditDialog] = useState(false); // New state for edit dialog
 
   const handleEdit = () => {
-    setShowEditDialog(true) // Open edit dialog instead of inline editing
-  }
+    setShowEditDialog(true); // Open edit dialog instead of inline editing
+  };
 
   function getCurrentStepIndex(status) {
     const key = status?.toLowerCase() || "not_started";
-    return steps.findIndex(s => s.key === key) || 0;
+    return steps.findIndex((s) => s.key === key) || 0;
   }
 
 
+  const handleStatusChange = async (newStatus) => {
+  try {
+    await tripsApi.updateStatus(trip._id, { status: newStatus }); // ✅ API call
+    toast.success("Trip status updated successfully");
+
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000); // 2 sec delay
+
+  } catch (err) {
+    console.error("Failed to update status", err);
+    toast.error("Failed to update trip status");
+  }
+};
   const handleEditSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
-    setShowEditDialog(false)
-    toast.success("Trip updated successfully!")
-  }
-
+    queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+    setShowEditDialog(false);
+    toast.success("Trip updated successfully!");
+  };
 
   const form = useForm({
-    resolver: zodResolver(tripSchema)
-  })
+    resolver: zodResolver(tripSchema),
+  });
 
   const {
     fields: clientFields,
     append: appendClient,
-    remove: removeClient
+    remove: removeClient,
   } = useFieldArray({
     control: form.control,
-    name: "clients"
-  })
+    name: "clients",
+  });
 
   // Queries
   const { data: tripData, isLoading } = useQuery({
     queryKey: ["trip", params.id],
-    queryFn: () => tripsApi.getById(params.id)
-  })
+    queryFn: () => tripsApi.getById(params.id),
+  });
 
   const { data: clientsData } = useQuery({
     queryKey: ["users", "clients"],
-    queryFn: () => usersApi.getAll({ role: "client" })
-  })
+    queryFn: () => usersApi.getAll({ role: "client" }),
+  });
 
   const { data: vehiclesData } = useQuery({
     queryKey: ["vehicles"],
-    queryFn: () => vehiclesApi.getAll({ status: "available" })
-  })
+    queryFn: () => vehiclesApi.getAll({ status: "available" }),
+  });
 
   const { data: driversData } = useQuery({
     queryKey: ["users", "drivers"],
-    queryFn: () => usersApi.getAll({ role: "driver" })
-  })
+    queryFn: () => usersApi.getAll({ role: "driver" }),
+  });
 
   // Mutations
   const updateTripMutation = useMutation({
-    mutationFn: data => tripsApi.update(params.id, data),
+    mutationFn: (data) => tripsApi.update(params.id, data),
     onSuccess: () => {
-      toast.success("Trip updated successfully")
-      setIsEditing(false)
-      queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
+      toast.success("Trip updated successfully");
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
     },
-    onError: error => {
-      toast.error(error.response?.data?.message || "Failed to update trip")
-    }
-  })
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to update trip");
+    },
+  });
 
-  const trip = tripData?.data?.trip
-  const clients = clientsData?.data?.users || []
-  const vehicles = vehiclesData?.data?.vehicles || []
-  const drivers = driversData?.data?.users || []
+  const trip = tripData?.data?.trip;
+  const clients = clientsData?.data?.users || [];
+  const vehicles = vehiclesData?.data?.vehicles || [];
+  const drivers = driversData?.data?.users || [];
 
   // Initialize form when trip data is loaded
   useEffect(() => {
@@ -966,28 +979,28 @@ export default function TripDetailPage() {
         scheduledDate: new Date(trip.scheduledDate).toISOString().slice(0, 16),
         estimatedDuration: trip.estimatedDuration,
         estimatedDistance: trip.estimatedDistance,
-        specialInstructions: trip.specialInstructions
-      })
+        specialInstructions: trip.specialInstructions,
+      });
     }
-  }, [trip, isEditing, form])
+  }, [trip, isEditing, form]);
 
   const deleteMutation = useMutation({
-    mutationFn: id => tripsApi.delete(id),
+    mutationFn: (id) => tripsApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(["trips"])
-      toast.success("Trip deleted successfully")
-      setShowDeleteDialog(false)
-      setSelectedTrip(null)
-      router.push("/trips")
+      queryClient.invalidateQueries(["trips"]);
+      toast.success("Trip deleted successfully");
+      setShowDeleteDialog(false);
+      setSelectedTrip(null);
+      router.push("/trips");
     },
-    onError: error => {
-      toast.error(error.response?.data?.message || "Failed to delete trip")
-    }
-  })
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to delete trip");
+    },
+  });
 
-  const onSubmit = data => {
-    updateTripMutation.mutate(data)
-  }
+  const onSubmit = (data) => {
+    updateTripMutation.mutate(data);
+  };
 
   // const handleEdit = () => {
   //   setIsEditing(true)
@@ -1007,59 +1020,50 @@ export default function TripDetailPage() {
   // }
 
   const handleCancelEdit = () => {
-    setIsEditing(false)
-    form.reset()
-  }
+    setIsEditing(false);
+    form.reset();
+  };
 
   const handleASubmit = async (values, index) => {
-    const data = { ...values, index: index }
+    const data = { ...values, index: index };
     try {
-      const res = await tripsApi.addAdvance(params.id, data)
+      const res = await tripsApi.addAdvance(params.id, data);
 
-      res && setAdvancePay(false)
-      toast.success("Payment added successfully")
-      queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
+      res && setAdvancePay(false);
+      toast.success("Payment added successfully");
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
     } catch (error) {
-      console.log(error)
-      toast.error("Failed to add payment")
+      console.log(error);
+      toast.error("Failed to add payment");
     }
-  }
-
-
-
-
+  };
 
   const handleDeleteAdvance = async (tripId, clientIndex, advanceIndex) => {
-    if (!window.confirm("Are you sure you want to delete this advance payment?")) return;
+    if (
+      !window.confirm("Are you sure you want to delete this advance payment?")
+    )
+      return;
 
     try {
-
-
-
       const res = await tripsApi.deleteAdvance(params.id, {
         clientIndex,
         advanceIndex,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
 
       // ✅ Optional: Show toast or refresh data
       console.log("Deleted successfully:", res.data);
       toast.success("Advance payment deleted");
-
-
-
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete advance");
     }
   };
 
-
-
-
   const handleDeleteExpense = async (tripId, clientIndex, expenseIndex) => {
-    if (!window.confirm("Are you sure you want to delete this expense?")) return;
+    if (!window.confirm("Are you sure you want to delete this expense?"))
+      return;
 
     try {
       const res = await tripsApi.deleteExpense(params.id, {
@@ -1067,11 +1071,9 @@ export default function TripDetailPage() {
         expenseIndex,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
-
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
 
       toast.success("Expense deleted successfully");
-
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete expense");
@@ -1079,90 +1081,87 @@ export default function TripDetailPage() {
   };
 
   const handleESubmit = async (values, index) => {
-    const data = { ...values, index: index }
+    const data = { ...values, index: index };
     try {
-      const res = await tripsApi.addExpense(params.id, data)
+      const res = await tripsApi.addExpense(params.id, data);
 
-      res && setExpensesPay(false)
-      toast.success("Expenses added successfully")
-      queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
+      res && setExpensesPay(false);
+      toast.success("Expenses added successfully");
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
     } catch (error) {
-      console.log(error)
-      toast.error("Failed to add expenses")
+      console.log(error);
+      toast.error("Failed to add expenses");
     }
-  }
+  };
 
   // Fleet Owner Expense Handler
-  const handleFleetExpenseSubmit = async values => {
+  const handleFleetExpenseSubmit = async (values) => {
     try {
-      const res = await tripsApi.addFleetExpense(params.id, values)
+      const res = await tripsApi.addFleetExpense(params.id, values);
       if (res) {
-        setFleetExpenseForm(false)
-        queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
-        toast.success("Fleet expense added successfully")
+        setFleetExpenseForm(false);
+        queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+        toast.success("Fleet expense added successfully");
       }
     } catch (error) {
-      console.log(error)
-      toast.error("Failed to add fleet expense")
+      console.log(error);
+      toast.error("Failed to add fleet expense");
     }
-  }
+  };
 
   // Fleet Owner Advance Payment Handler
-  const handleFleetAdvanceSubmit = async values => {
+  const handleFleetAdvanceSubmit = async (values) => {
     try {
-      const res = await tripsApi.addFleetAdvance(params.id, values)
+      const res = await tripsApi.addFleetAdvance(params.id, values);
       if (res) {
-        setFleetAdvanceForm(false)
-        queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
-        toast.success("Fleet advance payment added successfully")
+        setFleetAdvanceForm(false);
+        queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+        toast.success("Fleet advance payment added successfully");
       }
     } catch (error) {
-      console.log(error)
-      toast.error("Failed to add fleet advance payment")
+      console.log(error);
+      toast.error("Failed to add fleet advance payment");
     }
-  }
-
-
-
-
-
-
+  };
 
   const handleDeleteFleetAdvance = async (advanceIndex) => {
-    if (!window.confirm("Are you sure you want to delete this advance?")) return;
+    if (!window.confirm("Are you sure you want to delete this advance?"))
+      return;
 
     try {
-
-      const res = await tripsApi.deleteFleetAdvance(params.id, { advanceIndex })
+      const res = await tripsApi.deleteFleetAdvance(params.id, {
+        advanceIndex,
+      });
 
       toast.success("Fleet advance deleted");
-      queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
-
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
     } catch (error) {
-      toast.error(
-        error.response?.data?.message || "Failed to delete advance"
-      );
+      toast.error(error.response?.data?.message || "Failed to delete advance");
     }
   };
 
   const handleDeleteSelfExpense = async (expenseIndex) => {
-    const confirmed = window.confirm("Are you sure you want to delete this self expense?");
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this self expense?"
+    );
     if (!confirmed) return;
 
     try {
-
-      const res = await tripsApi.deleteSelfExpense(params.id, { expenseIndex })
+      const res = await tripsApi.deleteSelfExpense(params.id, { expenseIndex });
 
       toast.success("Expense deleted");
-      queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
-
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to delete self expense");
+      toast.error(
+        err.response?.data?.message || "Failed to delete self expense"
+      );
     }
   };
 
   const handleDeleteSelfAdvance = async (advanceIndex) => {
-    const confirmed = window.confirm("Are you sure you want to delete this self advance?");
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this self advance?"
+    );
     if (!confirmed) return;
 
     try {
@@ -1170,80 +1169,81 @@ export default function TripDetailPage() {
       toast.success("Advance deleted");
       queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to delete self advance");
+      toast.error(
+        err.response?.data?.message || "Failed to delete self advance"
+      );
     }
   };
 
-
   // Self Owner Expense Handler
-  const handleSelfExpenseSubmit = async values => {
+  const handleSelfExpenseSubmit = async (values) => {
     try {
-      const res = await tripsApi.addSelfExpense(params.id, values)
+      const res = await tripsApi.addSelfExpense(params.id, values);
       if (res) {
-        setSelfExpenseForm(false)
-        queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
-        toast.success("Self expense added successfully")
+        setSelfExpenseForm(false);
+        queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+        toast.success("Self expense added successfully");
       }
     } catch (error) {
-      console.log(error)
-      toast.error("Failed to add self expense")
+      console.log(error);
+      toast.error("Failed to add self expense");
     }
-  }
+  };
 
   // Self Owner Advance Payment Handler
-  const handleSelfAdvanceSubmit = async values => {
+  const handleSelfAdvanceSubmit = async (values) => {
     try {
-      const res = await tripsApi.addSelfAdvance(params.id, values)
+      const res = await tripsApi.addSelfAdvance(params.id, values);
       if (res) {
-        setSelfAdvanceForm(false)
-        queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
-        toast.success("Self advance payment added successfully")
+        setSelfAdvanceForm(false);
+        queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+        toast.success("Self advance payment added successfully");
       }
     } catch (error) {
-      console.log(error)
-      toast.error("Failed to add self advance payment")
+      console.log(error);
+      toast.error("Failed to add self advance payment");
     }
-  }
+  };
 
   // Collection Memo Handler
-  const handleCollectionMemoSubmit = async formData => {
+  const handleCollectionMemoSubmit = async (formData) => {
     try {
       const res = await tripsApi.addCollectionMemo(
         params.id,
         selectedClientForMemo._id,
         formData
-      )
+      );
       if (res) {
-        setShowCollectionMemoDialog(false)
-        setSelectedClientForMemo(null)
-        queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
-        toast.success("Collection memo created successfully")
+        setShowCollectionMemoDialog(false);
+        setSelectedClientForMemo(null);
+        queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+        toast.success("Collection memo created successfully");
       }
     } catch (error) {
-      console.log(error)
-      toast.error("Failed to create collection memo")
+      console.log(error);
+      toast.error("Failed to create collection memo");
     }
-  }
+  };
 
   // Balance Memo Handler
-  const handleBalanceMemoSubmit = async formData => {
+  const handleBalanceMemoSubmit = async (formData) => {
     try {
       const res = await tripsApi.addBalanceMemo(
         params.id,
         selectedClientForMemo._id,
         formData
-      )
+      );
       if (res) {
-        setShowBalanceMemoDialog(false)
-        setSelectedClientForMemo(null)
-        queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
-        toast.success("Balance memo created successfully")
+        setShowBalanceMemoDialog(false);
+        setSelectedClientForMemo(null);
+        queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+        toast.success("Balance memo created successfully");
       }
     } catch (error) {
-      console.log(error)
-      toast.error("Failed to create balance memo")
+      console.log(error);
+      toast.error("Failed to create balance memo");
     }
-  }
+  };
 
   const steps = [
     { key: "started", label: "Trip Started", icon: "🚛", color: "blue" },
@@ -1253,58 +1253,56 @@ export default function TripDetailPage() {
       key: "pod_submitted",
       label: "POD Submitted",
       icon: "📤",
-      color: "purple"
+      color: "purple",
     },
-    { key: "settled", label: "Settled", icon: "💰", color: "emerald" }
-  ]
+    { key: "settled", label: "Settled", icon: "💰", color: "emerald" },
+  ];
 
-  const [currentIndex, setCurrentIndex] = useState(-1)
+  const [currentIndex, setCurrentIndex] = useState(-1);
 
   useEffect(() => {
     if (trip?.podManage?.status) {
-      const index = steps.findIndex(s => s.key === trip.podManage.status)
-      setCurrentIndex(index)
+      const index = steps.findIndex((s) => s.key === trip.podManage.status);
+      setCurrentIndex(index);
     }
-  }, [trip])
+  }, [trip]);
 
   const handleStepClick = async () => {
-    const nextStep = steps[currentIndex + 1]
+    const nextStep = steps[currentIndex + 1];
     if (!nextStep) {
-      toast.error("Trip is already at the final step")
-      return
+      toast.error("Trip is already at the final step");
+      return;
     }
 
-    setIsUpdatingPOD(true)
+    setIsUpdatingPOD(true);
 
     try {
-      const toastId = toast.loading(`Updating to: ${nextStep.label}...`)
+      const toastId = toast.loading(`Updating to: ${nextStep.label}...`);
 
       const data = await tripsApi.updatePodStatus(trip._id, {
-        status: nextStep.key
-      })
+        status: nextStep.key,
+      });
 
       if (data.success) {
         // Update local state immediately for better UX
-        setCurrentIndex(currentIndex + 1)
+        setCurrentIndex(currentIndex + 1);
 
         // Refresh the trip data
-        queryClient.invalidateQueries({ queryKey: ["trip", params.id] })
+        queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
 
-        toast.dismiss(toastId)
-        toast.success(`✅ POD status updated to: ${nextStep.label}`)
+        toast.dismiss(toastId);
+        toast.success(`✅ POD status updated to: ${nextStep.label}`);
       } else {
-        toast.dismiss(toastId)
-        toast.error("Failed to update POD status")
+        toast.dismiss(toastId);
+        toast.error("Failed to update POD status");
       }
     } catch (error) {
-      console.error("Error updating POD status:", error)
-      toast.error("Something went wrong while updating POD status")
+      console.error("Error updating POD status:", error);
+      toast.error("Something went wrong while updating POD status");
     } finally {
-      setIsUpdatingPOD(false)
+      setIsUpdatingPOD(false);
     }
-  }
-
-
+  };
 
   const handleStepBack = async () => {
     if (isUpdatingPOD || currentIndex <= 0) return;
@@ -1317,7 +1315,7 @@ export default function TripDetailPage() {
       const toastId = toast.loading(`Reverting to: ${previousStep.label}...`);
 
       const data = await tripsApi.updatePodStatus(trip._id, {
-        status: previousStep.key
+        status: previousStep.key,
       });
 
       if (data.success) {
@@ -1339,10 +1337,6 @@ export default function TripDetailPage() {
     }
   };
 
-
-
-
-
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
   const token = localStorage?.getItem("token");
@@ -1351,17 +1345,16 @@ export default function TripDetailPage() {
   const handlePODStepUpload = async (file, stepKey) => {
     try {
       const formData = new FormData();
-      formData.append("file", file);        // 👈 👈 Important: Field name should be "file"
-      formData.append("stepKey", stepKey);  // 👈 Optional field agar extra data bhejna ho
-      console.log(file)
+      formData.append("file", file); // 👈 👈 Important: Field name should be "file"
+      formData.append("stepKey", stepKey); // 👈 Optional field agar extra data bhejna ho
+      console.log(file);
       const res = await axios.post(
-        `${API_BASE_URL}/trips/${params.id}/podDocument`,  // 👈 Trip ID ke hisab se URL
+        `${API_BASE_URL}/trips/${params.id}/podDocument`, // 👈 Trip ID ke hisab se URL
         formData,
         {
           headers: {
-            "Content-Type": "multipart/form-data",  // 👈 VERY IMPORTANT
+            "Content-Type": "multipart/form-data", // 👈 VERY IMPORTANT
             Authorization: token ? `Bearer ${token}` : "",
-
           },
         }
       );
@@ -1370,11 +1363,11 @@ export default function TripDetailPage() {
     } catch (error) {
       console.error("Upload failed:", error);
     }
-  }
+  };
 
   const handleDelete = () => {
-    setShowDeleteDialog(true)
-  }
+    setShowDeleteDialog(true);
+  };
 
   if (isLoading || !trip) {
     return (
@@ -1383,7 +1376,7 @@ export default function TripDetailPage() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
       </DashboardLayout>
-    )
+    );
   }
 
   if (!trip) {
@@ -1401,53 +1394,45 @@ export default function TripDetailPage() {
           </Button>
         </div>
       </DashboardLayout>
-    )
+    );
   }
 
-  const canEdit = user?.role === "admin"
-  const canManagePOD = user?.role === "admin" || user?.role === "driver"
+  const canEdit = user?.role === "admin";
+  const canManagePOD = user?.role === "admin" || user?.role === "driver";
   const isFleetOwner =
-    user?.role === "fleet_owner" || trip.vehicle.ownershipType !== "self"
-  const isSelfOwner = trip.vehicle.ownershipType === "self"
+    user?.role === "fleet_owner" || trip.vehicle.ownershipType !== "self";
+  const isSelfOwner = trip.vehicle.ownershipType === "self";
   const totalWeight =
     trip.clients?.reduce((sum, client) => sum + client.loadDetails.weight, 0) ||
-    0
+    0;
 
   // Fleet Owner Calculations
   const totalFleetExpenses =
-    trip.fleetExpenses?.reduce((sum, expense) => sum + expense.amount, 0) || 0
+    trip.fleetExpenses?.reduce((sum, expense) => sum + expense.amount, 0) || 0;
   const totalFleetAdvances =
-    trip.fleetAdvances?.reduce((sum, advance) => sum + advance.amount, 0) || 0
-  const totalFleetCosts = totalFleetExpenses + totalFleetAdvances
+    trip.fleetAdvances?.reduce((sum, advance) => sum + advance.amount, 0) || 0;
+  const totalFleetCosts = totalFleetExpenses + totalFleetAdvances;
 
   // Self Owner Calculations
   const totalSelfExpenses =
-    trip.selfExpenses?.reduce((sum, expense) => sum + expense.amount, 0) || 0
+    trip.selfExpenses?.reduce((sum, expense) => sum + expense.amount, 0) || 0;
   const totalSelfAdvances =
-    trip.selfAdvances?.reduce((sum, advance) => sum + advance.amount, 0) || 0
-  const totalSelfCosts = totalSelfExpenses + totalSelfAdvances
+    trip.selfAdvances?.reduce((sum, advance) => sum + advance.amount, 0) || 0;
+  const totalSelfCosts = totalSelfExpenses + totalSelfAdvances;
 
-  const totalRevenue = trip.totalClientAmount || 0
+  const totalRevenue = trip.totalClientAmount || 0;
   const netProfit =
-    totalRevenue - (isFleetOwner ? totalFleetCosts : totalSelfCosts)
+    totalRevenue - (isFleetOwner ? totalFleetCosts : totalSelfCosts);
 
+  const tripRate = trip.rate || 0;
+  const totalGivenToFleetOwner = totalFleetExpenses + totalFleetAdvances;
+  const commission = trip.commission || 0;
+  const podBalance = trip.podBalance || 0;
 
+  const finalAmount =
+    tripRate - totalGivenToFleetOwner - commission - podBalance;
 
-
-
-
-
-
-  const tripRate = trip.rate || 0
-  const totalGivenToFleetOwner = totalFleetExpenses + totalFleetAdvances
-  const commission = trip.commission || 0
-  const podBalance = trip.podBalance || 0
-
-  const finalAmount = tripRate - totalGivenToFleetOwner - commission - podBalance
-
-
-
-  const getCategoryColor = category => {
+  const getCategoryColor = (category) => {
     const colors = {
       fuel: "bg-blue-100 text-blue-800",
       maintenance: "bg-orange-100 text-orange-800",
@@ -1456,12 +1441,12 @@ export default function TripDetailPage() {
       insurance: "bg-red-100 text-red-800",
       permit: "bg-yellow-100 text-yellow-800",
       food: "bg-pink-100 text-pink-800",
-      other: "bg-gray-100 text-gray-800"
-    }
-    return colors[category] || colors.other
-  }
+      other: "bg-gray-100 text-gray-800",
+    };
+    return colors[category] || colors.other;
+  };
 
-  const getCategoryIcon = category => {
+  const getCategoryIcon = (category) => {
     const icons = {
       fuel: "⛽",
       maintenance: "🔧",
@@ -1470,25 +1455,25 @@ export default function TripDetailPage() {
       insurance: "🛡️",
       permit: "📋",
       food: "🍽️",
-      other: "📝"
-    }
-    return icons[category] || "📝"
-  }
+      other: "📝",
+    };
+    return icons[category] || "📝";
+  };
 
-  const getRecipientColor = type => {
+  const getRecipientColor = (type) => {
     const colors = {
       driver: "bg-blue-100 text-blue-800",
       vendor: "bg-green-100 text-green-800",
       fuel_station: "bg-orange-100 text-orange-800",
       vehicle: "bg-purple-100 text-purple-800",
-      other: "bg-gray-100 text-gray-800"
-    }
-    return colors[type] || colors.other
-  }
+      other: "bg-gray-100 text-gray-800",
+    };
+    return colors[type] || colors.other;
+  };
 
-  const getExpenseForIcon = expenseFor => {
-    return expenseFor === "driver" ? "👨‍💼" : "🚛"
-  }
+  const getExpenseForIcon = (expenseFor) => {
+    return expenseFor === "driver" ? "👨‍💼" : "🚛";
+  };
 
   return (
     <DashboardLayout>
@@ -1516,6 +1501,15 @@ export default function TripDetailPage() {
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            {canManagePOD && (
+              <Button
+                onClick={() => setShowPODDialog(true)}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Manage POD
+              </Button>
+            )}
             {!isEditing && canEdit && (
               <Button
                 onClick={handleEdit}
@@ -1568,18 +1562,27 @@ export default function TripDetailPage() {
         {/* Status and Quick Info */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-blue-600" />
-                <div>
-                  <div className="text-sm text-muted-foreground">Status</div>
-                  <Badge className={getStatusColor(trip.status)}>
-                    {trip.status.replace("_", " ")}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <CardContent className="p-4">
+        <div className="flex items-center space-x-2">
+          <Calendar className="h-4 w-4 text-blue-600" />
+          <div>
+            <div className="text-sm text-muted-foreground">Status</div>
+            <select
+              className={`rounded px-2 py-1 text-sm font-medium ${getStatusColor(trip.status)}`}
+              value={trip.status}
+              onChange={(e) => handleStatusChange(e.target.value)}
+            >
+              {steps.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
 
           <Card className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
@@ -1607,10 +1610,12 @@ export default function TripDetailPage() {
           <Card className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-orange-600">
-                {formatCurrency(trip.rate || 0)} / {" "}
+                {formatCurrency(trip.rate || 0)} /{" "}
                 {formatCurrency(trip.totalClientAmount || 0)}
               </div>
-              <p className="text-sm text-muted-foreground">Total Amount / Total clients</p>
+              <p className="text-sm text-muted-foreground">
+                Total Amount / Total clients
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -1655,7 +1660,7 @@ export default function TripDetailPage() {
                         <AvatarFallback className="bg-blue-100 text-blue-800">
                           {trip?.driver?.name
                             .split(" ")
-                            .map(n => n[0])
+                            .map((n) => n[0])
                             .join("")
                             .toUpperCase()}
                         </AvatarFallback>
@@ -1719,32 +1724,54 @@ export default function TripDetailPage() {
                           Total Argestment
                         </div>
                         <div className="text-2xl font-extrabold text-green-800">
-
-                          ₹{trip.clients?.reduce((sum, c) => sum + (Number(c?.argestment || c?.adjustment) || 0), 0)}
+                          ₹
+                          {trip.clients?.reduce(
+                            (sum, c) =>
+                              sum +
+                              (Number(c?.argestment || c?.adjustment) || 0),
+                            0
+                          )}
                         </div>
                       </div>
 
                       {/* Total Profile Section - Styled as a prominent card */}
                       {(() => {
-                        const totalClientRevenue = trip.clients?.reduce((sum, c) => sum + (Number(c?.rate) || 0), 0);
-                        const totalAdjustments = trip.clients?.reduce((sum, c) => sum + (Number(c?.argestment || c?.adjustment) || 0), 0);
+                        const totalClientRevenue = trip.clients?.reduce(
+                          (sum, c) => sum + (Number(c?.rate) || 0),
+                          0
+                        );
+                        const totalAdjustments = trip.clients?.reduce(
+                          (sum, c) =>
+                            sum + (Number(c?.argestment || c?.adjustment) || 0),
+                          0
+                        );
                         const tripRate = Number(trip?.rate) || 0;
                         const commission = Number(trip?.commission) || 0;
 
-                        const overallProfit = totalClientRevenue - tripRate - totalAdjustments + commission;
+                        const overallProfit =
+                          totalClientRevenue -
+                          tripRate -
+                          totalAdjustments +
+                          commission;
 
                         return (
                           <div className="col-span-1 md:col-span-2 p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-lg border border-green-200 flex items-center justify-between mt-4">
                             <div className="text-md font-semibold text-green-700">
                               Overall Trip Profit/Loss:
                             </div>
-                            <div className={`text-2xl font-extrabold ${overallProfit >= 0 ? 'text-green-800' : 'text-red-800'}`}>
-                              {overallProfit >= 0 ? '+' : '-'}₹{Math.abs(overallProfit).toLocaleString()}
+                            <div
+                              className={`text-2xl font-extrabold ${
+                                overallProfit >= 0
+                                  ? "text-green-800"
+                                  : "text-red-800"
+                              }`}
+                            >
+                              {overallProfit >= 0 ? "+" : "-"}₹
+                              {Math.abs(overallProfit).toLocaleString()}
                             </div>
                           </div>
                         );
                       })()}
-
                     </div>
                   )}
 
@@ -1769,8 +1796,6 @@ export default function TripDetailPage() {
                 </CardContent>
               </Card>
             </div>
-
-
 
             {/* Self Owner Expenses & Advances Section - Only show for self-owned vehicles */}
             {isSelfOwner && (
@@ -1872,33 +1897,37 @@ export default function TripDetailPage() {
                     </Card>
 
                     <Card
-                      className={`bg-gradient-to-r hover:shadow-md transition-shadow ${netProfit >= 0
-                        ? "from-blue-100 to-blue-200"
-                        : "from-orange-100 to-orange-200"
-                        }`}
+                      className={`bg-gradient-to-r hover:shadow-md transition-shadow ${
+                        netProfit >= 0
+                          ? "from-blue-100 to-blue-200"
+                          : "from-orange-100 to-orange-200"
+                      }`}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-2">
                           <TrendingUp
-                            className={`h-5 w-5 ${netProfit >= 0
-                              ? "text-blue-600"
-                              : "text-orange-600"
-                              }`}
+                            className={`h-5 w-5 ${
+                              netProfit >= 0
+                                ? "text-blue-600"
+                                : "text-orange-600"
+                            }`}
                           />
                           <div>
                             <div
-                              className={`text-sm font-medium ${netProfit >= 0
-                                ? "text-blue-700"
-                                : "text-orange-700"
-                                }`}
+                              className={`text-sm font-medium ${
+                                netProfit >= 0
+                                  ? "text-blue-700"
+                                  : "text-orange-700"
+                              }`}
                             >
                               Net Profit
                             </div>
                             <div
-                              className={`text-xl font-bold ${netProfit >= 0
-                                ? "text-blue-800"
-                                : "text-orange-800"
-                                }`}
+                              className={`text-xl font-bold ${
+                                netProfit >= 0
+                                  ? "text-blue-800"
+                                  : "text-orange-800"
+                              }`}
                             >
                               {formatCurrency(netProfit)}
                             </div>
@@ -2006,13 +2035,14 @@ export default function TripDetailPage() {
                                     {formatCurrency(expense.amount)}
                                   </div>
                                   <button
-                                    onClick={() => handleDeleteSelfExpense(index)}
+                                    onClick={() =>
+                                      handleDeleteSelfExpense(index)
+                                    }
                                     className="text-red-500 text-sm mt-2 hover:underline"
                                   >
                                     Delete
                                   </button>
                                 </div>
-
                               </div>
                             ))}
                           </div>
@@ -2087,13 +2117,14 @@ export default function TripDetailPage() {
                                     {formatCurrency(advance.amount)}
                                   </div>
                                   <button
-                                    onClick={() => handleDeleteSelfAdvance(index)}
+                                    onClick={() =>
+                                      handleDeleteSelfAdvance(index)
+                                    }
                                     className="text-red-500 text-sm mt-2 hover:underline"
                                   >
                                     Delete
                                   </button>
                                 </div>
-
                               </div>
                             ))}
                           </div>
@@ -2109,7 +2140,6 @@ export default function TripDetailPage() {
                         )}
                       </div>
                     </TabsContent>
-
                   </Tabs>
                 </CardContent>
               </Card>
@@ -2213,33 +2243,37 @@ export default function TripDetailPage() {
                     </Card>
 
                     <Card
-                      className={`bg-gradient-to-r hover:shadow-md transition-shadow ${netProfit >= 0
-                        ? "from-blue-100 to-blue-200"
-                        : "from-orange-100 to-orange-200"
-                        }`}
+                      className={`bg-gradient-to-r hover:shadow-md transition-shadow ${
+                        netProfit >= 0
+                          ? "from-blue-100 to-blue-200"
+                          : "from-orange-100 to-orange-200"
+                      }`}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-2">
                           <TrendingUp
-                            className={`h-5 w-5 ${netProfit >= 0
-                              ? "text-blue-600"
-                              : "text-orange-600"
-                              }`}
+                            className={`h-5 w-5 ${
+                              netProfit >= 0
+                                ? "text-blue-600"
+                                : "text-orange-600"
+                            }`}
                           />
                           <div>
                             <div
-                              className={`text-sm font-medium ${netProfit >= 0
-                                ? "text-blue-700"
-                                : "text-orange-700"
-                                }`}
+                              className={`text-sm font-medium ${
+                                netProfit >= 0
+                                  ? "text-blue-700"
+                                  : "text-orange-700"
+                              }`}
                             >
                               Pending Fleet Owner
                             </div>
                             <div
-                              className={`text-xl font-bold ${netProfit >= 0
-                                ? "text-blue-800"
-                                : "text-orange-800"
-                                }`}
+                              className={`text-xl font-bold ${
+                                netProfit >= 0
+                                  ? "text-blue-800"
+                                  : "text-orange-800"
+                              }`}
                             >
                               {formatCurrency(finalAmount)}
                             </div>
@@ -2285,7 +2319,6 @@ export default function TripDetailPage() {
                       </TabsTrigger>
                     </TabsList>
 
-
                     <TabsContent value="advances">
                       <div className="space-y-3">
                         <div className="flex justify-between items-center border-b pb-2">
@@ -2307,7 +2340,9 @@ export default function TripDetailPage() {
                               <div className="flex-1">
                                 <div className="flex items-center space-x-2 mb-1">
                                   <Badge className="bg-blue-100 text-blue-800">
-                                    {advance.paymentType?.replace("_", " ").toUpperCase()}
+                                    {advance.paymentType
+                                      ?.replace("_", " ")
+                                      .toUpperCase()}
                                   </Badge>
                                   <span className="text-sm text-gray-500">
                                     {formatDate(advance.date, "MMM dd, yyyy")}
@@ -2332,7 +2367,6 @@ export default function TripDetailPage() {
                             </div>
                           </div>
                         ))}
-
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -2354,14 +2388,14 @@ export default function TripDetailPage() {
                     </CardDescription>
                   </div>
                   <Button
-                    onClick={() => setAddLoad(prev => !prev)}
+                    onClick={() => setAddLoad((prev) => !prev)}
                     className="bg-indigo-600 hover:bg-indigo-700"
                   >
                     <Plus className="h-4 w-4 mr-2" /> Add Load
                   </Button>
                   <AddLoadDialog
                     open={addLoad}
-                    onOpenChange={() => setAddLoad(prev => !prev)}
+                    onOpenChange={() => setAddLoad((prev) => !prev)}
                   />
                 </div>
               </CardHeader>
@@ -2373,8 +2407,9 @@ export default function TripDetailPage() {
                   <TabsList
                     className="grid w-full"
                     style={{
-                      gridTemplateColumns: `repeat(${trip.clients?.length ||
-                        1}, minmax(0, 1fr))`
+                      gridTemplateColumns: `repeat(${
+                        trip.clients?.length || 1
+                      }, minmax(0, 1fr))`,
                     }}
                   >
                     {trip.clients?.map((clientData, index) => (
@@ -2403,7 +2438,7 @@ export default function TripDetailPage() {
                               <AvatarFallback className="bg-blue-100 text-blue-800 text-lg">
                                 {clientData.client.name
                                   .split(" ")
-                                  .map(n => n[0])
+                                  .map((n) => n[0])
                                   .join("")
                                   .toUpperCase()}
                               </AvatarFallback>
@@ -2439,13 +2474,20 @@ export default function TripDetailPage() {
                               <div className="text-sm">
                                 Total Truck Hire Cost:{" "}
                                 <span className="text-green-600 font-bold">
-                                  {formatCurrency(clientData.truckHireCost ?? 0)}
+                                  {formatCurrency(
+                                    clientData.truckHireCost ?? 0
+                                  )}
                                 </span>
                               </div>
                               <div className="text-sm">
-                                Profite  client rate - truck cost:{" "}
+                                Profite client rate - truck cost:{" "}
                                 <span className="text-green-600 font-bold">
-                                  {formatCurrency(Math.abs(clientData.truckHireCost - clientData.totalRate))}
+                                  {formatCurrency(
+                                    Math.abs(
+                                      clientData.truckHireCost -
+                                        clientData.totalRate
+                                    )
+                                  )}
                                 </span>
                               </div>
                               <div className="text-sm">
@@ -2465,8 +2507,8 @@ export default function TripDetailPage() {
                                 <span className="text-orange-600 font-bold">
                                   {formatCurrency(
                                     (clientData.totalRate ?? 0) -
-                                    (clientData.paidAmount ?? 0) +
-                                    (clientData.totalExpense ?? 0)
+                                      (clientData.paidAmount ?? 0) +
+                                      (clientData.totalExpense ?? 0)
                                   )}
                                 </span>
                               </div>
@@ -2549,8 +2591,8 @@ export default function TripDetailPage() {
                               </CardTitle>
                               <Button
                                 onClick={() => {
-                                  setSelectedClientForMemo(clientData)
-                                  setShowCollectionMemoDialog(true)
+                                  setSelectedClientForMemo(clientData);
+                                  setShowCollectionMemoDialog(true);
                                 }}
                                 size="sm"
                                 className="bg-blue-600 hover:bg-blue-700"
@@ -2562,7 +2604,7 @@ export default function TripDetailPage() {
                           </CardHeader>
                           <CardContent>
                             {clientData.collectionMemos &&
-                              clientData.collectionMemos.length > 0 ? (
+                            clientData.collectionMemos.length > 0 ? (
                               <div className="space-y-2">
                                 {clientData.collectionMemos.map(
                                   (memo, memoIndex) => (
@@ -2624,8 +2666,8 @@ export default function TripDetailPage() {
                               </CardTitle>
                               <Button
                                 onClick={() => {
-                                  setSelectedClientForMemo(clientData)
-                                  setShowBalanceMemoDialog(true)
+                                  setSelectedClientForMemo(clientData);
+                                  setShowBalanceMemoDialog(true);
                                 }}
                                 size="sm"
                                 className="bg-green-600 hover:bg-green-700"
@@ -2637,7 +2679,7 @@ export default function TripDetailPage() {
                           </CardHeader>
                           <CardContent>
                             {clientData.balanceMemos &&
-                              clientData.balanceMemos.length > 0 ? (
+                            clientData.balanceMemos.length > 0 ? (
                               <div className="space-y-2">
                                 {clientData.balanceMemos.map(
                                   (memo, memoIndex) => (
@@ -2724,7 +2766,10 @@ export default function TripDetailPage() {
                                     Payment #{advanceIndex + 1}
                                   </p>
                                   <p className="text-xs text-gray-500">
-                                    {formatDate(item.paidAt, "MMM dd, yyyy HH:mm")}
+                                    {formatDate(
+                                      item.paidAt,
+                                      "MMM dd, yyyy HH:mm"
+                                    )}
                                   </p>
                                 </div>
                               </div>
@@ -2736,7 +2781,13 @@ export default function TripDetailPage() {
 
                                 {/* 🗑 Delete Button */}
                                 <button
-                                  onClick={() => handleDeleteAdvance(params.id, index, advanceIndex)}
+                                  onClick={() =>
+                                    handleDeleteAdvance(
+                                      params.id,
+                                      index,
+                                      advanceIndex
+                                    )
+                                  }
                                   className="text-red-500 hover:text-red-700 text-xs cursor pointer"
                                   title="Delete Advance"
                                 >
@@ -2747,11 +2798,10 @@ export default function TripDetailPage() {
                           ))}
                         </div>
 
-
                         <Button
                           variant="outline"
                           className="w-full border-green-300 text-green-700 hover:bg-green-100"
-                          onClick={() => setAdvancePay(prev => !prev)}
+                          onClick={() => setAdvancePay((prev) => !prev)}
                         >
                           <PlusCircle className="w-4 h-4 mr-2" />
                           {advancePay ? "Cancel" : "Add Payment"}
@@ -2793,7 +2843,10 @@ export default function TripDetailPage() {
                                     Expense #{expenseIndex + 1}
                                   </p>
                                   <p className="text-xs text-gray-500">
-                                    {formatDate(item.paidAt, "MMM dd, yyyy HH:mm")}
+                                    {formatDate(
+                                      item.paidAt,
+                                      "MMM dd, yyyy HH:mm"
+                                    )}
                                   </p>
                                 </div>
                               </div>
@@ -2806,7 +2859,11 @@ export default function TripDetailPage() {
                                 {/* 🗑 Delete Button */}
                                 <button
                                   onClick={() =>
-                                    handleDeleteExpense(params.id, index, expenseIndex)
+                                    handleDeleteExpense(
+                                      params.id,
+                                      index,
+                                      expenseIndex
+                                    )
                                   }
                                   className="text-red-500 hover:text-red-700 text-xs cursor-pointer"
                                   title="Delete Expense"
@@ -2818,11 +2875,10 @@ export default function TripDetailPage() {
                           ))}
                         </div>
 
-
                         <Button
                           variant="outline"
                           className="w-full border-red-300 text-red-700 hover:bg-red-100"
-                          onClick={() => setExpensesPay(prev => !prev)}
+                          onClick={() => setExpensesPay((prev) => !prev)}
                         >
                           <PlusCircle className="w-4 h-4 mr-2" />
                           {expensesPay ? "Cancel" : "Add Expense"}
@@ -2833,6 +2889,8 @@ export default function TripDetailPage() {
                           index={index}
                         />
                       </div>
+
+                      <PodStatusCard trip={trip} clientData={clientData} />
                     </TabsContent>
                   ))}
                 </Tabs>
@@ -2860,274 +2918,264 @@ export default function TripDetailPage() {
           </>
         )}
 
-
-
         {/* WORK LATER */}
-        <PodStatusCard trip={trip} />
-
-
 
         {/* Enhanced POD Management Section */}
-        <Card className="border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-lg">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-indigo-100 rounded-lg">
-                  <FileText className="h-6 w-6 text-indigo-600" />
+        {false && (
+          <Card className="border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-lg">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-indigo-100 rounded-lg">
+                    <FileText className="h-6 w-6 text-indigo-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-indigo-800 text-xl">
+                      POD Management System
+                    </CardTitle>
+                    <CardDescription className="text-indigo-600">
+                      Track your Proof of Delivery status in real-time
+                    </CardDescription>
+                  </div>
+                  <Badge className="bg-indigo-100 text-indigo-800 px-3 py-1 text-sm font-medium">
+                    {trip?.podManage?.status?.replace("_", " ").toUpperCase() ||
+                      "NOT STARTED"}
+                  </Badge>
                 </div>
-                <div>
-                  <CardTitle className="text-indigo-800 text-xl">
-                    POD Management System
-                  </CardTitle>
-                  <CardDescription className="text-indigo-600">
-                    Track your Proof of Delivery status in real-time
-                  </CardDescription>
+                {canManagePOD && (
+                  <Button
+                    onClick={() => setShowPODDialog(true)}
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Manage POD
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {/* Progress Steps with Enhanced Design */}
+              <div className="relative">
+                {/* Background Progress Line */}
+                <div className="absolute top-6 left-0 right-0 h-1 bg-gray-200 rounded-full">
+                  <div
+                    className="h-full bg-gradient-to-r from-green-400 via-blue-500 to-indigo-600 rounded-full transition-all duration-1000 ease-in-out shadow-sm"
+                    style={{
+                      width: `${((currentIndex + 1) / steps.length) * 100}%`,
+                    }}
+                  />
                 </div>
-                <Badge className="bg-indigo-100 text-indigo-800 px-3 py-1 text-sm font-medium">
-                  {trip?.podManage?.status
-                    ?.replace("_", " ")
-                    .toUpperCase() || "NOT STARTED"}
-                </Badge>
-              </div>
-              {canManagePOD && (
-                <Button
-                  onClick={() => setShowPODDialog(true)}
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Manage POD
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-8">
-            {/* Progress Steps with Enhanced Design */}
-            <div className="relative">
-              {/* Background Progress Line */}
-              <div className="absolute top-6 left-0 right-0 h-1 bg-gray-200 rounded-full">
-                <div
-                  className="h-full bg-gradient-to-r from-green-400 via-blue-500 to-indigo-600 rounded-full transition-all duration-1000 ease-in-out shadow-sm"
-                  style={{
-                    width: `${((currentIndex + 1) / steps.length) * 100}%`
-                  }}
-                />
-              </div>
 
-              {/* Steps */}
-              <div className="relative flex justify-between">
-                {steps.map((step, index) => {
-                  const isDone = index < currentIndex
-                  const isCurrent = index === currentIndex
-                  const isNext = index === currentIndex + 1
-                  const isPending = index > currentIndex
+                {/* Steps */}
+                <div className="relative flex justify-between">
+                  {steps.map((step, index) => {
+                    const isDone = index < currentIndex;
+                    const isCurrent = index === currentIndex;
+                    const isNext = index === currentIndex + 1;
+                    const isPending = index > currentIndex;
 
-                  return (
-                    <div
-                      key={step.key}
-                      className="flex flex-col items-center space-y-3 relative"
-                    >
-                      {/* Step Circle with Enhanced Design */}
+                    return (
                       <div
-                        className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 transform hover:scale-110 shadow-lg ${isDone
-                          ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-green-200"
-                          : isCurrent
-                            ? "bg-gradient-to-r from-indigo-400 to-indigo-600 text-white shadow-indigo-200 animate-pulse"
-                            : isNext
+                        key={step.key}
+                        className="flex flex-col items-center space-y-3 relative"
+                      >
+                        {/* Step Circle with Enhanced Design */}
+                        <div
+                          className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 transform hover:scale-110 shadow-lg ${
+                            isDone
+                              ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-green-200"
+                              : isCurrent
+                              ? "bg-gradient-to-r from-indigo-400 to-indigo-600 text-white shadow-indigo-200 animate-pulse"
+                              : isNext
                               ? "bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-700 border-2 border-yellow-300 shadow-yellow-100"
                               : "bg-gray-200 text-gray-400 shadow-gray-100"
                           }`}
-                      >
-                        {isDone ? (
-                          <CheckCircle className="w-6 h-6" />
-                        ) : isCurrent ? (
-                          <div className="flex items-center justify-center">
-                            <Clock className="w-5 h-5 animate-spin" />
-                          </div>
-                        ) : isNext ? (
-                          <AlertCircle className="w-5 h-5" />
-                        ) : (
-                          <Circle className="w-5 h-5" />
-                        )}
+                        >
+                          {isDone ? (
+                            <CheckCircle className="w-6 h-6" />
+                          ) : isCurrent ? (
+                            <div className="flex items-center justify-center">
+                              <Clock className="w-5 h-5 animate-spin" />
+                            </div>
+                          ) : isNext ? (
+                            <AlertCircle className="w-5 h-5" />
+                          ) : (
+                            <Circle className="w-5 h-5" />
+                          )}
 
-                        {/* Pulse animation for current step */}
-                        {isCurrent && (
-                          <div className="absolute inset-0 rounded-full bg-indigo-400 animate-ping opacity-30" />
-                        )}
-                      </div>
+                          {/* Pulse animation for current step */}
+                          {isCurrent && (
+                            <div className="absolute inset-0 rounded-full bg-indigo-400 animate-ping opacity-30" />
+                          )}
+                        </div>
 
-                      {/* Step Label with Enhanced Typography */}
-                      <div className="text-center max-w-24">
-                        <div
-                          className={`text-sm font-semibold transition-colors duration-300 ${isDone
-                            ? "text-green-700"
-                            : isCurrent
-                              ? "text-indigo-700"
-                              : isNext
+                        {/* Step Label with Enhanced Typography */}
+                        <div className="text-center max-w-24">
+                          <div
+                            className={`text-sm font-semibold transition-colors duration-300 ${
+                              isDone
+                                ? "text-green-700"
+                                : isCurrent
+                                ? "text-indigo-700"
+                                : isNext
                                 ? "text-yellow-700"
                                 : "text-gray-500"
                             }`}
-                        >
-                          {step.label}
+                          >
+                            {step.label}
+                          </div>
+
+                          {/* Emoji indicator */}
+                          <div className="text-lg mt-1">{step.icon}</div>
+
+                          {/* Timestamp for completed/current steps */}
+                          {(isDone || isCurrent) && trip.podManage?.date && (
+                            <div className="text-xs text-gray-500 mt-2 bg-white px-2 py-1 rounded-full shadow-sm">
+                              {formatDate(trip.podManage.date, "MMM dd, HH:mm")}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Emoji indicator */}
-                        <div className="text-lg mt-1">{step.icon}</div>
-
-                        {/* Timestamp for completed/current steps */}
-                        {(isDone || isCurrent) && trip.podManage?.date && (
-                          <div className="text-xs text-gray-500 mt-2 bg-white px-2 py-1 rounded-full shadow-sm">
-                            {formatDate(
-                              trip.podManage.date,
-                              "MMM dd, HH:mm"
-                            )}
-                          </div>
+                        {/* Optional Document Upload for each step */}
+                        {(isDone || isCurrent) && (
+                          <PODStepUpload
+                            stepName={step.label}
+                            onUpload={(file) =>
+                              handlePODStepUpload(file, step.key)
+                            }
+                            existingDocument={
+                              trip.podManage?.stepDocuments?.[step.key]
+                            }
+                          />
                         )}
                       </div>
-
-                      {/* Optional Document Upload for each step */}
-                      {(isDone || isCurrent) && (
-                        <PODStepUpload
-                          stepName={step.label}
-                          onUpload={file =>
-                            handlePODStepUpload(file, step.key)
-                          }
-                          existingDocument={
-                            trip.podManage?.stepDocuments?.[step.key]
-                          }
-                        />
-                      )}
-                    </div>
-                  )
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            {/* Enhanced Action Section */}
-            <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-6">
-                  {/* Current Status Info */}
-                  <div className="text-center">
-                    <div className="text-sm text-gray-600 font-medium">
-                      Current Status
-                    </div>
-                    <div className="text-lg font-bold text-gray-900 mt-1">
-                      {steps[currentIndex]?.label || "Not Started"}
-                    </div>
-                  </div>
-
-                  {/* Progress Percentage with Circular Progress */}
-                  <div className="text-center">
-                    <div className="relative w-16 h-16">
-                      <svg
-                        className="w-16 h-16 transform -rotate-90"
-                        viewBox="0 0 64 64"
-                      >
-                        <circle
-                          cx="32"
-                          cy="32"
-                          r="28"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                          className="text-gray-200"
-                        />
-                        <circle
-                          cx="32"
-                          cy="32"
-                          r="28"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                          strokeDasharray={`${2 * Math.PI * 28}`}
-                          strokeDashoffset={`${2 *
-                            Math.PI *
-                            28 *
-                            (1 - (currentIndex + 1) / steps.length)}`}
-                          className="text-indigo-600 transition-all duration-1000 ease-in-out"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-lg font-bold text-indigo-600">
-                          {Math.round(
-                            ((currentIndex + 1) / steps.length) * 100
-                          )}
-                          %
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Complete
-                    </div>
-                  </div>
-
-                  {/* Next Step Info */}
-                  {currentIndex < steps.length - 1 && (
+              {/* Enhanced Action Section */}
+              <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-6">
+                    {/* Current Status Info */}
                     <div className="text-center">
                       <div className="text-sm text-gray-600 font-medium">
-                        Next Step
+                        Current Status
                       </div>
-                      <div className="text-md font-semibold text-indigo-600 mt-1">
-                        {steps[currentIndex + 1]?.label}
+                      <div className="text-lg font-bold text-gray-900 mt-1">
+                        {steps[currentIndex]?.label || "Not Started"}
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Action Buttons */}
-
-
-
-                <div className="flex items-center space-x-3">
-                  {/* Back Button */}
-                  {canManagePOD && currentIndex > 0 && (
-                    <Button
-                      onClick={handleStepBack}
-                      disabled={isUpdatingPOD}
-                      className="bg-gradient-to-r from-gray-400 to-gray-600 hover:from-gray-500 hover:to-gray-700 shadow-md px-6 py-2"
-                    >
-                      {isUpdatingPOD ? (
-                        <>
-                          <Clock className="w-4 h-4 mr-2 animate-spin" />
-                          Reverting...
-                        </>
-                      ) : (
-                        <>Back to: {steps[currentIndex - 1]?.label}</>
-                      )}
-                    </Button>
-                  )}
-
-                  {/* Forward Button */}
-                  {canManagePOD && currentIndex < steps.length - 1 && (
-                    <Button
-                      onClick={handleStepClick}
-                      disabled={isUpdatingPOD}
-                      className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md px-6 py-2"
-                    >
-                      {isUpdatingPOD ? (
-                        <>
-                          <Clock className="w-4 h-4 mr-2 animate-spin" />
-                          Updating...
-                        </>
-                      ) : (
-                        <>Advance to: {steps[currentIndex + 1]?.label}</>
-                      )}
-                    </Button>
-                  )}
-
-                  {/* Completed Badge */}
-                  {currentIndex === steps.length - 1 && (
-                    <div className="flex items-center space-x-2">
-                      <Badge className="bg-green-100 text-green-800 px-4 py-2 text-sm font-medium">
-                        ✅ Trip Completed Successfully
-                      </Badge>
+                    {/* Progress Percentage with Circular Progress */}
+                    <div className="text-center">
+                      <div className="relative w-16 h-16">
+                        <svg
+                          className="w-16 h-16 transform -rotate-90"
+                          viewBox="0 0 64 64"
+                        >
+                          <circle
+                            cx="32"
+                            cy="32"
+                            r="28"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                            fill="none"
+                            className="text-gray-200"
+                          />
+                          <circle
+                            cx="32"
+                            cy="32"
+                            r="28"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                            fill="none"
+                            strokeDasharray={`${2 * Math.PI * 28}`}
+                            strokeDashoffset={`${
+                              2 *
+                              Math.PI *
+                              28 *
+                              (1 - (currentIndex + 1) / steps.length)
+                            }`}
+                            className="text-indigo-600 transition-all duration-1000 ease-in-out"
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-lg font-bold text-indigo-600">
+                            {Math.round(
+                              ((currentIndex + 1) / steps.length) * 100
+                            )}
+                            %
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">Complete</div>
                     </div>
-                  )}
-                </div>
 
+                    {/* Next Step Info */}
+                    {currentIndex < steps.length - 1 && (
+                      <div className="text-center">
+                        <div className="text-sm text-gray-600 font-medium">
+                          Next Step
+                        </div>
+                        <div className="text-md font-semibold text-indigo-600 mt-1">
+                          {steps[currentIndex + 1]?.label}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
+                  {/* Action Buttons */}
 
-                {/* <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3">
+                    {/* Back Button */}
+                    {canManagePOD && currentIndex > 0 && (
+                      <Button
+                        onClick={handleStepBack}
+                        disabled={isUpdatingPOD}
+                        className="bg-gradient-to-r from-gray-400 to-gray-600 hover:from-gray-500 hover:to-gray-700 shadow-md px-6 py-2"
+                      >
+                        {isUpdatingPOD ? (
+                          <>
+                            <Clock className="w-4 h-4 mr-2 animate-spin" />
+                            Reverting...
+                          </>
+                        ) : (
+                          <>Back to: {steps[currentIndex - 1]?.label}</>
+                        )}
+                      </Button>
+                    )}
+
+                    {/* Forward Button */}
+                    {canManagePOD && currentIndex < steps.length - 1 && (
+                      <Button
+                        onClick={handleStepClick}
+                        disabled={isUpdatingPOD}
+                        className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md px-6 py-2"
+                      >
+                        {isUpdatingPOD ? (
+                          <>
+                            <Clock className="w-4 h-4 mr-2 animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          <>Advance to: {steps[currentIndex + 1]?.label}</>
+                        )}
+                      </Button>
+                    )}
+
+                    {/* Completed Badge */}
+                    {currentIndex === steps.length - 1 && (
+                      <div className="flex items-center space-x-2">
+                        <Badge className="bg-green-100 text-green-800 px-4 py-2 text-sm font-medium">
+                          ✅ Trip Completed Successfully
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* <div className="flex items-center space-x-3">
                   {canManagePOD && currentIndex < steps.length - 1 && (
                     <Button
                       onClick={handleStepClick}
@@ -3153,87 +3201,89 @@ export default function TripDetailPage() {
                     </div>
                   )}
                 </div> */}
+                </div>
               </div>
-            </div>
 
-            {/* POD Document Preview with Enhanced Design */}
-            {trip?.podManage?.document?.url && (
-              <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                    <FileText className="h-5 w-5 mr-2 text-indigo-600" />
-                    POD Document
-                  </h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      window.open(trip.podManage.document.url, "_blank")
-                    }
-                    className="hover:bg-indigo-50 hover:border-indigo-300"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    View Full Size
-                  </Button>
+              {/* POD Document Preview with Enhanced Design */}
+              {trip?.podManage?.document?.url && (
+                <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <FileText className="h-5 w-5 mr-2 text-indigo-600" />
+                      POD Document
+                    </h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        window.open(trip.podManage.document.url, "_blank")
+                      }
+                      className="hover:bg-indigo-50 hover:border-indigo-300"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      View Full Size
+                    </Button>
+                  </div>
+                  <div className="flex justify-center">
+                    <img
+                      src={`${
+                        trip.podManage.document.url || "/placeholder.svg"
+                      }`}
+                      alt="POD Document"
+                      className="max-w-xs rounded-lg border shadow-md hover:shadow-lg transition-shadow cursor-pointer transform hover:scale-105"
+                      onClick={() =>
+                        window.open(trip.podManage.document.url, "_blank")
+                      }
+                    />
+                  </div>
                 </div>
-                <div className="flex justify-center">
-                  <img
-                    src={`${trip.podManage.document.url ||
-                      "/placeholder.svg"}`}
-                    alt="POD Document"
-                    className="max-w-xs rounded-lg border shadow-md hover:shadow-lg transition-shadow cursor-pointer transform hover:scale-105"
-                    onClick={() =>
-                      window.open(trip.podManage.document.url, "_blank")
-                    }
-                  />
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Additional POD Information with Enhanced Cards */}
-            {trip?.podManage && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl shadow-sm border border-blue-200">
-                  <div className="text-sm text-blue-600 font-semibold flex items-center">
-                    <FileText className="h-4 w-4 mr-1" />
-                    POD Number
+              {/* Additional POD Information with Enhanced Cards */}
+              {trip?.podManage && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl shadow-sm border border-blue-200">
+                    <div className="text-sm text-blue-600 font-semibold flex items-center">
+                      <FileText className="h-4 w-4 mr-1" />
+                      POD Number
+                    </div>
+                    <div className="text-lg font-bold text-blue-900 mt-1">
+                      {trip.podManage.podNumber || "Not assigned"}
+                    </div>
                   </div>
-                  <div className="text-lg font-bold text-blue-900 mt-1">
-                    {trip.podManage.podNumber || "Not assigned"}
+                  <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl shadow-sm border border-green-200">
+                    <div className="text-sm text-green-600 font-semibold flex items-center">
+                      <Calendar className="h-4 w-4 mr-1" />
+                      Received Date
+                    </div>
+                    <div className="text-lg font-bold text-green-900 mt-1">
+                      {trip.podManage.receivedDate
+                        ? formatDate(
+                            trip.podManage.receivedDate,
+                            "MMM dd, yyyy"
+                          )
+                        : "Pending"}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl shadow-sm border border-purple-200">
+                    <div className="text-sm text-purple-600 font-semibold flex items-center">
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Submitted Date
+                    </div>
+                    <div className="text-lg font-bold text-purple-900 mt-1">
+                      {trip.podManage.submittedDate
+                        ? formatDate(
+                            trip.podManage.submittedDate,
+                            "MMM dd, yyyy"
+                          )
+                        : "Pending"}
+                    </div>
                   </div>
                 </div>
-                <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl shadow-sm border border-green-200">
-                  <div className="text-sm text-green-600 font-semibold flex items-center">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    Received Date
-                  </div>
-                  <div className="text-lg font-bold text-green-900 mt-1">
-                    {trip.podManage.receivedDate
-                      ? formatDate(
-                        trip.podManage.receivedDate,
-                        "MMM dd, yyyy"
-                      )
-                      : "Pending"}
-                  </div>
-                </div>
-                <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl shadow-sm border border-purple-200">
-                  <div className="text-sm text-purple-600 font-semibold flex items-center">
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Submitted Date
-                  </div>
-                  <div className="text-lg font-bold text-purple-900 mt-1">
-                    {trip.podManage.submittedDate
-                      ? formatDate(
-                        trip.podManage.submittedDate,
-                        "MMM dd, yyyy"
-                      )
-                      : "Pending"}
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* POD Upload Dialog */}
         <PODDetailsDialog
@@ -3302,13 +3352,24 @@ export default function TripDetailPage() {
         </DialogContent>
       </Dialog>
 
-
-      <EnhancedEditTripDialog
+      {/* <EnhancedAddEditTripDialog
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
         onSuccess={handleEditSuccess}
         tripData={trip}
+      /> */}
+
+
+        <EnhancedAddEditTripDialog
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          setShowEditDialog(open)
+          if (!open) setEditingTrip(null)
+        }}
+        onSuccess={handleEditSuccess}
+        editingTrip={trip}
+        isEditing={true}
       />
     </DashboardLayout>
-  )
+  );
 }

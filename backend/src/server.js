@@ -121,42 +121,7 @@ app.use("/api/v1/expenses", require("./routes/expenseRoutes"));
 
 
 
-function calculateDashboardData(trips) {
-  let totalTrips = trips.length;
-  let totalPods = 0;
-  let totalProfitBeforeExpenses = 0;
-  let totalExpenses = 0;
 
-  trips.forEach(trip => {
-    totalPods += (trip.podBalance || 0);
-
-    // Profit Calculation
-    if (trip.vehicleOwner?.ownershipType === "fleet_owner") {
-      const clientTotalRate = trip.clients.reduce((sum, c) => sum + (c.rate || 0), 0);
-      const clientTruckCost = trip.clients.reduce((sum, c) => sum + (c.truckHireCost || 0), 0);
-      const profit = (clientTotalRate - clientTruckCost) + clientTruckCost - (trip.rate || 0) + (trip.commission || 0);
-      totalProfitBeforeExpenses += profit;
-    } else if (trip.vehicleOwner?.ownershipType === "self") {
-      const profit = (trip.totalClientAmount || 0) - (trip.rate || 0) + (trip.commission || 0);
-      totalProfitBeforeExpenses += profit;
-
-      // Self Expenses for Self Trips
-      if (Array.isArray(trip.selfExpenses)) {
-        totalExpenses += trip.selfExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-      }
-    }
-  });
-
-  const totalFinalProfit = totalProfitBeforeExpenses - totalExpenses;
-
-  return {
-    totalTrips,
-    totalPods,
-    totalProfitBeforeExpenses,
-    totalExpenses,
-    totalFinalProfit
-  };
-}
 
 // Health check endpoint
 app.get("/health", (req, res) => {

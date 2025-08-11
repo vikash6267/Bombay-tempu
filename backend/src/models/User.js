@@ -115,7 +115,7 @@ const userSchema = new mongoose.Schema(
       state: String,
       pincode: {
         type: String,
-        match: [/^[0-9]{6}$/, "Please provide a valid 6-digit pincode"],
+        
       },
     },
     profileImage: {

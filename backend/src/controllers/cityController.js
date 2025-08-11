@@ -461,6 +461,7 @@ const getAllCities = catchAsync(async (req, res, next) => {
   });
 });
 
+
 const addCity = async (req, res) => {
   try {
     let { city, state, pincode } = req.body;

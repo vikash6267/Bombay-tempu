@@ -3,7 +3,7 @@ import { Formik, Form, Field, ErrorMessage } from "formik"
 import * as Yup from "yup"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import toast from "react-hot-toast"
-import { User, Mail, Phone, Lock } from "lucide-react"
+import { User, Mail, Phone, Lock, MapPin } from "lucide-react"
 
 import {
   Dialog,
@@ -18,14 +18,59 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { usersApi } from "@/lib/api"
 
-const userSchema = Yup.object().shape({
-  name: Yup.string().required("Name is required"),
-  email: Yup.string()
-    .email("Invalid email")
-    .required("Email is required"),
-  phone: Yup.string().required("Phone is required"),
-  role: Yup.string().required("Role is required")
-})
+// Dynamic validation schema based on userType
+const getUserSchema = userType => {
+  const baseSchema = {
+    name: Yup.string().required("Name is required"),
+    email: Yup.string().email("Invalid email").required("Email is required"),
+    phone: Yup.string().required("Phone is required"),
+    role: Yup.string().required("Role is required")
+  }
+
+  // Conditionally add the address validation
+  if (userType !== "fleet_owner") {
+    return Yup.object().shape({
+      ...baseSchema,
+      address: Yup.object().shape({
+        street: Yup.string().required("Street is required"),
+        city: Yup.string().required("City is required"),
+        state: Yup.string().required("State is required"),
+        pincode: Yup.string()
+          .required("Pincode is required")
+          .matches(/^\d{6}$/, "Pincode must be 6 digits")
+      })
+    })
+  }
+
+  return Yup.object().shape(baseSchema)
+}
+
+// Dynamic initial values based on userType
+const getInitialValues = userType => {
+  const timestamp = Date.now()
+  const baseValues = {
+    name: "",
+    email: `noreply${timestamp}@gmail.com`,
+    phone: "",
+    password: "12345678",
+    role: userType
+  }
+
+  // Conditionally add the address field
+  if (userType !== "fleet_owner") {
+    return {
+      ...baseValues,
+      address: {
+        street: "",
+        city: "",
+        state: "",
+        pincode: ""
+      }
+    }
+  }
+
+  return baseValues
+}
 
 export function AddUserDialog({ open, onOpenChange, userType, onSuccess }) {
   const queryClient = useQueryClient()
@@ -65,15 +110,6 @@ export function AddUserDialog({ open, onOpenChange, userType, onSuccess }) {
     }
   }
 
-  const timestamp = Date.now()
-  const getInitialValues = () => ({
-    name: "",
-    email: `noreply${timestamp}@gmail.com`,  // <-- change domain as needed
-    phone: "",
-    password: "12345678",
-    role: userType
-  })
-
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
       await addMutation.mutateAsync(values)
@@ -84,6 +120,9 @@ export function AddUserDialog({ open, onOpenChange, userType, onSuccess }) {
       setSubmitting(false)
     }
   }
+
+  const userSchema = getUserSchema(userType)
+  const initialValues = getInitialValues(userType)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,7 +139,7 @@ export function AddUserDialog({ open, onOpenChange, userType, onSuccess }) {
         </DialogHeader>
 
         <Formik
-          initialValues={getInitialValues()}
+          initialValues={initialValues}
           validationSchema={userSchema}
           onSubmit={handleSubmit}
         >
@@ -178,6 +217,105 @@ export function AddUserDialog({ open, onOpenChange, userType, onSuccess }) {
                   className="text-sm text-red-500"
                 />
               </div>
+
+              {/* Conditional Address Fields */}
+              {userType !== "fleet_owner" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="address.street">Street *</Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Field name="address.street">
+                        {({ field }) => (
+                          <Input
+                            {...field}
+                            id="address.street"
+                            placeholder="Street Address"
+                            className={`pl-10 ${
+                              errors.address?.street && touched.address?.street
+                                ? "border-red-500"
+                                : ""
+                            }`}
+                          />
+                        )}
+                      </Field>
+                    </div>
+                    <ErrorMessage
+                      name="address.street"
+                      component="p"
+                      className="text-sm text-red-500"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="address.city">City *</Label>
+                      <Field name="address.city">
+                        {({ field }) => (
+                          <Input
+                            {...field}
+                            id="address.city"
+                            placeholder="City"
+                            className={`${
+                              errors.address?.city && touched.address?.city
+                                ? "border-red-500"
+                                : ""
+                            }`}
+                          />
+                        )}
+                      </Field>
+                      <ErrorMessage
+                        name="address.city"
+                        component="p"
+                        className="text-sm text-red-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address.state">State *</Label>
+                      <Field name="address.state">
+                        {({ field }) => (
+                          <Input
+                            {...field}
+                            id="address.state"
+                            placeholder="State"
+                            className={`${
+                              errors.address?.state && touched.address?.state
+                                ? "border-red-500"
+                                : ""
+                            }`}
+                          />
+                        )}
+                      </Field>
+                      <ErrorMessage
+                        name="address.state"
+                        component="p"
+                        className="text-sm text-red-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address.pincode">Pincode *</Label>
+                    <Field name="address.pincode">
+                      {({ field }) => (
+                        <Input
+                          {...field}
+                          id="address.pincode"
+                          placeholder="Pincode"
+                          className={`${
+                            errors.address?.pincode && touched.address?.pincode
+                              ? "border-red-500"
+                              : ""
+                          }`}
+                        />
+                      )}
+                    </Field>
+                    <ErrorMessage
+                      name="address.pincode"
+                      component="p"
+                      className="text-sm text-red-500"
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="password">Default Password</Label>
