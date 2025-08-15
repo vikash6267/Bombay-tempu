@@ -76,6 +76,9 @@ const vehicleSchema = new mongoose.Schema(
         "Please provide a valid registration number",
       ],
     },
+
+    description: String,
+
     vehicleType: {
       type: String,
       required: [true, "Vehicle type is required"],
@@ -233,86 +236,27 @@ const vehicleSchema = new mongoose.Schema(
       },
     },
 
-    // Loan Information
-    loanDetails: {
-      hasLoan: {
-        type: Boolean,
-        default: false,
-      },
-      loanAmount: {
-        type: Number,
-        min: 0,
-        validate: {
-          validator: function (v) {
-            return !this.loanDetails.hasLoan || (v && v > 0);
-          },
-          message: "Loan amount is required when vehicle has loan",
-        },
-      },
-      loanProvider: {
-        type: String,
-        validate: {
-          validator: function (v) {
-            return !this.loanDetails.hasLoan || (v && v.trim().length > 0);
-          },
-          message: "Loan provider is required when vehicle has loan",
-        },
-      },
-      emiAmount: {
-        type: Number,
-        min: 0,
-        validate: {
-          validator: function (v) {
-            return !this.loanDetails.hasLoan || (v && v > 0);
-          },
-          message: "EMI amount is required when vehicle has loan",
-        },
-      },
-      emiDueDate: {
-        type: Number, // Day of month (1-31)
-        min: 1,
-        max: 31,
-        validate: {
-          validator: function (v) {
-            return !this.loanDetails.hasLoan || (v && v >= 1 && v <= 31);
-          },
-          message: "EMI due date must be between 1 and 31",
-        },
-      },
-      loanStartDate: {
-        type: Date,
-        validate: {
-          validator: function (v) {
-            return !this.loanDetails.hasLoan || v;
-          },
-          message: "Loan start date is required when vehicle has loan",
-        },
-      },
-      loanTenure: {
-        type: Number, // in months
-        min: 1,
-        validate: {
-          validator: function (v) {
-            return !this.loanDetails.hasLoan || (v && v > 0);
-          },
-          message: "Loan tenure is required when vehicle has loan",
-        },
-      },
-      remainingInstallments: {
-        type: Number,
-        min: 0,
-        default: function () {
-          return this.loanDetails.hasLoan ? this.loanDetails.loanTenure : 0;
-        },
-      },
-      loanStatus: {
-        type: String,
-        enum: ["active", "completed", "defaulted"],
-        default: function () {
-          return this.loanDetails.hasLoan ? "active" : "completed";
-        },
-      },
-    },
+   loanDetails: {
+  hasLoan: { type: Boolean, default: false },
+  loanAmount: { type: Number, default: null },
+  emiAmount: { type: Number, default: null },
+  loanTenure: { type: Number, default: null },
+  loanProvider: { type: String, default: "" },
+  loanStartDate: { type: Date, default: null }
+},
+papers: {
+  engineNo: { type: String, default: "" },
+  chassisNo: { type: String, default: "" },
+  modelName: { type: String, default: "" },
+  registrationDate: { type: Date, default: null },
+  fitnessDate: { type: Date, default: null },
+  taxDate: { type: Date, default: null },
+  insuranceDate: { type: Date, default: null },
+  puccDate: { type: Date, default: null },
+  permitDate: { type: Date, default: null },
+  nationalPermitDate: { type: Date, default: null }
+}
+,
 
     // Financial tracking
     totalEarnings: {

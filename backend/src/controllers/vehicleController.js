@@ -209,130 +209,161 @@ const getVehicle = catchAsync(async (req, res, next) => {
 });
 
 const createVehicle = catchAsync(async (req, res, next) => {
-  const {ownershipType, owner, commissionRate} = req.body;
-  let vehicle;
+  const { ownershipType, owner, commissionRate } = req.body;
 
-  // Validate ownership type
-  if (!ownershipType || !["self", "fleet_owner"].includes(ownershipType)) {
-    return next(
-      new AppError(
-        "Valid ownership type is required (self or fleet_owner)",
-        400
-      )
-    );
+  // --- Map flat loan fields into nested loanDetails ---
+  if (req.body.hasLoan !== undefined) {
+    req.body.loanDetails = {
+      hasLoan: req.body.hasLoan,
+      loanAmount: req.body.loanAmount,
+      emiAmount: req.body.emiAmount,
+      loanTenure: req.body.loanTenure,
+      loanProvider: req.body.loanProvider,
+      loanStartDate: req.body.loanStartDate
+    };
   }
 
-  // Set ownership details based on type
+  // --- Map flat paper fields into nested papers ---
+  req.body.papers = {
+    engineNo: req.body.engineNumber,
+    chassisNo: req.body.chassisNumber,
+    modelName: req.body.modelName,
+    registrationDate: req.body.registrationDate,
+    fitnessDate: req.body.fitnessDate,
+    taxDate: req.body.taxDate,
+    insuranceDate: req.body.insuranceDate,
+    puccDate: req.body.puccDate,
+    permitDate: req.body.permitDate,
+    nationalPermitDate: req.body.nationalPermitDate
+  };
+
+  // Remove flat fields to avoid duplicate storage
+  [
+    "hasLoan", "loanAmount", "emiAmount", "loanTenure", "loanProvider", "loanStartDate",
+    "engineNumber", "chassisNumber", "modelName", "registrationDate", "fitnessDate",
+    "taxDate", "insuranceDate", "puccDate", "permitDate", "nationalPermitDate"
+  ].forEach(f => delete req.body[f]);
+
+  // --- Ownership validation logic (unchanged) ---
+  if (!ownershipType || !["self", "fleet_owner"].includes(ownershipType)) {
+    return next(new AppError("Valid ownership type is required (self or fleet_owner)", 400));
+  }
+
+  let vehicle;
   if (ownershipType === "self") {
-    // For self-owned vehicles, remove owner and commission rate
     delete req.body.owner;
     delete req.body.commissionRate;
 
-    // Only admin can create self-owned vehicles
     if (req.user.role !== "admin") {
-      return next(
-        new AppError("Only admin can create self-owned vehicles", 403)
-      );
+      return next(new AppError("Only admin can create self-owned vehicles", 403));
     }
 
-    let details = {
+    const details = {
       selfOwnerDetails: {
         adminId: req.user.id,
         name: req.user.name,
         email: req.user.email,
-        phone: req.user.phone,
-      },
+        phone: req.user.phone
+      }
     };
 
-    vehicle = await Vehicle.create({...req.body, ...details});
+    vehicle = await Vehicle.create({ ...req.body, ...details });
   } else if (ownershipType === "fleet_owner") {
-    // For fleet owner vehicles, validate owner and commission rate
     if (!owner) {
-      return next(
-        new AppError("Fleet owner is required for fleet_owner vehicles", 400)
-      );
+      return next(new AppError("Fleet owner is required for fleet_owner vehicles", 400));
+    }
+    if (commissionRate === undefined || commissionRate < 0 || commissionRate > 100) {
+      return next(new AppError("Commission rate must be between 0-100%", 400));
     }
 
-    if (
-      commissionRate === undefined ||
-      commissionRate < 0 ||
-      commissionRate > 100
-    ) {
-      return next(
-        new AppError(
-          "Commission rate is required and must be between 0-100%",
-          400
-        )
-      );
-    }
-
-    // Verify owner exists and is a fleet owner
     const ownerUser = await User.findById(owner);
     if (!ownerUser || ownerUser.role !== "fleet_owner") {
       return next(new AppError("Invalid fleet owner specified", 400));
     }
 
-    // If user is fleet owner, they can only create vehicles for themselves
-    // if (req.user.role === "fleet_owner" && req.user.id !== owner) {
-    //   return next(
-    //     new AppError(
-    //       "Fleet owners can only create vehicles for themselves",
-    //       403
-    //     )
-    //   );
-    // }
-
-    vehicle = await Vehicle.create({...req.body});
+    vehicle = await Vehicle.create({ ...req.body });
   }
 
-  // Populate the created vehicle
   await vehicle.populate([
-    {path: "owner", select: "name email phone"},
-    {path: "selfOwnerDetails.adminId", select: "name email phone"},
+    { path: "owner", select: "name email phone" },
+    { path: "selfOwnerDetails.adminId", select: "name email phone" }
   ]);
 
   res.status(201).json({
     status: "success",
-    data: {
-      vehicle,
-    },
+    data: { vehicle }
   });
 });
 
-const updateVehicle = catchAsync(async (req, res, next) => {
-  const filter = {_id: req.params.id};
 
-  // Apply role-based filtering
-  if (req.user.role === "fleet_owner") {
-    filter.owner = req.user.id;
-    filter.ownershipType = "fleet_owner";
+const updateVehicle = async (req, res, next) => {
+  try {
+    const filter = { _id: req.params.id };
+
+    if (req.user.role === "fleet_owner") {
+      filter.owner = req.user.id;
+      filter.ownershipType = "fleet_owner";
+    }
+
+    // Prevent ownership change via update
+    ["ownershipType", "owner", "selfOwnerDetails", "commissionRate"].forEach(f => delete req.body[f]);
+
+    // Map flat fields to nested structures
+    if (req.body.hasLoan !== undefined) {
+      req.body.loanDetails = {
+        hasLoan: req.body.hasLoan,
+        loanAmount: req.body.loanAmount,
+        emiAmount: req.body.emiAmount,
+        loanTenure: req.body.loanTenure,
+        loanProvider: req.body.loanProvider,
+        loanStartDate: req.body.loanStartDate
+      };
+    }
+
+    req.body.papers = {
+      engineNo: req.body.engineNumber,
+      chassisNo: req.body.chassisNumber,
+      modelName: req.body.modelName,
+      registrationDate: req.body.registrationDate,
+      fitnessDate: req.body.fitnessDate,
+      taxDate: req.body.taxDate,
+      insuranceDate: req.body.insuranceDate,
+      puccDate: req.body.puccDate,
+      permitDate: req.body.permitDate,
+      nationalPermitDate: req.body.nationalPermitDate
+    };
+
+    // Remove flat fields
+    [
+      "hasLoan", "loanAmount", "emiAmount", "loanTenure", "loanProvider", "loanStartDate",
+      "engineNumber", "chassisNumber", "modelName", "registrationDate", "fitnessDate",
+      "taxDate", "insuranceDate", "puccDate", "permitDate", "nationalPermitDate"
+    ].forEach(f => delete req.body[f]);
+
+    const vehicle = await Vehicle.findOneAndUpdate(filter, req.body, {
+      new: true,
+      runValidators: true
+    }).populate([
+      { path: "owner", select: "name email phone" },
+      { path: "selfOwnerDetails.adminId", select: "name email phone" }
+    ]);
+
+    if (!vehicle) {
+      return next(new AppError("No vehicle found with that ID", 404));
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: { vehicle }
+    });
+
+  } catch (err) {
+    console.error("Error updating vehicle:", err);
+    next(new AppError(err.message || "Something went wrong while updating vehicle", 500));
   }
+};
 
-  // Don't allow changing ownership details through this endpoint
-  delete req.body.ownershipType;
-  delete req.body.owner;
-  delete req.body.selfOwnerDetails;
-  delete req.body.commissionRate;
 
-  const vehicle = await Vehicle.findOneAndUpdate(filter, req.body, {
-    new: true,
-    runValidators: true,
-  }).populate([
-    {path: "owner", select: "name email phone"},
-    {path: "selfOwnerDetails.adminId", select: "name email phone"},
-  ]);
-
-  if (!vehicle) {
-    return next(new AppError("No vehicle found with that ID", 404));
-  }
-
-  res.status(200).json({
-    status: "success",
-    data: {
-      vehicle,
-    },
-  });
-});
 
 const deleteVehicle = catchAsync(async (req, res, next) => {
   const filter = {_id: req.params.id};

@@ -19,7 +19,7 @@ import CitySelect from "./CitySelect"
 import { tripsApi, usersApi, vehiclesApi } from "@/lib/api"
 import { getErrorMessage } from "@/lib/utils"
 import { useSelector } from "react-redux"
-import { AddVehicleDialog } from "components/vehicles/add-vehicle-dialog"
+import { AddEditVehicleDialog } from "components/vehicles/add-vehicle-dialog"
 import { AddUserDialog } from "./add-user-dialog"
 import CommissionSelector from "./CommissionSelector"
 
@@ -1131,7 +1131,7 @@ export function EnhancedAddEditTripDialog({ open, onOpenChange, onSuccess, editi
         userType="driver"
         onSuccess={() => handleUserAdded("driver")}
       />
-      <AddVehicleDialog open={showAddVehicle} onOpenChange={setShowAddVehicle} onSuccess={handleVehicleAdded} />
+      <AddEditVehicleDialog open={showAddVehicle} onOpenChange={setShowAddVehicle} onSuccess={handleVehicleAdded} />
     </>
   )
 }

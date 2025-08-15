@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 import {api} from "@/lib/api";
 import toast from "react-hot-toast";
-import {AddVehicleDialog} from "@/components/vehicles/add-vehicle-dialog";
+import {AddEditVehicleDialog} from "@/components/vehicles/add-vehicle-dialog";
 import {EditVehicleDialog} from "@/components/vehicles/edit-vehicle-dialog";
 import {DeleteVehicleDialog} from "@/components/vehicles/delete-vehicle-dialog";
 import {VehicleDetailsDialog} from "@/components/vehicles/vehicle-details-dialog";
@@ -239,18 +239,22 @@ export default function VehiclesPage() {
         </Card>
 
         {/* Dialogs */}
-        <AddVehicleDialog
+        <AddEditVehicleDialog
           open={showAddDialog}
           onOpenChange={setShowAddDialog}
         />
 
         {selectedVehicle && (
           <>
-            <EditVehicleDialog
+            <AddEditVehicleDialog
               open={showEditDialog}
               onOpenChange={setShowEditDialog}
               vehicle={selectedVehicle}
+              mode="edit"
+              
             />
+
+
             <DeleteVehicleDialog
               open={showDeleteDialog}
               onOpenChange={setShowDeleteDialog}
