@@ -1,7 +1,8 @@
 import { jsPDF } from "jspdf"
 
 export async function generateDriverReceiptPdf(
-  trip,
+  trips,
+  driver,
   kmData = { oldKM: 0, newKM: 0, rate: 19.5, pichla: 0 },
   companyDetails = {
     name: "Bombay Uttranchal Tempo Service",
@@ -26,11 +27,18 @@ export async function generateDriverReceiptPdf(
   doc.setLineWidth(1)
   doc.rect(10, 10, pageWidth - 20, pageHeight - 20)
 
-  // Calculate totals
-  const totalAdvance =
-    trip.selfAdvances?.reduce((sum, a) => sum + a.amount, 0) || 0
-  const totalExpenses =
-    trip.selfExpenses?.reduce((sum, e) => sum + e.amount, 0) || 0
+  const totalAdvance = trips.reduce(
+    (sum, trip) =>
+      sum +
+      (trip.selfAdvances?.reduce((advSum, a) => advSum + a.amount, 0) || 0),
+    0
+  )
+  const totalExpenses = trips.reduce(
+    (sum, trip) =>
+      sum +
+      (trip.selfExpenses?.reduce((expSum, e) => expSum + e.amount, 0) || 0),
+    0
+  )
   const totalKM = kmData.newKM - kmData.oldKM
   const kmValue = totalKM * kmData.rate
   const totalEarnings = kmValue + totalExpenses + kmData.pichla
@@ -64,21 +72,23 @@ export async function generateDriverReceiptPdf(
 
   y += 15
 
-  // Vehicle and Driver Info Box
   doc.setLineWidth(0.5)
-  doc.rect(15, y, pageWidth - 30, 15)
+  doc.rect(15, y, pageWidth - 30, 20)
 
   doc.setFontSize(10)
   doc.setFont("helvetica", "normal")
-  doc.text(`Vehicle No :-`, 20, y + 5)
-  doc.text(`${trip?.vehicle?.registrationNumber || "HR57A0956"}`, 55, y + 5)
-  doc.text(`Driver Name :-`, 120, y + 5)
-  doc.text(`${trip?.driver?.name || "Ajay"}`, 155, y + 5)
-  doc.text(`Date :-`, 20, y + 10)
-  doc.text(`${new Date().toLocaleDateString("en-GB")}`, 35, y + 10)
-  doc.text(`Dr.Contact No`, 120, y + 10)
+doc.text(
+  `Trip Statement (${trips.map(t => t.tripNumber).join(", ")})`, 
+  20, 
+  y + 5
+)
+  doc.text(`Driver Name :-`, 20, y + 10)
+  doc.text(`${driver?.name || "N/A"}`, 55, y + 10)
+  doc.text(`Date :-`, 120, y + 10)
+  doc.text(`${new Date().toLocaleDateString("en-GB")}`, 140, y + 10)
+  doc.text(`Phone: ${driver?.phone || "N/A"}`, 20, y + 15)
 
-  y += 20
+  y += 25
 
   // Table Headers
   const tableStartY = y
@@ -101,7 +111,7 @@ export async function generateDriverReceiptPdf(
   doc.text("Sr No", leftTableX + 7, y + 4, { align: "center" })
   doc.text("Date", leftTableX + 25, y + 4, { align: "center" })
   doc.text("Amount", leftTableX + 45, y + 4, { align: "center" })
-  doc.text("Method", leftTableX + 65, y + 4, { align: "center" })
+  doc.text("Trip", leftTableX + 65, y + 4, { align: "center" })
 
   // Right Table Header (Expenses)
   doc.rect(rightTableX, y, tableWidth, rowHeight)
@@ -110,13 +120,29 @@ export async function generateDriverReceiptPdf(
 
   doc.text("Sr No", rightTableX + 7, y + 4, { align: "center" })
   doc.text("Amount", rightTableX + 25, y + 4, { align: "center" })
-  doc.text("Remark", rightTableX + 55, y + 4, { align: "center" })
+  doc.text("Category", rightTableX + 55, y + 4, { align: "center" })
 
   y += rowHeight
 
   // Table Data
   doc.setFont("helvetica", "normal")
   doc.setFontSize(8)
+
+  const allAdvances = trips.flatMap(
+    trip =>
+      trip.selfAdvances?.map(adv => ({
+        ...adv,
+        tripNumber: trip.tripNumber
+      })) || []
+  )
+
+  const allExpenses = trips.flatMap(
+    trip =>
+      trip.selfExpenses?.map(exp => ({
+        ...exp,
+        tripNumber: trip.tripNumber
+      })) || []
+  )
 
   // Left side data (Advances)
   for (let i = 0; i < 10; i++) {
@@ -125,8 +151,8 @@ export async function generateDriverReceiptPdf(
     doc.line(leftTableX + 35, y, leftTableX + 35, y + rowHeight)
     doc.line(leftTableX + 55, y, leftTableX + 55, y + rowHeight)
 
-    if (i < trip.selfAdvances?.length) {
-      const advance = trip.selfAdvances[i]
+    if (i < allAdvances.length) {
+      const advance = allAdvances[i]
       doc.text((i + 1).toString(), leftTableX + 7, y + 4, { align: "center" })
       doc.text(
         advance.paidAt?.slice(8, 10) +
@@ -138,10 +164,12 @@ export async function generateDriverReceiptPdf(
         y + 4,
         { align: "center" }
       )
-      doc.text(advance.amount.toString(), leftTableX + 50, y + 4, {
+      doc.text(advance?.amount.toString(), leftTableX + 50, y + 4, {
         align: "right"
       })
-      doc.text("A/c", leftTableX + 65, y + 4, { align: "center" })
+      doc.text(advance.tripNumber || "N/A", leftTableX + 65, y + 4, {
+        align: "center"
+      })
     } else {
       doc.text((i + 1).toString(), leftTableX + 7, y + 4, { align: "center" })
     }
@@ -157,8 +185,8 @@ export async function generateDriverReceiptPdf(
     doc.line(rightTableX + 15, y, rightTableX + 15, y + rowHeight)
     doc.line(rightTableX + 35, y, rightTableX + 35, y + rowHeight)
 
-    if (i < trip.selfExpenses?.length) {
-      const expense = trip.selfExpenses[i]
+    if (i < allExpenses.length) {
+      const expense = allExpenses[i]
       doc.text((i + 1).toString(), rightTableX + 7, y + 4, { align: "center" })
       doc.text(expense.amount.toString(), rightTableX + 30, y + 4, {
         align: "right"
@@ -224,12 +252,11 @@ export async function generateDriverReceiptPdf(
   doc.text(`Advance`, 120, y + 22)
   doc.text(totalAdvance.toString(), 180, y + 22, { align: "right" })
 
-  // Final Trip amount with thick border
   doc.setLineWidth(1)
   doc.rect(115, y + 30, 70, 15)
   doc.setFont("helvetica", "bold")
   doc.setFontSize(12)
-  doc.text(`Trip`, 120, y + 40)
+  doc.text(`Multi-Trip`, 120, y + 40)
   doc.text(finalAmount.toFixed(0), 180, y + 40, { align: "right" })
 
   return doc

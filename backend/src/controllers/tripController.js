@@ -1412,13 +1412,11 @@ const deleteSelfExpense = async (req, res) => {
     trip.selfExpenses.splice(expenseIndex, 1);
     await trip.save();
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Self expense deleted successfully",
-        trip,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Self expense deleted successfully",
+      trip,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Internal server error" });
@@ -2176,7 +2174,7 @@ const updateTripStatus = async (req, res) => {
     const { status } = req.body;
 
     const trip = await Trip.findById(tripId);
-    console.log(trip)
+    console.log(trip);
     if (!trip) {
       return res.status(404).json({ error: "Trip not found" });
     }
@@ -2195,7 +2193,9 @@ const updateTripStatus = async (req, res) => {
       case "complete":
       case "settled":
         if (trip.vehicle) {
-          await Vehicle.findByIdAndUpdate(trip.vehicle, { status: "available" });
+          await Vehicle.findByIdAndUpdate(trip.vehicle, {
+            status: "available",
+          });
         }
         if (trip.driver) {
           await User.findByIdAndUpdate(trip.driver, { status: "available" });
@@ -2217,6 +2217,58 @@ const updateTripStatus = async (req, res) => {
     res.status(500).json({ error: "Failed to update trip status" });
   }
 };
+const getPodStatusReport = async (req, res) => {
+  try {
+    const trips = await Trip.find({})
+      .populate("clients.client", "name email")
+      .select("tripNumber clients");
+
+    const pendingStatuses = ["started", "complete"];
+    const submittedStatuses = ["pod_received", "pod_submitted", "settled"];
+
+    let pending = [];
+    let submitted = [];
+
+    trips.forEach((trip) => {
+      trip.clients.forEach((c) => {
+        const status = c.podManage?.status || "started";
+
+        const clientData = {
+          tripId: trip._id,           // ✅ Trip ki id
+          tripNumber: trip.tripNumber,
+          clientId: c.client?._id,
+          clientName: c.client?.name,
+          clientEmail: c.client?.email,
+          status: status,
+        };
+
+        if (pendingStatuses.includes(status)) {
+          pending.push(clientData);
+        } else if (submittedStatuses.includes(status)) {
+          submitted.push(clientData);
+        }
+      });
+    });
+
+    return res.json({
+      success: true,
+      message: "POD status report generated",
+      data: {
+        pending,
+        submitted,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching POD report:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching POD status report",
+    });
+  }
+};
+
+
+
 
 module.exports = {
   getAllTrips,
@@ -2251,4 +2303,5 @@ module.exports = {
   payClientAdjustment,
   clientUpdatePodStatus,
   uploadPodDocumentForClient,
+  getPodStatusReport,
 };

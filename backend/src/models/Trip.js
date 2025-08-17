@@ -29,7 +29,11 @@ const tripSchema = new mongoose.Schema(
       unique: true,
       required: true,
     },
-
+  vehicle: {
+      type: mongoose.Schema.ObjectId,
+      ref: "Vehicle",
+      required: [true, "Vehicle is required"],
+    },
     // Multiple Clients Support
     clients: [
       {
@@ -61,18 +65,17 @@ const tripSchema = new mongoose.Schema(
             },
           ],
         },
-       documents: {
-  type: [
-    {
-      url: String,
-      fileType: String,
-      uploadedAt: Date,
-      stepKey: String,
-    },
-  ],
-  default: [],
-}
-,
+        documents: {
+          type: [
+            {
+              url: String,
+              fileType: String,
+              uploadedAt: Date,
+              stepKey: String,
+            },
+          ],
+          default: [],
+        },
         loadDetails: {
           description: { type: String, required: true },
           weight: { type: Number },
@@ -271,11 +274,7 @@ const tripSchema = new mongoose.Schema(
     selfAdvances: [selfAdvanceSchema],
 
     // Vehicle and driver assignment
-    vehicle: {
-      type: mongoose.Schema.ObjectId,
-      ref: "Vehicle",
-      required: [true, "Vehicle is required"],
-    },
+  
     driver: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
@@ -319,7 +318,7 @@ const tripSchema = new mongoose.Schema(
     // Status tracking
     status: {
       type: String,
-     
+
       default: "booked",
     },
 

@@ -36,5 +36,6 @@ router.post("/:id/documents", upload.single("file"), vehicleController.uploadDoc
 
 router.get("/:id/maintenance", vehicleController.getMaintenanceRecords)
 router.get("/:vehicleId/finace", vehicleController.getVehicleMonthlyFinance)
+router.get("/expiries/alll", vehicleController.getVehicleExpiries);
 
 module.exports = router

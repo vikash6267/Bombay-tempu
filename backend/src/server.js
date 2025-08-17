@@ -112,6 +112,7 @@ app.use("/api/v1/maintenance", require("./routes/maintenanceRoutes"));
 app.use("/api/v1/reports", require("./routes/reportRoutes"));
 app.use("/api/v1/cities", require("./routes/cityRoutes"));
 app.use("/api/v1/expenses", require("./routes/expenseRoutes"));
+app.use("/api/v1/driver-calculations", require("./routes/driverHisabRoute"));
 
 
 

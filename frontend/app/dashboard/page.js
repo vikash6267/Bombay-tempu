@@ -1,25 +1,25 @@
-"use client"
-import { useEffect, useState } from "react"
-import { useSelector } from "react-redux"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
+"use client";
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
-} from "@/components/ui/table"
+  TableRow,
+} from "@/components/ui/table";
 import {
   Truck,
   Route,
@@ -31,12 +31,14 @@ import {
   Package,
   Calculator,
   PiggyBank,
-  Activity
-} from "lucide-react"
-import { api } from "@/lib/api"
-import { useQuery } from "@tanstack/react-query"
-import { tripsApi } from "lib/api"
-import { Skeleton } from "@/components/ui/skeleton"
+  Activity,
+} from "lucide-react";
+import { api } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { tripsApi, vehiclesApi } from "lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
+import VehicleExpiryList from "./ui/ExpiryList";
+import PodReport from "./ui/PodStatement";
 
 function StatCard({
   title,
@@ -45,7 +47,7 @@ function StatCard({
   icon: Icon,
   trend,
   trendValue,
-  isLoading = false
+  isLoading = false,
 }) {
   if (isLoading) {
     return (
@@ -59,7 +61,7 @@ function StatCard({
           <Skeleton className="h-3 w-32" />
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -85,7 +87,7 @@ function StatCard({
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function ProfitBreakdownCard({ data, isLoading }) {
@@ -98,7 +100,7 @@ function ProfitBreakdownCard({ data, isLoading }) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="flex justify-between items-center">
                 <Skeleton className="h-4 w-24" />
                 <Skeleton className="h-4 w-20" />
@@ -107,15 +109,15 @@ function ProfitBreakdownCard({ data, isLoading }) {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  if (!data) return null
+  if (!data) return null;
 
   const profitMargin = (
     (data.totalFinalProfit / data.totalProfitBeforeExpenses) *
     100
-  ).toFixed(1)
+  ).toFixed(1);
 
   return (
     <Card className="col-span-2">
@@ -127,77 +129,77 @@ function ProfitBreakdownCard({ data, isLoading }) {
         <CardDescription>Financial overview for current period</CardDescription>
       </CardHeader>
       <CardContent>
-     <div className="space-y-4">
-  {/* Revenue Before Expenses */}
-  <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-    <span className="font-medium text-green-700 dark:text-green-300">
-      Revenue (Before Expenses)
-    </span>
-    <span className="font-bold text-green-700 dark:text-green-300">
-      ₹{data.totalProfitBeforeExpenses.toLocaleString("en-IN")}
-    </span>
-  </div>
+        <div className="space-y-4">
+          {/* Revenue Before Expenses */}
+          <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+            <span className="font-medium text-green-700 dark:text-green-300">
+              Revenue (Before Expenses)
+            </span>
+            <span className="font-bold text-green-700 dark:text-green-300">
+              ₹{data.totalProfitBeforeExpenses.toLocaleString("en-IN")}
+            </span>
+          </div>
 
-  {/* Trip Expenses */}
-  <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950 rounded-lg">
-    <span className="font-medium text-red-700 dark:text-red-300">
-      Trip Expenses
-    </span>
-    <span className="font-bold text-red-700 dark:text-red-300">
-      -₹{(data.totalExpenses - data.otherExpense).toLocaleString("en-IN")}
-    </span>
-  </div>
+          {/* Trip Expenses */}
+          <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950 rounded-lg">
+            <span className="font-medium text-red-700 dark:text-red-300">
+              Trip Expenses
+            </span>
+            <span className="font-bold text-red-700 dark:text-red-300">
+              -₹
+              {(data.totalExpenses - data.otherExpense).toLocaleString("en-IN")}
+            </span>
+          </div>
 
-  {/* Other Expenses */}
-  <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950 rounded-lg">
-    <span className="font-medium text-red-700 dark:text-red-300">
-      Other Expenses
-    </span>
-    <span className="font-bold text-red-700 dark:text-red-300">
-      -₹{data.otherExpense.toLocaleString("en-IN")}
-    </span>
-  </div>
+          {/* Other Expenses */}
+          <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950 rounded-lg">
+            <span className="font-medium text-red-700 dark:text-red-300">
+              Other Expenses
+            </span>
+            <span className="font-bold text-red-700 dark:text-red-300">
+              -₹{data.otherExpense.toLocaleString("en-IN")}
+            </span>
+          </div>
 
-  {/* Total Expenses */}
-  <div className="flex justify-between items-center p-3 bg-red-100 dark:bg-red-900 rounded-lg">
-    <span className="font-semibold text-red-800 dark:text-red-200">
-      Total Expenses
-    </span>
-    <span className="font-bold text-red-800 dark:text-red-200">
-      -₹{data.totalExpenses.toLocaleString("en-IN")}
-    </span>
-  </div>
+          {/* Total Expenses */}
+          <div className="flex justify-between items-center p-3 bg-red-100 dark:bg-red-900 rounded-lg">
+            <span className="font-semibold text-red-800 dark:text-red-200">
+              Total Expenses
+            </span>
+            <span className="font-bold text-red-800 dark:text-red-200">
+              -₹{data.totalExpenses.toLocaleString("en-IN")}
+            </span>
+          </div>
 
-  {/* Final Profit */}
-  <div className="border-t pt-3">
-    <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-      <span className="font-bold text-blue-700 dark:text-blue-300">
-        Final Profit
-      </span>
-      <span className="font-bold text-xl text-blue-700 dark:text-blue-300">
-        ₹{data.totalFinalProfit.toLocaleString("en-IN")}
-      </span>
-    </div>
-  </div>
+          {/* Final Profit */}
+          <div className="border-t pt-3">
+            <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+              <span className="font-bold text-blue-700 dark:text-blue-300">
+                Final Profit
+              </span>
+              <span className="font-bold text-xl text-blue-700 dark:text-blue-300">
+                ₹{data.totalFinalProfit.toLocaleString("en-IN")}
+              </span>
+            </div>
+          </div>
 
-  {/* Profit Margin */}
-  <div className="text-center pt-2">
-    <Badge variant="secondary" className="text-sm">
-      Profit Margin: {profitMargin}%
-    </Badge>
-  </div>
-</div>
-
+          {/* Profit Margin */}
+          <div className="text-center pt-2">
+            <Badge variant="secondary" className="text-sm">
+              Profit Margin: {profitMargin}%
+            </Badge>
+          </div>
+        </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function RecentTrips() {
   const { data: trips, isLoading } = useQuery({
     queryKey: ["recent-trips"],
-    queryFn: () => api.get("/trips?limit=5&sort=-createdAt")
-  })
+    queryFn: () => api.get("/trips?limit=5&sort=-createdAt"),
+  });
 
   if (isLoading) {
     return (
@@ -208,7 +210,7 @@ function RecentTrips() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map(i => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <div
                 key={i}
                 className="flex justify-between items-center p-3 border rounded"
@@ -223,7 +225,7 @@ function RecentTrips() {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -243,7 +245,7 @@ function RecentTrips() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {trips?.data?.data?.trips?.map(trip => (
+            {trips?.data?.data?.trips?.map((trip) => (
               <TableRow key={trip._id}>
                 <TableCell className="font-medium">
                   #{trip._id.slice(-6)}
@@ -287,14 +289,14 @@ function RecentTrips() {
         </Table>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function UpcomingMaintenance() {
   const { data: maintenance, isLoading } = useQuery({
     queryKey: ["upcoming-maintenance"],
-    queryFn: () => api.get("/maintenance?status=scheduled&limit=5")
-  })
+    queryFn: () => api.get("/maintenance?status=scheduled&limit=5"),
+  });
 
   if (isLoading) {
     return (
@@ -305,7 +307,7 @@ function UpcomingMaintenance() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3].map((i) => (
               <div
                 key={i}
                 className="flex items-center justify-between p-3 border rounded-lg"
@@ -326,7 +328,7 @@ function UpcomingMaintenance() {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -338,7 +340,7 @@ function UpcomingMaintenance() {
       <CardContent>
         <div className="space-y-4">
           {maintenance?.data?.data?.maintenanceRecords?.length > 0 ? (
-            maintenance.data.data.maintenanceRecords.map(item => (
+            maintenance.data.data.maintenanceRecords.map((item) => (
               <div
                 key={item._id}
                 className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -371,30 +373,31 @@ function UpcomingMaintenance() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 export default function DashboardPage() {
-  const { user } = useSelector(state => state.auth)
-  const [dashboardData, setDashboardData] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { user } = useSelector((state) => state.auth);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setIsLoading(true)
-        const res = await tripsApi.getDashboard()
-        console.log("Dashboard Data:", res.data)
-        setDashboardData(res.data)
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error)
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      const res = await tripsApi.getDashboard();
+      console.log("Dashboard Data:", res.data);
+      setDashboardData(res.data);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    fetchDashboardData()
-  }, [])
+ 
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
   return (
     <DashboardLayout>
@@ -439,7 +442,10 @@ export default function DashboardPage() {
           />
           <StatCard
             title="Pod Count"
-            value={dashboardData?.pendingPodClientsCount?.toLocaleString("en-IN") || "0"}
+            value={
+              dashboardData?.pendingPodClientsCount?.toLocaleString("en-IN") ||
+              "0"
+            }
             description="Trip Pending Pods"
             icon={Package}
             trend="up"
@@ -478,47 +484,14 @@ export default function DashboardPage() {
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="trips">Recent Trips</TabsTrigger>
+
             <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+            <TabsTrigger value="pods">Pods</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
               <ProfitBreakdownCard data={dashboardData} isLoading={isLoading} />
-
-              <Card className="col-span-3">
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                  <CardDescription>Frequently used actions</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Button className="w-full justify-start">
-                    <Route className="mr-2 h-4 w-4" />
-                    Create New Trip
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start bg-transparent"
-                  >
-                    <Truck className="mr-2 h-4 w-4" />
-                    Add Vehicle
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start bg-transparent"
-                  >
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Record Payment
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start bg-transparent"
-                  >
-                    <Users className="mr-2 h-4 w-4" />
-                    Manage Users
-                  </Button>
-                </CardContent>
-              </Card>
             </div>
 
             {/* Business Metrics Summary */}
@@ -578,10 +551,13 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="maintenance">
-            <UpcomingMaintenance />
+            <VehicleExpiryList />
+          </TabsContent>
+          <TabsContent value="pods">
+            <PodReport />
           </TabsContent>
         </Tabs>
       </div>
     </DashboardLayout>
-  )
+  );
 }

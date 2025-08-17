@@ -10,7 +10,7 @@ export const api = axios.create({
     "Content-Type": "application/json",
   },
 });
-console.log(API_BASE_URL)
+console.log(API_BASE_URL);
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
@@ -40,7 +40,7 @@ api.interceptors.response.use(
 
 // Generic API functions
 const apiGet = async (url, params) => {
-  const response = await api.get(url, {params});
+  const response = await api.get(url, { params });
   return response.data;
 };
 
@@ -109,12 +109,9 @@ export const usersApi = {
   deactivate: (id) => apiPatch(`/users/${id}/deactivate`),
   userDetails: (id) => apiGet(`/auth/trip-balances/${id}`),
   driverDetails: (id) => apiGet(`/trips/driver-summary/${id}`),
-    getAdujstmetn: (clientId) => apiGet(`/trips/argestment/${clientId}`),
-    payAdjustment: (clientId, amount) =>
-  apiPatch(`/trips/argestment/${clientId}/pay`, { amount }),
-
-
-
+  getAdujstmetn: (clientId) => apiGet(`/trips/argestment/${clientId}`),
+  payAdjustment: (clientId, amount) =>
+    apiPatch(`/trips/argestment/${clientId}/pay`, { amount }),
 };
 
 // Vehicles API
@@ -134,6 +131,7 @@ export const vehiclesApi = {
 
   getFinace: (id, params) => apiGet(`/vehicles/${id}/finace`, params),
 
+  getExpiries: () => apiGet("/vehicles/expiries/alll"),
 };
 
 // Trips API
@@ -152,30 +150,35 @@ export const tripsApi = {
   deleteExpense: (id, data) => apiPost(`/trips/${id}/del-expense`, data),
   uploadDocument: (id, formData) =>
     apiUpload(`/trips/${id}/documents`, formData),
-   addFleetAdvance: (id, data) => apiPost(`/trips/${id}/fleet-advance`, data), // 👈 singular
-   deleteFleetAdvance: (id, data) => apiPost(`/trips/${id}/del-fleet-advance`, data), // 👈 singular
-addFleetExpense: (id, data) => apiPost(`/trips/${id}/fleet-expense`, data), // 👈 singular
+  addFleetAdvance: (id, data) => apiPost(`/trips/${id}/fleet-advance`, data), // 👈 singular
+  deleteFleetAdvance: (id, data) =>
+    apiPost(`/trips/${id}/del-fleet-advance`, data), // 👈 singular
+  addFleetExpense: (id, data) => apiPost(`/trips/${id}/fleet-expense`, data), // 👈 singular
 
- // ✅ Add self expense and advance
+  // ✅ Add self expense and advance
   addSelfExpense: (id, data) => apiPost(`/trips/${id}/self-expense`, data),
-  deleteSelfExpense: (id, data) => apiPost(`/trips/${id}/del-self-expense`, data),
+  deleteSelfExpense: (id, data) =>
+    apiPost(`/trips/${id}/del-self-expense`, data),
   addSelfAdvance: (id, data) => apiPost(`/trips/${id}/self-advance`, data),
-  deleteSelfAdvance: (id, data) => apiPost(`/trips/${id}/del-self-advance`, data),
-    updatePodDetails: (id, data) => apiPut(`/trips/${id}/pod-details`, data),
-    updatePodStatus: (id, data) => apiPut(`/trips/pod-status/${id}`, data),
-    updatePodDocs: (id, data) => apiPost(`/trips/${id}/podDocument`, data),
-   
-    clientupdatePodStatus: (id,clientid, data) => apiPut(`/trips/client-pod-status/${id}/${clientid}`, data),
-    clientupdatePodDocs: (id, data) => apiPost(`/trips/${id}/client/podDocument`, data),
-  
-  
-  
-  
-  
-    getDashboard: () => apiGet("/auth/dashboard"),
+  deleteSelfAdvance: (id, data) =>
+    apiPost(`/trips/${id}/del-self-advance`, data),
+  updatePodDetails: (id, data) => apiPut(`/trips/${id}/pod-details`, data),
+  updatePodStatus: (id, data) => apiPut(`/trips/pod-status/${id}`, data),
+  updatePodDocs: (id, data) => apiPost(`/trips/${id}/podDocument`, data),
 
+  clientupdatePodStatus: (id, clientid, data) =>
+    apiPut(`/trips/client-pod-status/${id}/${clientid}`, data),
+  clientupdatePodDocs: (id, data) =>
+    apiPost(`/trips/${id}/client/podDocument`, data),
+
+  getDashboard: () => apiGet("/auth/dashboard"),
+
+
+    getPodReport: () => apiGet("/trips/pod-status/statement"),
 
 };
+
+
 
 // Payments API
 export const paymentsApi = {
@@ -216,16 +219,32 @@ export const reportsApi = {
     apiGet("/reports/vehicle-performance", params),
 };
 
-
-
-
-
 export const expensesApi = {
   getAll: (params) => apiGet("/expenses/getAll", params),
   delete: (params) => apiDelete(`/expenses/delete/${params}`, params),
   create: (data) => apiPost("/expenses/create", data),
   update: (id, data) => apiPatch(`/expenses/edit/${id}`, data),
-
-
 };
+
+export const driverCalculationsApi = {
+  // सभी हिसाब लाना
+  getAll: (params) => apiGet("/driver-calculations", params),
+
+  // एक हिसाब by id
+  getById: (id) => apiGet(`/driver-calculations/${id}`),
+
+  // किसी particular driver का हिसाब
+  getByDriver: (driverId, params) =>
+    apiGet(`/driver-calculations/driver/${driverId}`, params),
+
+  // नया हिसाब बनाना
+  create: (data) => apiPost("/driver-calculations", data),
+
+  // हिसाब update करना
+  update: (id, data) => apiPatch(`/driver-calculations/${id}`, data),
+
+  // हिसाब delete करना
+  delete: (id) => apiDelete(`/driver-calculations/${id}`),
+};
+
 export default api;

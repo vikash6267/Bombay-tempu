@@ -8,6 +8,7 @@ const AppError = require("../utils/appError");
 const APIFeatures = require("../utils/apiFeatures");
 const cloudinary = require("../utils/cloudinary");
 const { default: mongoose } = require("mongoose");
+const dayjs = require("dayjs");
 
 
 
@@ -659,6 +660,118 @@ const getVehicleExpenseTotal = catchAsync(async (req, res, next) => {
   });
 });
 
+
+
+
+const getVehicleExpiries = async (req, res) => {
+  try {
+    const vehicles = await Vehicle.find();
+
+    const result = {
+      days30: [],
+      days90: [],
+      days180: [],
+    };
+
+    const today = dayjs();
+
+    vehicles.forEach((vehicle) => {
+      const expiryDocs = [];
+
+      // Documents check
+      const docs = vehicle.documents;
+      if (docs.registrationCertificate?.expiryDate) {
+        expiryDocs.push({
+          name: "Registration Certificate",
+          expiryDate: docs.registrationCertificate.expiryDate,
+        });
+      }
+      if (docs.insurance?.expiryDate) {
+        expiryDocs.push({
+          name: "Insurance",
+          expiryDate: docs.insurance.expiryDate,
+        });
+      }
+      if (docs.fitnessCertificate?.expiryDate) {
+        expiryDocs.push({
+          name: "Fitness Certificate",
+          expiryDate: docs.fitnessCertificate.expiryDate,
+        });
+      }
+      if (docs.permit?.expiryDate) {
+        expiryDocs.push({
+          name: "Permit",
+          expiryDate: docs.permit.expiryDate,
+        });
+      }
+      if (docs.pollution?.expiryDate) {
+        expiryDocs.push({
+          name: "Pollution Certificate",
+          expiryDate: docs.pollution.expiryDate,
+        });
+      }
+
+      // Papers check
+      const papers = vehicle.papers;
+      const paperKeys = {
+        fitnessDate: "Fitness",
+        taxDate: "Tax",
+        insuranceDate: "Insurance (Paper)",
+        puccDate: "PUC",
+        permitDate: "Permit (Paper)",
+        nationalPermitDate: "National Permit",
+      };
+
+      for (const key in paperKeys) {
+        if (papers[key]) {
+          expiryDocs.push({
+            name: paperKeys[key],
+            expiryDate: papers[key],
+          });
+        }
+      }
+
+      // Categorize
+      expiryDocs.forEach((doc) => {
+        const diff = dayjs(doc.expiryDate).diff(today, "day");
+
+        if (diff <= 30 && diff >= 0) {
+          result.days30.push({
+            vehicle: vehicle.registrationNumber,
+            docName: doc.name,
+            expiryDate: doc.expiryDate,
+          });
+        } else if (diff <= 90 && diff > 30) {
+          result.days90.push({
+            vehicle: vehicle.registrationNumber,
+            docName: doc.name,
+            expiryDate: doc.expiryDate,
+          });
+        } else if (diff <= 180 && diff > 90) {
+          result.days180.push({
+            vehicle: vehicle.registrationNumber,
+            docName: doc.name,
+            expiryDate: doc.expiryDate,
+          });
+        }
+      });
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Vehicle expiry data fetched successfully",
+      data: result,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server Error while fetching vehicle expiry data",
+      error: err.message,
+    });
+  }
+};
+
 module.exports = {
   getAllVehicles,
   getVehicle,
@@ -671,5 +784,6 @@ module.exports = {
   getEMIDueVehicles,
   getVehiclesByOwnership,
   getVehicleExpenseTotal,
-  getVehicleMonthlyFinance
+  getVehicleMonthlyFinance,
+  getVehicleExpiries
 };

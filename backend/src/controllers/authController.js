@@ -244,33 +244,30 @@ const Trip = require("../models/Trip");
 
 const getClientTripBalances = catchAsync(async (req, res, next) => {
   const clientId = req.params.clientId;
+  const { percentage } = req.query; // e.g. 70, 80, etc.
 
   const trips = await Trip.find({ "clients.client": clientId })
     .populate("vehicle", "registrationNumber")
     .populate("clients.client", "name email phone");
 
-  const client = await User.findById(clientId);
-
   let overallBalance = 0;
 
-  const rawTripSummaries = trips
+  let tripSummaries = trips
     .map((trip) => {
       const clientData = trip.clients.find(
-        (client) => client.client && client.client._id.toString() === clientId
+        (c) => c.client && c.client._id.toString() === clientId
       );
-
       if (!clientData) return null;
 
       const totalRate = clientData.totalRate || 0;
       const paidAmount = clientData.paidAmount || 0;
       const balance = totalRate - paidAmount;
-
       overallBalance += balance;
 
       const percentagePaid = totalRate ? (paidAmount / totalRate) * 100 : 0;
       const seventyPercentOfTotal = (totalRate * 70) / 100;
       const remainingToReach70 = Math.max(seventyPercentOfTotal - paidAmount, 0);
-const remainingAfterSeventy = Math.max(totalRate - paidAmount, 0);
+      const remainingAfterSeventy = Math.max(totalRate - paidAmount, 0);
 
       return {
         tripId: trip._id,
@@ -283,99 +280,25 @@ const remainingAfterSeventy = Math.max(totalRate - paidAmount, 0);
         percentagePaid: Number(percentagePaid.toFixed(2)),
         seventyPercentOfTotal: Number(seventyPercentOfTotal.toFixed(2)),
         remainingToReach70Percent: Number(remainingToReach70.toFixed(2)),
-          remainingAfterSeventy: Number(remainingAfterSeventy.toFixed(2)), // ✅ new field added here
-
+        remainingAfterSeventy: Number(remainingAfterSeventy.toFixed(2)),
       };
     })
     .filter(Boolean);
 
-  // ✅ Categorize trips
-  const seventyOrAbove = rawTripSummaries.filter(trip => trip.percentagePaid >= 70);
-  const belowSeventy = rawTripSummaries.filter(trip => trip.percentagePaid < 70);
-
-  // ✅ Below 70% summary calculations
-  const totalBelowAdvance = belowSeventy.reduce((sum, t) => sum + (t.paid || 0), 0);
-  const totalBelowSeventyPercentValue = belowSeventy.reduce((sum, t) => sum + t.seventyPercentOfTotal, 0);
-  const pendingBelowAdvance = totalBelowSeventyPercentValue - totalBelowAdvance;
-
-  // ✅ Statement Entries (Advance and Expense merged)
-  let statementEntries = [];
-
-  // Advances → Credit
-  if (client?.advanceRecords?.length) {
-    client.advanceRecords.forEach((adv) => {
-      statementEntries.push({
-        date: adv.date,
-        reason: adv.purpose,
-        tripId: adv.tripId,
-        debit: 0,
-        credit: adv.amount,
-        type: "advance",
-        paidTo: adv.paidTo,
-        notes: adv.notes,
-      });
-    });
+  // Filter by percentage if provided
+  if (percentage) {
+    const percentValue = Number(percentage);
+    tripSummaries = tripSummaries.filter(t => t.percentagePaid >= percentValue);
   }
 
-  // Expenses → Debit
-  if (client?.expenseRecords?.length) {
-    client.expenseRecords.forEach((exp) => {
-      statementEntries.push({
-        date: exp.paidAt,
-        reason: exp.type,
-        tripId: exp.tripId,
-        debit: exp.amount,
-        credit: 0,
-        type: "expense",
-        description: exp.description,
-        paidBy: exp.paidBy,
-      });
-    });
-  }
-
-  // ✅ Add Trip Number in statement
-  statementEntries = statementEntries.map((entry) => {
-    const trip = trips.find((t) => t._id.toString() === entry.tripId?.toString());
-    return {
-      ...entry,
-      tripNumber: trip?.tripNumber || null,
-    };
-  });
-
-  // ✅ Sort statement by date
-  statementEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  const totalDebit = statementEntries.reduce((sum, e) => sum + (e.debit || 0), 0);
-  const totalCredit = statementEntries.reduce((sum, e) => sum + (e.credit || 0), 0);
-  const closingBalance = totalCredit - totalDebit;
-
-  // ✅ Final response
   res.status(200).json({
     status: "success",
     totalBalance: overallBalance,
-    statement: {
-      totalDebit,
-      totalCredit,
-      closingBalance,
-      entries: statementEntries,
-    },
-    summaryByPercentage: {
-      seventyOrAbove: {
-        totalTrips: seventyOrAbove.length,
-        totalPaid: seventyOrAbove.reduce((sum, t) => sum + t.paid, 0),
-        totalAmount: seventyOrAbove.reduce((sum, t) => sum + t.total, 0),
-        trips: seventyOrAbove,
-      },
-      belowSeventy: {
-        totalTrips: belowSeventy.length,
-        totalAdvance: Number(totalBelowAdvance.toFixed(2)),
-        seventyPercentTotal: Number(totalBelowSeventyPercentValue.toFixed(2)),
-        pendingAdvanceToReach70Percent: Number(pendingBelowAdvance.toFixed(2)),
-        trips: belowSeventy,
-      },
-    },
+    trips: tripSummaries
   });
 });
+
+
 
 
 

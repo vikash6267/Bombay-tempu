@@ -93,5 +93,6 @@ router.get("/driver-summary/:driverId", tripController.getDriverSelfSummary);
 router.get("/argestment/:clientId", tripController.getClientArgestment);
 
 router.patch("/argestment/:clientId/pay", tripController.payClientAdjustment);
+router.get("/pod-status/statement", tripController.getPodStatusReport);
 
 module.exports = router;

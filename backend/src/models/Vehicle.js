@@ -105,7 +105,18 @@ const vehicleSchema = new mongoose.Schema(
       min: [0.5, "Capacity must be at least 0.5 tons"],
       max: [50, "Capacity cannot exceed 50 tons"],
     },
-
+    currentKilometers: {
+      type: Number,
+      default: 0,
+      min: 0,
+      description: "Current odometer reading of the vehicle",
+    },
+    nextServiceAtKm: {
+      type: Number,
+      default: 10000, // default 10,000 km interval
+      min: 0,
+      description: "Next servicing required at this km reading",
+    },
     // Enhanced Ownership Structure
     ownershipType: {
       type: String,
@@ -236,28 +247,26 @@ const vehicleSchema = new mongoose.Schema(
       },
     },
 
-   loanDetails: {
-  hasLoan: { type: Boolean, default: false },
-  loanAmount: { type: Number, default: null },
-  emiAmount: { type: Number, default: null },
-  loanTenure: { type: Number, default: null },
-  loanProvider: { type: String, default: "" },
-  loanStartDate: { type: Date, default: null }
-},
-papers: {
-  engineNo: { type: String, default: "" },
-  chassisNo: { type: String, default: "" },
-  modelName: { type: String, default: "" },
-  registrationDate: { type: Date, default: null },
-  fitnessDate: { type: Date, default: null },
-  taxDate: { type: Date, default: null },
-  insuranceDate: { type: Date, default: null },
-  puccDate: { type: Date, default: null },
-  permitDate: { type: Date, default: null },
-  nationalPermitDate: { type: Date, default: null }
-}
-,
-
+    loanDetails: {
+      hasLoan: { type: Boolean, default: false },
+      loanAmount: { type: Number, default: null },
+      emiAmount: { type: Number, default: null },
+      loanTenure: { type: Number, default: null },
+      loanProvider: { type: String, default: "" },
+      loanStartDate: { type: Date, default: null },
+    },
+    papers: {
+      engineNo: { type: String, default: "" },
+      chassisNo: { type: String, default: "" },
+      modelName: { type: String, default: "" },
+      registrationDate: { type: Date, default: null },
+      fitnessDate: { type: Date, default: null },
+      taxDate: { type: Date, default: null },
+      insuranceDate: { type: Date, default: null },
+      puccDate: { type: Date, default: null },
+      permitDate: { type: Date, default: null },
+      nationalPermitDate: { type: Date, default: null },
+    },
     // Financial tracking
     totalEarnings: {
       type: Number,

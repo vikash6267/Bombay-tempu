@@ -670,7 +670,7 @@ function FleetExpenseForm({ handleSubmit, open, onClose }) {
 }
 
 // Fleet Owner Advance Payment Form Component
-function FleetAdvanceForm({ handleSubmit, open, onClose }) {
+function FleetAdvanceForm({ handleSubmit, open, onClose, maxPending }) {
   const form = useForm({
     resolver: zodResolver(fleetAdvanceSchema),
     defaultValues: {
@@ -682,6 +682,10 @@ function FleetAdvanceForm({ handleSubmit, open, onClose }) {
   });
 
   const onSubmit = (data) => {
+    if (data.amount > maxPending) {
+      toast.error(`You cannot pay more than pending amount: ₹${maxPending}`);
+      return;
+    }
     handleSubmit(data);
     form.reset();
   };
@@ -777,10 +781,11 @@ function FleetAdvanceForm({ handleSubmit, open, onClose }) {
                   <FormControl>
                     <Input
                       type="number"
-                      placeholder="Enter amount"
+                      placeholder={`Max: ₹${maxPending}`}
                       {...field}
                       onChange={(e) => field.onChange(Number(e.target.value))}
                       className="focus:ring-green-500 focus:border-green-500"
+                      max={maxPending} // HTML input level restriction
                     />
                   </FormControl>
                   <FormMessage />
@@ -894,21 +899,19 @@ export default function TripDetailPage() {
     return steps.findIndex((s) => s.key === key) || 0;
   }
 
-
   const handleStatusChange = async (newStatus) => {
-  try {
-    await tripsApi.updateStatus(trip._id, { status: newStatus }); // ✅ API call
-    toast.success("Trip status updated successfully");
+    try {
+      await tripsApi.updateStatus(trip._id, { status: newStatus }); // ✅ API call
+      toast.success("Trip status updated successfully");
 
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000); // 2 sec delay
-
-  } catch (err) {
-    console.error("Failed to update status", err);
-    toast.error("Failed to update trip status");
-  }
-};
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000); // 2 sec delay
+    } catch (err) {
+      console.error("Failed to update status", err);
+      toast.error("Failed to update trip status");
+    }
+  };
   const handleEditSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
     setShowEditDialog(false);
@@ -1389,7 +1392,10 @@ export default function TripDetailPage() {
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             The requested trip could not be found.
           </p>
-          <Button onClick={() => router.push("/trips")} className="mt-4">
+          <Button
+            onClick={() => router.push("/trips")}
+            className="mt-4 cursor-pointer"
+          >
             Back to Trips
           </Button>
         </div>
@@ -1491,25 +1497,16 @@ export default function TripDetailPage() {
               Back to Trips
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 {trip.tripNumber}
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+              {/* <p className="text-gray-600 dark:text-gray-400 mt-1">
                 {trip.clients?.[0]?.origin?.city || "N/A"} →{" "}
                 {trip.clients?.[0]?.destination?.city || "N/A"}
-              </p>
+              </p> */}
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            {canManagePOD && (
-              <Button
-                onClick={() => setShowPODDialog(true)}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Manage POD
-              </Button>
-            )}
             {!isEditing && canEdit && (
               <Button
                 onClick={handleEdit}
@@ -1559,72 +1556,9 @@ export default function TripDetailPage() {
           </div>
         </div>
 
-        {/* Status and Quick Info */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-center space-x-2">
-          <Calendar className="h-4 w-4 text-blue-600" />
-          <div>
-            <div className="text-sm text-muted-foreground">Status</div>
-            <select
-              className={`rounded px-2 py-1 text-sm font-medium ${getStatusColor(trip.status)}`}
-              value={trip.status}
-              onChange={(e) => handleStatusChange(e.target.value)}
-            >
-              {steps.map((s) => (
-                <option key={s.key} value={s.key}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4 text-green-600" />
-                <div>
-                  <div className="text-2xl font-bold text-green-600">
-                    {trip.clients?.length || 0}
-                  </div>
-                  <p className="text-sm text-muted-foreground">Clients</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-purple-600">
-                {totalWeight.toFixed(1)} tons
-              </div>
-              <p className="text-sm text-muted-foreground">Total Weight</p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-orange-600">
-                {formatCurrency(trip.rate || 0)} /{" "}
-                {formatCurrency(trip.totalClientAmount || 0)}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Total Amount / Total clients
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {!isEditing && (
-          <>
-            {/* Vehicle and Driver */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="hover:shadow-md transition-shadow">
+        <div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* <Card className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <Truck className="h-4 w-4 mr-2" />
@@ -1675,127 +1609,164 @@ export default function TripDetailPage() {
                     </div>
                   )}
                 </CardContent>
-              </Card>
+              </Card> */}
 
-              {/* Route Information */}
-              <Card className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    Trip Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Separator />
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Truck className="h-4 w-4 mr-2" />
+                  Vehicle Overview
+                </CardTitle>
+              </CardHeader>
 
-                  {!isSelfOwner && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      {/* Trip Amount Card */}
-                      <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out border border-red-200">
-                        <div className="text-sm font-semibold text-red-700 mb-1">
-                          Trip Amount
-                        </div>
-                        <div className="text-2xl font-extrabold text-red-800">
-                          ₹{trip?.rate?.toLocaleString() || 0}
-                        </div>
-                      </div>
-
-                      {/* Commission Card */}
-                      <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out border border-blue-200">
-                        <div className="text-sm font-semibold text-blue-700 mb-1">
-                          Commission
-                        </div>
-                        <div className="text-2xl font-extrabold text-blue-800">
-                          ₹{trip?.commission?.toLocaleString() || 0}
-                        </div>
-                      </div>
-
-                      {/* POD Balance Card */}
-                      <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out  border border-green-200">
-                        <div className="text-sm font-semibold text-green-700 mb-1">
-                          POD Balance
-                        </div>
-                        <div className="text-2xl font-extrabold text-green-800">
-                          ₹{trip?.podBalance?.toLocaleString() || 0}
-                        </div>
-                      </div>
-                      <div className="flex flex-col justify-between p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out  border border-green-200">
-                        <div className="text-sm font-semibold text-green-700 mb-1">
-                          Total Argestment
-                        </div>
-                        <div className="text-2xl font-extrabold text-green-800">
-                          ₹
-                          {trip.clients?.reduce(
-                            (sum, c) =>
-                              sum +
-                              (Number(c?.argestment || c?.adjustment) || 0),
-                            0
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Total Profile Section - Styled as a prominent card */}
-                      {(() => {
-                        const totalClientRevenue = trip.clients?.reduce(
-                          (sum, c) => sum + (Number(c?.rate) || 0),
-                          0
-                        );
-                        const totalAdjustments = trip.clients?.reduce(
-                          (sum, c) =>
-                            sum + (Number(c?.argestment || c?.adjustment) || 0),
-                          0
-                        );
-                        const tripRate = Number(trip?.rate) || 0;
-                        const commission = Number(trip?.commission) || 0;
-
-                        const overallProfit =
-                          totalClientRevenue -
-                          tripRate -
-                          totalAdjustments +
-                          commission;
-
-                        return (
-                          <div className="col-span-1 md:col-span-2 p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-lg border border-green-200 flex items-center justify-between mt-4">
-                            <div className="text-md font-semibold text-green-700">
-                              Overall Trip Profit/Loss:
-                            </div>
-                            <div
-                              className={`text-2xl font-extrabold ${
-                                overallProfit >= 0
-                                  ? "text-green-800"
-                                  : "text-red-800"
-                              }`}
-                            >
-                              {overallProfit >= 0 ? "+" : "-"}₹
-                              {Math.abs(overallProfit).toLocaleString()}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        Scheduled Date
-                      </div>
-                      <div className="font-medium">
-                        {formatDate(trip.scheduledDate, "MMM dd, yyyy HH:mm")}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        Estimated Distance
-                      </div>
-                      <div className="font-medium">
-                        {trip.estimatedDistance || "N/A"} km
-                      </div>
-                    </div>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {/* Vehicle Number */}
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    Vehicle Number
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <div className="font-semibold text-gray-800">
+                    {trip.vehicle.registrationNumber}
+                  </div>
+                </div>
+
+                {/* Owner Name */}
+                <div>
+                  <div className="text-xs text-muted-foreground">Owner</div>
+                  <div className="font-semibold text-gray-800">
+                    {isSelfOwner
+                      ? "Self Owned"
+                      : trip.vehicle?.ownerName || "Fleet Owner"}
+                  </div>
+                </div>
+
+                {/* Weight */}
+                <div>
+                  <div className="text-xs text-muted-foreground">Weight</div>
+                  <div className="font-semibold text-purple-600">
+                    {totalWeight.toFixed(1)} tons
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <div className="text-xs text-muted-foreground">Status</div>
+                  <select
+                    className={`rounded px-2 py-1 text-sm font-medium ${getStatusColor(
+                      trip.status
+                    )}`}
+                    value={trip.status}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                  >
+                    {steps.map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Client Counting */}
+                <div>
+                  <div className="text-xs text-muted-foreground">Clients</div>
+                  <div className="font-semibold text-green-600">
+                    {trip.clients?.length || 0}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Route Information */}
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Trip Information
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Freight</span>
+                    <span className="font-semibold text-blue-800">
+                      ₹{trip?.rate?.toLocaleString() || 0}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Commission</span>
+                    <span className="font-semibold text-purple-800">
+                      ₹{trip?.commission?.toLocaleString() || 0}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">POD</span>
+                    <span className="font-semibold text-green-800">
+                      ₹{trip?.podBalance?.toLocaleString() || 0}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Paid Balance</span>
+                    <span className="font-semibold text-teal-800">
+                      {formatCurrency(totalFleetAdvances)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between md:col-span-2">
+                    <span className="text-muted-foreground">
+                      Pending Balance
+                    </span>
+                    <span className="font-semibold text-red-800">
+                      {formatCurrency(finalAmount) || 0}
+                    </span>
+                  </div>
+
+                  {/* Profit / Loss */}
+                  {(() => {
+                    const totalClientRevenue =
+                      trip.clients?.reduce(
+                        (sum, c) => sum + (Number(c?.rate) || 0),
+                        0
+                      ) || 0;
+                    const tripRate = Number(trip?.rate) || 0;
+                    const commission = Number(trip?.commission) || 0;
+                    const pod = Number(trip?.pod) || 0;
+                    const profit =
+                      totalClientRevenue - tripRate + commission + podBalance;
+
+                    return (
+                      <div className="flex justify-between md:col-span-2">
+                        <span
+                          className={`font-medium ${
+                            profit >= 0 ? "text-green-700" : "text-red-700"
+                          }`}
+                        >
+                          Profit / Loss
+                        </span>
+                        <span
+                          className={`font-bold ${
+                            profit >= 0 ? "text-green-800" : "text-red-800"
+                          }`}
+                        >
+                          {profit >= 0 ? "+" : "-"}₹
+                          {Math.abs(profit).toLocaleString()}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        {/* Status and Quick Info */}
+
+        {!isEditing && (
+          <>
+            {/* Vehicle and Driver */}
 
             {/* Self Owner Expenses & Advances Section - Only show for self-owned vehicles */}
             {isSelfOwner && (
@@ -2294,10 +2265,11 @@ export default function TripDetailPage() {
                     handleSubmit={handleFleetAdvanceSubmit}
                     open={fleetAdvanceForm}
                     onClose={() => setFleetAdvanceForm(false)}
+                    maxPending={finalAmount}
                   />
 
                   {/* Tabs for Expenses and Advances */}
-                  <Tabs defaultValue="expenses" className="space-y-4">
+                  <Tabs defaultValue="advances" className="space-y-4">
                     <TabsList className="grid w-full grid-cols-1">
                       {/* <TabsTrigger
                         value="expenses"
@@ -2387,16 +2359,6 @@ export default function TripDetailPage() {
                       Individual client details and their respective loads
                     </CardDescription>
                   </div>
-                  <Button
-                    onClick={() => setAddLoad((prev) => !prev)}
-                    className="bg-indigo-600 hover:bg-indigo-700"
-                  >
-                    <Plus className="h-4 w-4 mr-2" /> Add Load
-                  </Button>
-                  <AddLoadDialog
-                    open={addLoad}
-                    onOpenChange={() => setAddLoad((prev) => !prev)}
-                  />
                 </div>
               </CardHeader>
               <CardContent>
@@ -3352,19 +3314,11 @@ export default function TripDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* <EnhancedAddEditTripDialog
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        onSuccess={handleEditSuccess}
-        tripData={trip}
-      /> */}
-
-
-        <EnhancedAddEditTripDialog
+      <EnhancedAddEditTripDialog
         open={showEditDialog}
         onOpenChange={(open) => {
-          setShowEditDialog(open)
-          if (!open) setEditingTrip(null)
+          setShowEditDialog(open);
+          if (!open) setEditingTrip(null);
         }}
         onSuccess={handleEditSuccess}
         editingTrip={trip}
