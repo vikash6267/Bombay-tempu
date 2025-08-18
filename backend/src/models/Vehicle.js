@@ -20,48 +20,6 @@ const vehicleAdvanceSchema = new mongoose.Schema({
   paidAt: Date,
   tripId: { type: mongoose.Schema.Types.ObjectId, ref: "Trip" },
 });
-/**
- * @swagger
- * components:
- *   schemas:
- *     Vehicle:
- *       type: object
- *       required:
- *         - registrationNumber
- *         - make
- *         - model
- *         - year
- *         - vehicleType
- *         - capacity
- *         - ownershipType
- *       properties:
- *         registrationNumber:
- *           type: string
- *           description: Vehicle registration number
- *         make:
- *           type: string
- *           description: Vehicle manufacturer
- *         model:
- *           type: string
- *           description: Vehicle model
- *         year:
- *           type: number
- *           description: Manufacturing year
- *         vehicleType:
- *           type: string
- *           enum: [truck, tempo, mini_truck, trailer, container]
- *         capacity:
- *           type: number
- *           description: Load capacity in tons
- *         ownershipType:
- *           type: string
- *           enum: [self, fleet_owner]
- *           description: Whether vehicle is owned by admin (self) or fleet owner
- *         status:
- *           type: string
- *           enum: [available, booked, maintenance, inactive]
- *           default: available
- */
 
 const vehicleSchema = new mongoose.Schema(
   {

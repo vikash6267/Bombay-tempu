@@ -38,9 +38,8 @@ const getVehicleMonthlyFinance = async (req, res) => {
       monthEnd = new Date(new Date(monthStart).setMonth(monthStart.getMonth() + 1));
     }
 
-    // 2. Fetch Vehicle
+    // 2. Vehicle
     const vehicle = await Vehicle.findById(vehicleId);
-    console.log(vehicle)
     if (!vehicle) {
       return res.status(404).json({
         success: false,
@@ -48,44 +47,38 @@ const getVehicleMonthlyFinance = async (req, res) => {
       });
     }
 
-    // 3. Filter Expenses
+    // 3. Vehicle Expenses
     const expenses = vehicle.vehicleExpenseHistoryMain || [];
-    const filteredExpenses = month
+    const filteredVehicleExpenses = month
       ? expenses.filter((e) => {
           const date = new Date(e.paidAt);
           return date >= monthStart && date < monthEnd;
         })
       : expenses;
 
-    const totalExpense = filteredExpenses.reduce(
+    const totalVehicleExpense = filteredVehicleExpenses.reduce(
       (sum, e) => sum + (e.amount || 0),
       0
     );
 
-    // 4. Fetch Trips based on scheduledDate
-    const tripQuery = {
-      vehicle: vehicleId,
-    };
-
+    // 4. Trips
+    const tripQuery = { vehicle: vehicleId };
     if (monthStart && monthEnd) {
       tripQuery.scheduledDate = { $gte: monthStart, $lt: monthEnd };
     }
 
     const trips = await Trip.find(tripQuery).select(
-      "tripNumber timeline scheduledDate totalClientAmount rate"
+      "tripNumber scheduledDate totalClientAmount rate selfExpenses"
     );
 
-    console.log(trips)
-    // 5. Compute Income
     let totalIncome = 0;
+    let totalSelfExpenses = 0;
     const incomeDetails = [];
+    const tripExpenseDetails = [];
 
     for (const trip of trips) {
-      const amount =
-        trip?.totalClientAmount ??
-        trip?.rate ??
-        0;
-
+      // income
+      const amount = trip?.totalClientAmount ?? trip?.rate ?? 0;
       totalIncome += amount;
 
       incomeDetails.push({
@@ -94,18 +87,60 @@ const getVehicleMonthlyFinance = async (req, res) => {
         amount,
         date: trip.scheduledDate || trip.createdAt,
       });
+
+      // self-expenses per trip (detailed)
+      (trip.selfExpenses || []).forEach((exp) => {
+        tripExpenseDetails.push({
+          tripId: trip._id,
+          tripNumber: trip.tripNumber,
+          amount: exp.amount || 0,
+          reason: exp.reason,
+          category: exp.category,
+          expenseFor: exp.expenseFor,
+          description: exp.description,
+          receiptNumber: exp.receiptNumber,
+          date: exp.paidAt,
+        });
+        totalSelfExpenses += exp.amount || 0;
+      });
     }
 
-    // 6. Respond
-    res.status(200).json({
-      success: true,
-      vehicleId,
-      month: month || "all",
-      totalIncome,
-      totalExpense,
-      incomeDetails,
-      expenseDetails: filteredExpenses,
-    });
+    // 5. Total Expense = vehicle + self
+  const totalExpense = totalVehicleExpense + totalSelfExpenses;
+
+// Merge details into one array
+const expenseDetails = [
+  ...filteredVehicleExpenses.map((exp) => ({
+    _id: exp._id,
+    amount: exp.amount || 0,
+    reason: exp.reason,
+    category: exp.category,
+    expenseFor: exp.expenseFor,
+    description: exp.description,
+    receiptNumber: exp.receiptNumber,
+    paidAt: exp.paidAt || exp.date,
+    source: "vehicle", // tag for frontend
+  })),
+  ...tripExpenseDetails.map((exp) => ({
+    ...exp,
+    source: "trip", // tag for frontend
+    paidAt: exp.paidAt || exp.date,
+
+  })),
+];
+console.log(tripExpenseDetails,"tripExpenseDetails")
+
+// 6. Response
+res.status(200).json({
+  success: true,
+  vehicleId,
+  month: month || "all",
+  totalIncome,
+  totalExpense,
+  netProfit: totalIncome - totalExpense,
+  incomeDetails,
+  expenseDetails, // ✅ single flat array now
+});
   } catch (error) {
     console.error("getVehicleMonthlyFinance error:", error);
     res.status(500).json({
@@ -114,6 +149,8 @@ const getVehicleMonthlyFinance = async (req, res) => {
     });
   }
 };
+
+
 
 
 
@@ -306,10 +343,41 @@ const updateVehicle = async (req, res, next) => {
       filter.ownershipType = "fleet_owner";
     }
 
-    // Prevent ownership change via update
-    ["ownershipType", "owner", "selfOwnerDetails", "commissionRate"].forEach(f => delete req.body[f]);
+    // Ownership change handling
+    if (req.user.role !== "admin") {
+      // Prevent fleet_owner from changing ownership related fields
+      ["ownershipType", "owner", "selfOwnerDetails", "commissionRate"].forEach(f => delete req.body[f]);
+    } else {
+      // If admin is updating ownership type
+      if (req.body.ownershipType) {
+        if (!["self", "fleet_owner"].includes(req.body.ownershipType)) {
+          return next(new AppError("Ownership type must be self or fleet_owner", 400));
+        }
 
-    // Map flat fields to nested structures
+        if (req.body.ownershipType === "fleet_owner") {
+          if (!req.body.owner) {
+            return next(new AppError("Fleet owner is required for fleet_owner type", 400));
+          }
+          const ownerUser = await User.findById(req.body.owner);
+          if (!ownerUser || ownerUser.role !== "fleet_owner") {
+            return next(new AppError("Invalid fleet owner specified", 400));
+          }
+        }
+
+        if (req.body.ownershipType === "self") {
+          req.body.selfOwnerDetails = {
+            adminId: req.user.id,
+            name: req.user.name,
+            email: req.user.email,
+            phone: req.user.phone,
+          };
+          delete req.body.owner;
+          delete req.body.commissionRate;
+        }
+      }
+    }
+
+    // --- Map loan fields ---
     if (req.body.hasLoan !== undefined) {
       req.body.loanDetails = {
         hasLoan: req.body.hasLoan,
@@ -317,10 +385,11 @@ const updateVehicle = async (req, res, next) => {
         emiAmount: req.body.emiAmount,
         loanTenure: req.body.loanTenure,
         loanProvider: req.body.loanProvider,
-        loanStartDate: req.body.loanStartDate
+        loanStartDate: req.body.loanStartDate,
       };
     }
 
+    // --- Map papers fields ---
     req.body.papers = {
       engineNo: req.body.engineNumber,
       chassisNo: req.body.chassisNumber,
@@ -331,7 +400,7 @@ const updateVehicle = async (req, res, next) => {
       insuranceDate: req.body.insuranceDate,
       puccDate: req.body.puccDate,
       permitDate: req.body.permitDate,
-      nationalPermitDate: req.body.nationalPermitDate
+      nationalPermitDate: req.body.nationalPermitDate,
     };
 
     // Remove flat fields
@@ -343,10 +412,10 @@ const updateVehicle = async (req, res, next) => {
 
     const vehicle = await Vehicle.findOneAndUpdate(filter, req.body, {
       new: true,
-      runValidators: true
+      runValidators: true,
     }).populate([
       { path: "owner", select: "name email phone" },
-      { path: "selfOwnerDetails.adminId", select: "name email phone" }
+      { path: "selfOwnerDetails.adminId", select: "name email phone" },
     ]);
 
     if (!vehicle) {
@@ -355,14 +424,14 @@ const updateVehicle = async (req, res, next) => {
 
     res.status(200).json({
       status: "success",
-      data: { vehicle }
+      data: { vehicle },
     });
-
   } catch (err) {
     console.error("Error updating vehicle:", err);
     next(new AppError(err.message || "Something went wrong while updating vehicle", 500));
   }
 };
+
 
 
 
@@ -665,9 +734,9 @@ const getVehicleExpenseTotal = catchAsync(async (req, res, next) => {
 
 const getVehicleExpiries = async (req, res) => {
   try {
-    const vehicles = await Vehicle.find();
+    const vehicles = await Vehicle.find({ownershipType:"self"});
 
-    const result = {
+    const result = { 
       days30: [],
       days90: [],
       days180: [],
