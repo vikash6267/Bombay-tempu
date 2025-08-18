@@ -112,6 +112,9 @@ export const usersApi = {
   getAdujstmetn: (clientId) => apiGet(`/trips/argestment/${clientId}`),
   payAdjustment: (clientId, amount) =>
     apiPatch(`/trips/argestment/${clientId}/pay`, { amount }),
+
+  giveAdvance: (data) => apiPost("/auth/create-advance", data), // ✅ new
+  getUserAdvances: (userId) => apiGet(`/auth/user/${userId}`), // ✅ optional: list
 };
 
 // Vehicles API
@@ -173,12 +176,8 @@ export const tripsApi = {
 
   getDashboard: () => apiGet("/auth/dashboard"),
 
-
-    getPodReport: () => apiGet("/trips/pod-status/statement"),
-
+  getPodReport: () => apiGet("/trips/pod-status/statement"),
 };
-
-
 
 // Payments API
 export const paymentsApi = {

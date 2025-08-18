@@ -2,57 +2,6 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 
-/**
- * @swagger
- * components:
- *   schemas:
- *     User:
- *       type: object
- *       required:
- *         - name
- *         - email
- *         - password
- *         - role
- *       properties:
- *         name:
- *           type: string
- *           description: User's full name
- *         email:
- *           type: string
- *           format: email
- *           description: User's email address
- *         password:
- *           type: string
- *           minLength: 8
- *           description: User's password
- *         role:
- *           type: string
- *           enum: [admin, fleet_owner, client, driver]
- *           description: User's role in the system
- *         phone:
- *           type: string
- *           description: User's phone number
- *         address:
- *           type: object
- *           properties:
- *             street:
- *               type: string
- *             city:
- *               type: string
- *             state:
- *               type: string
- *             pincode:
- *               type: string
- *         profileImage:
- *           type: string
- *           description: URL to user's profile image
- *         active:
- *           type: boolean
- *           default: true
- *         emailVerified:
- *           type: boolean
- *           default: false
- */
 
 const driverExpenseSchema = new mongoose.Schema({
   amount: Number,
@@ -115,9 +64,13 @@ const userSchema = new mongoose.Schema(
       state: String,
       pincode: {
         type: String,
-        
       },
     },
+    advanceAmount: {
+      type: Number,
+      default: 0,
+    },
+
     profileImage: {
       type: String,
       default: null,
@@ -138,8 +91,7 @@ const userSchema = new mongoose.Schema(
     },
     totalPayArgestment: {
       type: Number,
-      default:0
-    
+      default: 0,
     },
     gstNumber: {
       type: String,
@@ -204,8 +156,7 @@ const userSchema = new mongoose.Schema(
       ref: "Vehicle",
     },
 
-
-      status: {
+    status: {
       type: String,
       enum: ["available", "booked"],
       default: "available",
@@ -261,28 +212,26 @@ const userSchema = new mongoose.Schema(
       default: Date.now,
     },
 
-fleetAdvances: [
-  {
-    trip: { type: mongoose.Schema.Types.ObjectId, ref: "Trip" }, // in User schema only
-    amount: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    reason: {
-      type: String,
-    },
-    paymentType: {
-      type: String,
-     
-    },
-    date: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-]
-,
+    fleetAdvances: [
+      {
+        trip: { type: mongoose.Schema.Types.ObjectId, ref: "Trip" }, // in User schema only
+        amount: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+        reason: {
+          type: String,
+        },
+        paymentType: {
+          type: String,
+        },
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     fleetExpenses: [
       {
         trip: { type: mongoose.Schema.Types.ObjectId, ref: "Trip" },

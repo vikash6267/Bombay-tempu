@@ -1986,7 +1986,7 @@ const getDriverSelfSummary = async (req, res) => {
     }
 
     const driver = await User.findById(driverId).select(
-      "name email phone address"
+      "name email phone address advanceAmount"
     );
 
     return res.status(200).json({

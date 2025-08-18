@@ -1,36 +1,49 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { useRouter } from "next/navigation"
-import { Plus, Search, Filter } from "lucide-react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Plus, Search, Filter } from "lucide-react";
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DataTable } from "@/components/ui/data-table"
-import { usersApi } from "@/lib/api"
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { DataTable } from "@/components/ui/data-table";
+import { usersApi } from "@/lib/api";
 // import { useAuthStore } from "@/lib/auth-store"
-import { formatDate } from "@/lib/utils"
-import { useSelector } from "react-redux"
+import { formatDate } from "@/lib/utils";
+import { useSelector } from "react-redux";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 export default function DriversPage() {
-  const router = useRouter()
-  const { user } = useSelector(state=>state.auth)
-  const [searchTerm, setSearchTerm] = useState("")
+  const router = useRouter();
+  const { user } = useSelector((state) => state.auth);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: driversData, isLoading } = useQuery({
     queryKey: ["users", "drivers"],
     queryFn: () => usersApi.getAll({ role: "driver" }),
-  })
+  });
 
-  const drivers = driversData?.data?.users || []
+  const drivers = driversData?.data?.users || [];
   const filteredDrivers = drivers.filter(
     (driver) =>
       driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      driver.email.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      driver.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const columns = [
     {
@@ -53,10 +66,14 @@ export default function DriversPage() {
       accessorKey: "licenseExpiry",
       header: "License Expiry",
       cell: ({ row }) => {
-        const expiry = row.getValue("licenseExpiry")
-        if (!expiry) return "N/A"
-        const isExpired = new Date(expiry) < new Date()
-        return <span className={isExpired ? "text-red-600" : ""}>{formatDate(expiry, "MMM dd, yyyy")}</span>
+        const expiry = row.getValue("licenseExpiry");
+        if (!expiry) return "N/A";
+        const isExpired = new Date(expiry) < new Date();
+        return (
+          <span className={isExpired ? "text-red-600" : ""}>
+            {formatDate(expiry, "MMM dd, yyyy")}
+          </span>
+        );
       },
     },
     {
@@ -65,7 +82,9 @@ export default function DriversPage() {
       cell: ({ row }) => (
         <span
           className={`px-2 py-1 rounded-full text-xs ${
-            row.getValue("active") ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+            row.getValue("active")
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
           }`}
         >
           {row.getValue("active") ? "Active" : "Inactive"}
@@ -75,20 +94,30 @@ export default function DriversPage() {
     {
       id: "actions",
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" onClick={() => router.push(`/drivers/${row.original._id}`)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push(`/drivers/${row.original._id}`)}
+        >
           View Details
         </Button>
       ),
     },
-  ]
+  ];
+
+ 
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Drivers</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your driver database</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Drivers
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Manage your driver database
+            </p>
           </div>
           {user?.role === "admin" && (
             <Button onClick={() => router.push("/drivers/new")}>
@@ -120,10 +149,16 @@ export default function DriversPage() {
               </Button>
             </div>
 
-            <DataTable columns={columns} data={filteredDrivers} loading={isLoading} />
+            <DataTable
+              columns={columns}
+              data={filteredDrivers}
+              loading={isLoading}
+            />
           </CardContent>
         </Card>
       </div>
+
+    
     </DashboardLayout>
-  )
+  );
 }

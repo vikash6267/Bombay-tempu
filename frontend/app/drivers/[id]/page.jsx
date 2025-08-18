@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { usersApi, driverCalculationsApi } from "lib/api";
@@ -7,9 +7,19 @@ import { DashboardLayout } from "components/layout/dashboard-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Calculator, CheckCircle, Trash, Edit } from "lucide-react";
+import { Calculator, CheckCircle, Trash, Edit, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { MultiTripCalculationDialog } from "../multi-trip-calculation-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { useMutation } from "@tanstack/react-query";
+import { Input } from "components/ui/input";
+import Swal from "sweetalert2"
 
 const Page = () => {
   const { id } = useParams();
@@ -17,6 +27,83 @@ const Page = () => {
   const [showCalculationDialog, setShowCalculationDialog] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editingCalculation, setEditingCalculation] = useState(null);
+
+
+  ///ADVANCED 
+    const [openAdvance, setOpenAdvance] = useState(false)
+    const [selectedOwner, setSelectedOwner] = useState(null)
+    const [advanceAmount, setAdvanceAmount] = useState("")
+    const [reason, setReason] = useState("")
+    const [paymentType, setPaymentType] = useState("cash")
+  
+    const [advances, setAdvances] = useState([])
+    const [detailsLoading, setDetailsLoading] = useState(false)
+ const fetchAdvances = async () => {
+    if (openAdvance && selectedOwner?._id) {   // ✅ FIXED
+      try {
+        setDetailsLoading(true);
+        const res = await usersApi.getUserAdvances(selectedOwner._id);  // ✅ FIXED
+        setAdvances(res?.advances || []);
+      } catch (error) {
+        console.error("Failed to fetch advances:", error);
+        toast.error("Failed to load advances");
+      } finally {
+        setDetailsLoading(false);
+      }
+    }
+  };
+const giveAdvanceMutation = useMutation({
+  mutationFn: (payload) => usersApi.giveAdvance(payload),
+  onMutate: () => {
+    Swal.fire({
+      title: "Giving Advance...",
+      html: `
+        <div style="display: flex; justify-content: center; align-items: center; padding: 20px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+           class="lucide lucide-loader-2"
+           style="animation: spin 1s linear infinite;">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+          </svg>
+        </div>
+        <style>
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        </style>
+      `,
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+  },
+  onSuccess: async () => {
+    Swal.close();
+    toast.success("Advance given successfully");
+    setAdvanceAmount("");
+    setReason("");
+    fetchAdvances()
+    if (selectedOwner?._id) {   // ✅ FIXED
+      const res = await usersApi.getUserAdvances(selectedOwner._id);
+      setAdvances(res?.advances || []);
+    }
+  },
+  onError: () => {
+    fetchAdvances()
+
+    Swal.close();
+    toast.error("Failed to give advance");
+  },
+});
+
+useEffect(() => {
+ 
+  fetchAdvances();
+}, [openAdvance, selectedOwner]);
 
   // 🔹 Driver data (with trips)
   const { data: userData, isLoading } = useQuery({
@@ -102,7 +189,7 @@ const Page = () => {
   console.log("calculatedTripIds", Array.from(calculatedTripIds));
   console.log(
     "userData trips",
-    availableTripsForSelection
+    selectedOwner
   );
 
   return (
@@ -112,8 +199,19 @@ const Page = () => {
           Driver: {userData.driver?.name}
         </h2>
         <p>Email: {userData.driver?.email}</p>
-        <p>Phone: {userData.driver?.phone}</p>
-
+        <p>Phone: {userData.driver?.phone}</p> 
+        <p>Advance Amount: {userData.driver?.advanceAmount}</p> 
+ <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setSelectedOwner(userData.driver)
+              setOpenAdvance(true)
+            }}
+          >
+            <Wallet className="h-4 w-4 mr-1" />
+            Advance
+          </Button>
         {/* --- Trip selection box --- */}
         <div className="border p-4 rounded-xl bg-white shadow-sm">
           <div className="flex items-center justify-between mb-4">
@@ -273,6 +371,97 @@ const Page = () => {
           existingCalculation={editingCalculation}
         />
       </div>
+
+
+
+        <Dialog open={openAdvance} onOpenChange={setOpenAdvance}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Advances for {selectedOwner?.name}</DialogTitle>
+            <DialogDescription>
+              Manage and view all advances given to this fleet owner
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Add Advance Form */}
+          <div className="space-y-3 mb-4">
+            <Input
+              type="number"
+              placeholder="Amount"
+              value={advanceAmount}
+              onChange={(e) => setAdvanceAmount(e.target.value)}
+            />
+            <Input
+              placeholder="Reason / Notes"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+            <select
+              className="border rounded p-2 w-full"
+              value={paymentType}
+              onChange={(e) => setPaymentType(e.target.value)}
+            >
+              <option value="cash">Cash</option>
+              <option value="bank">Bank</option>
+              <option value="upi">UPI</option>
+            </select>
+
+            <Button
+              className="w-full"
+              type="button"
+              onClick={() =>
+                giveAdvanceMutation.mutate({
+                  userId: selectedOwner.id,
+                  amount: Number(advanceAmount),
+                  reason,
+                  paymentType,
+                })
+              }
+              disabled={giveAdvanceMutation.isLoading}
+            >
+              {giveAdvanceMutation.isLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              {giveAdvanceMutation.isLoading ? "Saving..." : "Give Advance"}
+            </Button>
+          </div>
+
+          {/* Advance History Table */}
+          <div>
+            <h3 className="font-semibold mb-2">Advance History</h3>
+            {advances.length === 0 ? (
+              <p className="text-gray-500">No advances yet.</p>
+            ) : (
+              <div className="max-h-60 overflow-y-auto border rounded-lg">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="p-2 text-left">Date</th>
+                      <th className="p-2 text-left">Amount</th>
+                      <th className="p-2 text-left">Reason</th>
+                      <th className="p-2 text-left">Payment Type</th>
+                      <th className="p-2 text-left">Paid By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {advances.map((a) => (
+                      <tr key={a._id} className="border-b">
+                        <td className="p-2">
+                          {new Date(a.date).toLocaleDateString()}
+                        </td>
+                        <td className="p-2 font-medium">₹{a.amount}</td>
+                        <td className="p-2">{a.reason}</td>
+                        <td className="p-2">{a.paymentType}</td>
+                        <td className="p-2">{a.paidBy}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

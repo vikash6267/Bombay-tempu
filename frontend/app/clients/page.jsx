@@ -93,11 +93,20 @@ export default function ClientsPage() {
   const getCurrentTrips = () => {
     if (!apiResponse?.summaryByPercentage) return [];
 
+    let trips = [];
+
     if (activeTab === "above70") {
-      return apiResponse.summaryByPercentage.seventyOrAbove?.trips || [];
-    } else {
-      return apiResponse.summaryByPercentage.belowSeventy?.trips || [];
+      trips = apiResponse.summaryByPercentage.seventyOrAbove?.trips || [];
+    } else if (activeTab === "below70") {
+      trips = apiResponse.summaryByPercentage.belowSeventy?.trips || [];
+    } else if (activeTab === "all") {
+      const above = apiResponse.summaryByPercentage.seventyOrAbove?.trips || [];
+      const below = apiResponse.summaryByPercentage.belowSeventy?.trips || [];
+      trips = [...above, ...below];
     }
+
+    // Sort by tripDate (oldest → newest)
+    return trips.sort((a, b) => new Date(a.tripDate) - new Date(b.tripDate));
   };
 
   // Filter and sort trips based on filters
@@ -338,7 +347,7 @@ export default function ClientsPage() {
             ) : (
               <div className="space-y-6">
                 {/* Overall Summary */}
-                <Card>
+                {/* <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <IndianRupee className="h-5 w-5" />
@@ -377,11 +386,23 @@ export default function ClientsPage() {
                       </div>
                     </div>
                   </CardContent>
-                </Card>
+                </Card> */}
 
                 {/* Tabs for 70% Above and Below */}
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger
+                      value="all"
+                      className="flex items-center gap-2"
+                    >
+                      <Truck className="h-4 w-4" />
+                      All (
+                      {(apiResponse?.summaryByPercentage?.seventyOrAbove
+                        ?.totalTrips || 0) +
+                        (apiResponse?.summaryByPercentage?.belowSeventy
+                          ?.totalTrips || 0)}
+                      )
+                    </TabsTrigger>
                     <TabsTrigger
                       value="above70"
                       className="flex items-center gap-2"
@@ -531,6 +552,103 @@ export default function ClientsPage() {
                               </p>
                             </div>
                             <AlertCircle className="h-8 w-8 text-red-500" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="all" className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      {/* ✅ Total Trips */}
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-gray-600">
+                                Total Trips
+                              </p>
+                              <p className="text-2xl font-bold">
+                                {(apiResponse?.summaryByPercentage
+                                  ?.seventyOrAbove?.totalTrips || 0) +
+                                  (apiResponse?.summaryByPercentage
+                                    ?.belowSeventy?.totalTrips || 0)}
+                              </p>
+                            </div>
+                            <Truck className="h-8 w-8 text-blue-500" />
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* ✅ Total Amount */}
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-gray-600">
+                                Total Amount
+                              </p>
+                              <p className="text-2xl font-bold">
+                                {formatCurrency(
+                                  (apiResponse?.summaryByPercentage
+                                    ?.seventyOrAbove?.totalAmount || 0) +
+                                    (apiResponse?.summaryByPercentage?.belowSeventy?.trips?.reduce(
+                                      (sum, t) => sum + (t.total || 0),
+                                      0
+                                    ) || 0)
+                                )}
+                              </p>
+                            </div>
+                            <IndianRupee className="h-8 w-8 text-purple-500" />
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* ✅ Total Paid */}
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-gray-600">
+                                Total Paid
+                              </p>
+                              <p className="text-2xl font-bold text-green-600">
+                                {formatCurrency(
+                                  (apiResponse?.summaryByPercentage
+                                    ?.seventyOrAbove?.totalPaid || 0) +
+                                    (apiResponse?.summaryByPercentage?.belowSeventy?.trips?.reduce(
+                                      (sum, t) => sum + (t.paid || 0),
+                                      0
+                                    ) || 0)
+                                )}
+                              </p>
+                            </div>
+                            <CheckCircle className="h-8 w-8 text-green-500" />
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* ✅ Pending */}
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-gray-600">Pending</p>
+                              <p className="text-2xl font-bold text-orange-600">
+                                {formatCurrency(
+                                  (apiResponse?.summaryByPercentage
+                                    ?.seventyOrAbove?.totalAmount || 0) -
+                                    (apiResponse?.summaryByPercentage
+                                      ?.seventyOrAbove?.totalPaid || 0) +
+                                    (apiResponse?.summaryByPercentage?.belowSeventy?.trips?.reduce(
+                                      (sum, t) =>
+                                        sum + ((t.total || 0) - (t.paid || 0)),
+                                      0
+                                    ) || 0)
+                                )}
+                              </p>
+                            </div>
+                            <AlertCircle className="h-8 w-8 text-orange-500" />
                           </div>
                         </CardContent>
                       </Card>
@@ -825,8 +943,18 @@ export default function ClientsPage() {
                                       : "Need for 70%"}
                                   </p>
                                   <p className="font-bold text-lg text-red-600">
-                                    {formatCurrency(
-                                      trip.remainingAfterSeventy || 0
+                                    {activeTab === "above70" ? (
+                                      <>
+                                        {formatCurrency(
+                                          trip.remainingAfterSeventy || 0
+                                        )}
+                                      </>
+                                    ) : (
+                                      <>
+                                        {formatCurrency(
+                                          trip.remainingToReach70Percent || 0
+                                        )}
+                                      </>
                                     )}
                                   </p>
                                 </div>
