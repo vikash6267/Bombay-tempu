@@ -3,7 +3,7 @@ const { protect } = require("../middleware/auth");
 const authController = require("../controllers/authController");
 const tripController = require("../controllers/tripController");
 const vehicleController = require("../controllers/vehicleController");
-const { createAdvance, getAdvancesByUser } = require("../controllers/advanceCtrl");
+const { createAdvance, getAdvancesByUser, createDeposit } = require("../controllers/advanceCtrl");
 
 const router = express.Router();
 
@@ -32,5 +32,6 @@ router.patch("/update-password", authController.updatePassword);
 
 //ADNVACE
 router.post("/create-advance", createAdvance);
+router.post("/create-deposite", createDeposit);
 router.get("/user/:userId", getAdvancesByUser);
 module.exports = router;

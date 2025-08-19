@@ -71,8 +71,8 @@ const getTrip = catchAsync(async (req, res, next) => {
       "vehicle",
       "registrationNumber make model capacity vehicleType ownershipType"
     )
-    .populate("driver", "name email phone licenseNumber")
-    .populate("vehicleOwner.ownerId", "name email phone")
+    .populate("driver", "name email phone licenseNumber advanceAmount")
+    .populate("vehicleOwner.ownerId", "name email phone advanceAmount")
     .populate("createdBy", "name email")
     .populate("documents.proofOfDelivery.uploadedBy", "name email")
     .populate("documents.proofOfDelivery.verifiedBy", "name email");

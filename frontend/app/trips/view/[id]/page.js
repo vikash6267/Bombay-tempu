@@ -91,6 +91,7 @@ import { PODStepUpload } from "@/components/memos/pod-step-upload";
 import axios from "axios";
 import { EnhancedAddEditTripDialog } from "components/trips/enhanced-edit-trip-dialog";
 import PodStatusCard from "../ClientPod";
+import DriverAdvanceCard from "../DepositeAmount";
 
 // Self Owner Expense Form Schema
 const selfExpenseSchema = z.object({
@@ -890,6 +891,8 @@ export default function TripDetailPage() {
   const [selectedClientForMemo, setSelectedClientForMemo] = useState(null);
   const [showEditDialog, setShowEditDialog] = useState(false); // New state for edit dialog
 
+  // ADVANCE
+
   const handleEdit = () => {
     setShowEditDialog(true); // Open edit dialog instead of inline editing
   };
@@ -966,6 +969,8 @@ export default function TripDetailPage() {
   });
 
   const trip = tripData?.data?.trip;
+
+  console.log(trip, "TRIPSMERIJAN");
   const clients = clientsData?.data?.users || [];
   const vehicles = vehiclesData?.data?.vehicles || [];
   const drivers = driversData?.data?.users || [];
@@ -1784,6 +1789,14 @@ export default function TripDetailPage() {
                         <CardDescription className="text-green-600">
                           Manage your own vehicle expenses and advances
                         </CardDescription>
+                        <CardDescription className="text-gray-600">
+                          <DriverAdvanceCard
+                            onUpdate={handleSelfAdvanceSubmit}
+                            trip={trip}
+                          />
+                          {/* Driver Advanced Balance :{" "}
+                          {formatCurrency(trip?.driver?.advanceAmount || 0)} */}
+                        </CardDescription>
                       </div>
                       <Badge className="bg-green-100 text-green-800 px-3 py-1">
                         Self Owned
@@ -2132,6 +2145,12 @@ export default function TripDetailPage() {
                         <CardDescription className="text-blue-600">
                           Manage fleet vehicle expenses and advances
                         </CardDescription>
+
+                        <DriverAdvanceCard
+                          onUpdate={handleFleetAdvanceSubmit}
+                          trip={trip}
+                          type="fleet"
+                        />
                       </div>
                       <Badge className="bg-blue-100 text-blue-800 px-3 py-1">
                         Fleet Owner

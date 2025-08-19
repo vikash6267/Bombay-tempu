@@ -114,6 +114,7 @@ export const usersApi = {
     apiPatch(`/trips/argestment/${clientId}/pay`, { amount }),
 
   giveAdvance: (data) => apiPost("/auth/create-advance", data), // ✅ new
+  createDeposite: (data) => apiPost("/auth/create-deposite", data), // ✅ new
   getUserAdvances: (userId) => apiGet(`/auth/user/${userId}`), // ✅ optional: list
 };
 

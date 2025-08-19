@@ -56,31 +56,42 @@ export function VehicleDetailsDialog({ open, onOpenChange, vehicle }) {
     return colors[status] || "outline"
   }
 
-  const calculateLoanDetails = () => {
-    if (!vehicle.loanDetails || !vehicle.loanDetails.hasLoan) return null
+const calculateLoanDetails = () => {
+  if (!vehicle.loanDetails || !vehicle.loanDetails.hasLoan) return null;
 
-    const startDate = new Date(vehicle.loanDetails.loanStartDate)
-    const currentDate = new Date()
-    const monthsDiff = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24 * 30.44)) // Average days per month
-    const elapsedMonths = Math.max(0, monthsDiff)
+  const startDate = new Date(vehicle.loanDetails.loanStartDate);
+  const currentDate = new Date();
 
-    const totalLoan = vehicle.loanDetails.loanAmount
-    const emiAmount = vehicle.loanDetails.emiAmount
-    const totalTenure = vehicle.loanDetails.loanTenure
+  // Month difference calculation with day check
+  let elapsedMonths = (currentDate.getFullYear() - startDate.getFullYear()) * 12;
+  elapsedMonths += currentDate.getMonth() - startDate.getMonth();
 
-    const totalPaid = Math.min(elapsedMonths * emiAmount, totalLoan)
-    const remainingAmount = Math.max(0, totalLoan - totalPaid)
-    const remainingMonths = Math.max(0, totalTenure - elapsedMonths)
-    const completionPercentage = Math.min(100, (totalPaid / totalLoan) * 100)
-
-    return {
-      elapsedMonths,
-      totalPaid,
-      remainingAmount,
-      remainingMonths,
-      completionPercentage,
-    }
+  // Agar current day >= start day, ek aur month count kar do
+  if (currentDate.getDate() >= startDate.getDate()) {
+    elapsedMonths += 1;
   }
+
+  const totalLoan = vehicle.loanDetails.loanAmount;
+  const emiAmount = vehicle.loanDetails.emiAmount;
+  const totalTenure = vehicle.loanDetails.loanTenure;
+
+  // Limit elapsedMonths to totalTenure
+  elapsedMonths = Math.min(elapsedMonths, totalTenure);
+
+  const totalPaid = Math.min(elapsedMonths * emiAmount, totalLoan);
+  const remainingAmount = Math.max(0, totalLoan - totalPaid);
+  const remainingMonths = Math.max(0, totalTenure - elapsedMonths);
+  const completionPercentage = Math.min(100, (totalPaid / totalLoan) * 100);
+
+  return {
+    elapsedMonths,
+    totalPaid,
+    remainingAmount,
+    remainingMonths,
+    completionPercentage,
+  };
+};
+
 
   const vehiclePapers = {
     engineNo: vehicle.papers?.engineNo || "",

@@ -8,6 +8,7 @@ const advanceSchema = new mongoose.Schema({
   reason: { type: String }, // agar trip null hai to yaha trip number/notes daal do
   paidBy: { type: String }, // req.user.name
   paymentType: {    type: String, },
+  type: {    type: String,default :"credit" },
   date: { type: Date, default: Date.now },
 });
 

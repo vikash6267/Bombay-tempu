@@ -98,32 +98,39 @@ export function AddEditVehicleDialog({ open, onOpenChange, vehicle = null, mode 
 
    
 
-  const calculateLoanDetails = (loanAmount, emiAmount, loanTenure, loanStartDate) => {
-    if (!loanAmount || !emiAmount || !loanTenure || !loanStartDate) {
-      return null
-    }
-
-    const startDate = new Date(loanStartDate)
-    const currentDate = new Date()
-
-    const elapsedMonths = Math.max(
-      0,
-      (currentDate.getFullYear() - startDate.getFullYear()) * 12 + (currentDate.getMonth() - startDate.getMonth()),
-    )
-
-    const totalPaid = Math.min(elapsedMonths * Number.parseFloat(emiAmount), Number.parseFloat(loanAmount))
-    const remainingAmount = Math.max(0, Number.parseFloat(loanAmount) - totalPaid)
-    const remainingMonths = Math.max(0, Number.parseInt(loanTenure) - elapsedMonths)
-    const completionPercentage = (totalPaid / Number.parseFloat(loanAmount)) * 100
-
-    return {
-      elapsedMonths,
-      totalPaid,
-      remainingAmount,
-      remainingMonths,
-      completionPercentage: Math.min(100, completionPercentage),
-    }
+ const calculateLoanDetails = (loanAmount, emiAmount, loanTenure, loanStartDate) => {
+  if (!loanAmount || !emiAmount || !loanTenure || !loanStartDate) {
+    return null;
   }
+
+  const startDate = new Date(loanStartDate);
+  const currentDate = new Date();
+
+  let elapsedMonths = (currentDate.getFullYear() - startDate.getFullYear()) * 12;
+  elapsedMonths += currentDate.getMonth() - startDate.getMonth();
+
+  // Agar current day >= start day, ek aur month count kar do
+  if (currentDate.getDate() >= startDate.getDate()) {
+    elapsedMonths += 1;
+  }
+
+  // Limit to loan tenure
+  elapsedMonths = Math.min(elapsedMonths, Number.parseInt(loanTenure));
+
+  const totalPaid = Math.min(elapsedMonths * Number.parseFloat(emiAmount), Number.parseFloat(loanAmount));
+  const remainingAmount = Math.max(0, Number.parseFloat(loanAmount) - totalPaid);
+  const remainingMonths = Math.max(0, Number.parseInt(loanTenure) - elapsedMonths);
+  const completionPercentage = (totalPaid / Number.parseFloat(loanAmount)) * 100;
+
+  return {
+    elapsedMonths,
+    totalPaid,
+    remainingAmount,
+    remainingMonths,
+    completionPercentage: Math.min(100, completionPercentage),
+  };
+};
+
 
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {

@@ -1,7 +1,6 @@
 const Advance = require("../models/advanceSchema");
 const User = require("../models/User");
 
-
 exports.createAdvance = async (req, res) => {
   try {
     const { userId, tripId, amount, reason, paymentType } = req.body;
@@ -12,15 +11,16 @@ exports.createAdvance = async (req, res) => {
       amount,
       reason,
       paymentType,
-      paidBy: req.user.name, // sirf name save karega
+      paidBy: req.user.name,
+      type: "credit",
     });
 
     // user ke schema me push + advanceAmount increase
     const user = await User.findByIdAndUpdate(
       userId,
       {
-        $push: { advances: advance._id },      // agar history maintain karni hai
-        $inc: { advanceAmount: +amount },      // amount increment karega
+        $push: { advances: advance._id }, // agar history maintain karni hai
+        $inc: { advanceAmount: +amount }, // amount increment karega
       },
       { new: true }
     );
@@ -34,6 +34,64 @@ exports.createAdvance = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+exports.createDeposit = async (req, res) => {
+  try {
+    const { userId, tripId, amount, reason, paymentType } = req.body;
+
+    // User fetch karo pehle
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: "User not found" 
+      });
+    }
+
+    // Check if advanceAmount sufficient hai
+    if (amount > user.advanceAmount) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient advance balance. Current advance: ${user.advanceAmount}`,
+      });
+    }
+
+    // Deposit create
+    const deposit = await Advance.create({
+      user: userId,
+      trip: tripId || null,
+      amount,
+      reason,
+      paymentType,
+      paidBy: req.user.name,
+      type: "deposit",
+    });
+
+    // User schema me deposit update
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        $push: { deposits: deposit._id }, // deposit history maintain
+        $inc: { advanceAmount: -amount }, // advance balance me amount kam hoga
+      },
+      { new: true }
+    );
+
+    res.status(201).json({
+      success: true, // ✅ success flag
+      message: `Deposit of ${amount} created successfully. Remaining advance balance: ${updatedUser.advanceAmount}`,
+      deposit,
+      deductedAmount: amount,
+      remainingAdvanceBalance: updatedUser.advanceAmount,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false, // ✅ error case bhi
+      message: err.message,
+    });
+  }
+};
+
 
 
 exports.getAdvancesByUser = async (req, res) => {
