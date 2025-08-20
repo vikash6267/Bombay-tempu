@@ -74,7 +74,7 @@
             >
               <div className="mb-2 sm:mb-0">
                 <p className="font-semibold text-gray-800">{item.clientName}</p>
-                <p className="text-sm text-gray-500">{item.clientEmail}</p>
+                {/* <p className="text-sm text-gray-500">{item.clientEmail}</p> */}
                 <p className="text-sm text-gray-600">
                   {item.from} → {item.to}
                 </p>
