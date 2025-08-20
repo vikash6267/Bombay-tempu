@@ -2217,11 +2217,14 @@ const updateTripStatus = async (req, res) => {
     res.status(500).json({ error: "Failed to update trip status" });
   }
 };
+
+
 const getPodStatusReport = async (req, res) => {
   try {
     const trips = await Trip.find({})
       .populate("clients.client", "name email")
-      .select("tripNumber clients");
+      .populate("vehicle", "registrationNumber") // ✅ Vehicle ka registrationNumber laa rahe hain
+      .select("tripNumber clients scheduledDate vehicle");
 
     const pendingStatuses = ["started", "complete"];
     const submittedStatuses = ["pod_received", "pod_submitted", "settled"];
@@ -2234,11 +2237,15 @@ const getPodStatusReport = async (req, res) => {
         const status = c.podManage?.status || "started";
 
         const clientData = {
-          tripId: trip._id,           // ✅ Trip ki id
-          tripNumber: trip.tripNumber,
+          tripId: trip._id,                 // ✅ Trip id
+          tripNumber: trip.tripNumber,      // ✅ Trip number
+          tripDate: trip.scheduledDate,     // ✅ Trip date
+          vehicleNumber: trip.vehicle?.registrationNumber, // ✅ Vehicle registration number
           clientId: c.client?._id,
           clientName: c.client?.name,
           clientEmail: c.client?.email,
+          from: c.origin?.city,             // ✅ From city
+          to: c.destination?.city,          // ✅ To city
           status: status,
         };
 
@@ -2266,6 +2273,7 @@ const getPodStatusReport = async (req, res) => {
     });
   }
 };
+
 
 
 

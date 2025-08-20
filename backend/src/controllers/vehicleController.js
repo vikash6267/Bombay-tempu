@@ -158,7 +158,7 @@ res.status(200).json({
 const getAllVehicles = catchAsync(async (req, res, next) => {
   const filter = {};
 
-  // Apply role-based filtering
+  // Role-based filtering
   if (req.user.role === "fleet_owner") {
     filter.owner = req.user.id;
     filter.ownershipType = "fleet_owner";
@@ -168,31 +168,42 @@ const getAllVehicles = catchAsync(async (req, res, next) => {
     filter._id = req.user.assignedVehicle;
   }
 
-  // Add ownership type filter if specified
+  // Ownership type filter
   if (req.query.ownershipType) {
     filter.ownershipType = req.query.ownershipType;
   }
-  //  const features = new APIFeatures(Vehicle.find(filter), req.query).filter().sort().limitFields().paginate()
 
-  // const vehicles = await features.query
-  //   .populate("owner", "name email phone")
-  //   .populate("selfOwnerDetails.adminId", "name email phone");
+  // 🔍 Search filter (registrationNumber, description, type, location etc.)
+  if (req.query.search) {
+    const searchRegex = new RegExp(req.query.search, "i"); // case-insensitive
+    filter.$or = [
+      { registrationNumber: searchRegex },
+      { description: searchRegex },
+      { vehicleType: searchRegex },
+      { currentLocation: searchRegex },
+      { color: searchRegex },
+      { "selfOwnerDetails.name": searchRegex }
+    ];
+  }
+
+  // Pagination
   const page = req.query.page * 1 || 1;
   const limit = req.query.limit * 1 || 100;
   const skip = (page - 1) * limit;
 
-  // Handle sorting
+  // Sorting
   let sort = "-createdAt";
   if (req.query.sort) {
     sort = req.query.sort.split(",").join(" ");
   }
 
-  // Handle field selection
+  // Fields selection
   let select = "-__v";
   if (req.query.fields) {
     select = req.query.fields.split(",").join(" ");
   }
 
+  // Query
   const vehicles = await Vehicle.find(filter)
     .populate("owner", "name email phone")
     .populate("currentDriver", "name email phone licenseNumber")
@@ -203,14 +214,21 @@ const getAllVehicles = catchAsync(async (req, res, next) => {
     .skip(skip)
     .limit(limit);
 
+  // Total count (for frontend pagination UI)
+  const totalCount = await Vehicle.countDocuments(filter);
+
   res.status(200).json({
     status: "success",
     results: vehicles.length,
+    total: totalCount,
+    page,
+    limit,
     data: {
       vehicles,
     },
   });
 });
+
 
 const getVehicle = catchAsync(async (req, res, next) => {
   const filter = {_id: req.params.id};

@@ -110,16 +110,16 @@ export default function VehiclesPage() {
     }
   };
   // console.log(vehicles)
-  if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center h-full justify-center">
-          <LoadingAnimation />
+  // if (isLoading) {
+  //   return (
+  //     <DashboardLayout>
+  //       <div className="flex items-center h-full justify-center">
+  //         <LoadingAnimation />
          
-        </div>
-      </DashboardLayout>
-    );
-  }
+  //       </div>
+  //     </DashboardLayout>
+  //   );
+  // }
 
   return (
     <DashboardLayout>
@@ -160,7 +160,10 @@ export default function VehiclesPage() {
         </Card>
 
         {/* Vehicles Table */}
-        <Card>
+      {isLoading ? <div className="flex items-center h-full justify-center">
+           <LoadingAnimation />
+         
+      </div> :  <Card>
           <CardHeader>
             <CardTitle>All Vehicles ({vehicles?.data?.results || 0})</CardTitle>
             <CardDescription>
@@ -236,7 +239,7 @@ export default function VehiclesPage() {
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* Dialogs */}
         <AddEditVehicleDialog
