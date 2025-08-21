@@ -98,10 +98,10 @@ const handleSubmit = async () => {
         className="text-gray-600 cursor-pointer"
         onClick={() => setIsOpen(true)}
       >
-        {type === "deposit" ? "Driver Deposit Balance" : "Fleet Owner Advance Balance"}:{" "}
+        {type === "driver" ? "Driver Deposit Balance" : "Fleet Owner Advance Balance"}:{" "}
         
         {
-          type === "deposit" ? <>{formatCurrency(trip?.driver?.advanceAmount || 0)}</> : <>{formatCurrency(trip?.vehicleOwner?.ownerId?.advanceAmount || 0)}</>
+          type === "driver" ? <>{formatCurrency(trip?.driver?.advanceAmount || 0)}</> : <>{formatCurrency(trip?.vehicleOwner?.ownerId?.advanceAmount || 0)}</>
         }
          Click To add
       </div>
@@ -110,10 +110,10 @@ const handleSubmit = async () => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              {type === "deposit" ? "Deduct Deposit" : "Deduct Advance"}
+              {type === "driver" ? "Deduct Deposit" : "Deduct Advance"}
             </DialogTitle>
             <DialogDescription>
-              Enter the amount you want to {type === "deposit" ? "deduct from advanced" : "deduct from advance"} balance.
+              Enter the amount you want to {type === "driver" ? "deduct from advanced" : "deduct from advance"} balance.
             </DialogDescription>
           </DialogHeader>
 

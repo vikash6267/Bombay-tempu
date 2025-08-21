@@ -68,7 +68,7 @@ const getVehicleMonthlyFinance = async (req, res) => {
     }
 
     const trips = await Trip.find(tripQuery).select(
-      "tripNumber scheduledDate totalClientAmount rate selfExpenses"
+      "tripNumber scheduledDate totalClientAmount rate selfExpenses selfAdvances"
     );
 
     let totalIncome = 0;
@@ -90,6 +90,20 @@ const getVehicleMonthlyFinance = async (req, res) => {
 
       // self-expenses per trip (detailed)
       (trip.selfExpenses || []).forEach((exp) => {
+        tripExpenseDetails.push({
+          tripId: trip._id,
+          tripNumber: trip.tripNumber,
+          amount: exp.amount || 0,
+          reason: exp.reason,
+          category: exp.category,
+          expenseFor: exp.expenseFor,
+          description: exp.description,
+          receiptNumber: exp.receiptNumber,
+          date: exp.paidAt,
+        });
+        totalSelfExpenses += exp.amount || 0;
+      });
+      (trip.selfAdvances || []).forEach((exp) => {
         tripExpenseDetails.push({
           tripId: trip._id,
           tripNumber: trip.tripNumber,
@@ -750,14 +764,17 @@ const getVehicleExpenseTotal = catchAsync(async (req, res, next) => {
 
 
 
-const getVehicleExpiries = async (req, res) => {
+const getVehicleExpiries = async (req, res) => { 
   try {
-    const vehicles = await Vehicle.find({ownershipType:"self"});
+    const vehicles = await Vehicle.find({ ownershipType: "self" });
 
     const result = { 
-      days30: [],
-      days90: [],
-      days180: [],
+      days30: [],   // documents expiry within 30 days
+      days90: [],   // documents expiry within 90 days
+      days180: [],  // documents expiry within 180 days
+      "500km": [],  // service due within 500 km
+      "1000km": [], // service due within 1000 km
+      "2000km": []  // service due within 2000 km
     };
 
     const today = dayjs();
@@ -765,40 +782,25 @@ const getVehicleExpiries = async (req, res) => {
     vehicles.forEach((vehicle) => {
       const expiryDocs = [];
 
-      // Documents check
+      // ---------- DOCUMENTS CHECK ----------
       const docs = vehicle.documents;
       if (docs.registrationCertificate?.expiryDate) {
-        expiryDocs.push({
-          name: "Registration Certificate",
-          expiryDate: docs.registrationCertificate.expiryDate,
-        });
+        expiryDocs.push({ name: "Registration Certificate", expiryDate: docs.registrationCertificate.expiryDate });
       }
       if (docs.insurance?.expiryDate) {
-        expiryDocs.push({
-          name: "Insurance",
-          expiryDate: docs.insurance.expiryDate,
-        });
+        expiryDocs.push({ name: "Insurance", expiryDate: docs.insurance.expiryDate });
       }
       if (docs.fitnessCertificate?.expiryDate) {
-        expiryDocs.push({
-          name: "Fitness Certificate",
-          expiryDate: docs.fitnessCertificate.expiryDate,
-        });
+        expiryDocs.push({ name: "Fitness Certificate", expiryDate: docs.fitnessCertificate.expiryDate });
       }
       if (docs.permit?.expiryDate) {
-        expiryDocs.push({
-          name: "Permit",
-          expiryDate: docs.permit.expiryDate,
-        });
+        expiryDocs.push({ name: "Permit", expiryDate: docs.permit.expiryDate });
       }
       if (docs.pollution?.expiryDate) {
-        expiryDocs.push({
-          name: "Pollution Certificate",
-          expiryDate: docs.pollution.expiryDate,
-        });
+        expiryDocs.push({ name: "Pollution Certificate", expiryDate: docs.pollution.expiryDate });
       }
 
-      // Papers check
+      // ---------- PAPERS CHECK ----------
       const papers = vehicle.papers;
       const paperKeys = {
         fitnessDate: "Fitness",
@@ -811,14 +813,11 @@ const getVehicleExpiries = async (req, res) => {
 
       for (const key in paperKeys) {
         if (papers[key]) {
-          expiryDocs.push({
-            name: paperKeys[key],
-            expiryDate: papers[key],
-          });
+          expiryDocs.push({ name: paperKeys[key], expiryDate: papers[key] });
         }
       }
 
-      // Categorize
+      // ---------- DOCUMENT EXPIRY CATEGORIZATION ----------
       expiryDocs.forEach((doc) => {
         const diff = dayjs(doc.expiryDate).diff(today, "day");
 
@@ -842,11 +841,39 @@ const getVehicleExpiries = async (req, res) => {
           });
         }
       });
+
+      // ---------- SERVICE CHECK ----------
+      if (vehicle.currentKilometers && vehicle.nextServiceAtKm) {
+        const remainingKm = vehicle.nextServiceAtKm - vehicle.currentKilometers;
+
+        if (remainingKm <= 500 && remainingKm >= 0) {
+          result["500km"].push({
+            vehicle: vehicle.registrationNumber,
+            currentKm: vehicle.currentKilometers,
+            nextServiceAtKm: vehicle.nextServiceAtKm,
+            remainingKm,
+          });
+        } else if (remainingKm <= 1000 && remainingKm > 500) {
+          result["1000km"].push({
+            vehicle: vehicle.registrationNumber,
+            currentKm: vehicle.currentKilometers,
+            nextServiceAtKm: vehicle.nextServiceAtKm,
+            remainingKm,
+          });
+        } else if (remainingKm <= 2000 && remainingKm > 1000) {
+          result["2000km"].push({
+            vehicle: vehicle.registrationNumber,
+            currentKm: vehicle.currentKilometers,
+            nextServiceAtKm: vehicle.nextServiceAtKm,
+            remainingKm,
+          });
+        }
+      }
     });
 
     res.status(200).json({
       success: true,
-      message: "Vehicle expiry data fetched successfully",
+      message: "Vehicle expiry & service data fetched successfully",
       data: result,
     });
   } catch (err) {
@@ -858,6 +885,7 @@ const getVehicleExpiries = async (req, res) => {
     });
   }
 };
+
 
 module.exports = {
   getAllVehicles,

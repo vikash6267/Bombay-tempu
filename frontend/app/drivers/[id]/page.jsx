@@ -427,39 +427,44 @@ useEffect(() => {
           </div>
 
           {/* Advance History Table */}
-          <div>
-            <h3 className="font-semibold mb-2">Advance History</h3>
-            {advances.length === 0 ? (
-              <p className="text-gray-500">No advances yet.</p>
-            ) : (
-              <div className="max-h-60 overflow-y-auto border rounded-lg">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="p-2 text-left">Date</th>
-                      <th className="p-2 text-left">Amount</th>
-                      <th className="p-2 text-left">Reason</th>
-                      <th className="p-2 text-left">Payment Type</th>
-                      <th className="p-2 text-left">Paid By</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {advances.map((a) => (
-                      <tr key={a._id} className="border-b">
-                        <td className="p-2">
-                          {new Date(a.date).toLocaleDateString()}
-                        </td>
-                        <td className="p-2 font-medium">₹{a.amount}</td>
-                        <td className="p-2">{a.reason}</td>
-                        <td className="p-2">{a.paymentType}</td>
-                        <td className="p-2">{a.paidBy}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+       <div>
+  <h3 className="font-semibold mb-2">Advance History</h3>
+  {advances.length === 0 ? (
+    <p className="text-gray-500">No advances yet.</p>
+  ) : (
+    <div className="max-h-60 overflow-y-auto border rounded-lg">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="p-2 text-left">Date</th>
+            <th className="p-2 text-left">Amount</th>
+            <th className="p-2 text-left">Reason</th>
+            <th className="p-2 text-left">Payment Type</th>
+            <th className="p-2 text-left">Paid By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {advances.map((a) => (
+            <tr key={a._id} className="border-b">
+              <td className="p-2">{new Date(a.date).toLocaleDateString("en-US")}</td>
+              <td
+                className={`p-2 font-medium ${
+                  a.type === "credit" ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {a.type === "credit" ? "+" : "-"}₹{a.amount}
+              </td>
+              <td className="p-2">{a.reason}</td>
+              <td className="p-2">{a.paymentType}</td>
+              <td className="p-2">{a.paidBy}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
+
         </DialogContent>
       </Dialog>
     </DashboardLayout>

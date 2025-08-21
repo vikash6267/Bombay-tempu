@@ -18,6 +18,8 @@ export function VehicleDetailsDialog({ open, onOpenChange, vehicle }) {
   const [selectedCategory, setSelectedCategory] = useState("")
   const [totalExpense, setTotalExpense] = useState(0)
 
+
+  console.log(vehicle,"vehicle")
   useEffect(() => {
     const fetchExpenses = async () => {
       try {
@@ -201,6 +203,16 @@ console.log(vehicle,"vehicleMODEL")
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Year:</span>
                     <span className="font-medium">{vehicle.year}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Curent Km:</span>
+                    <span className="font-medium">{vehicle?.currentKilometers}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Next Service Km:</span>
+                    <span className="font-medium">{vehicle?.nextServiceAtKm}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between">
@@ -446,18 +458,8 @@ console.log(vehicle,"vehicleMODEL")
                     <span className="text-muted-foreground">PUCC:</span>
                     <span className="font-medium">{new Date(vehiclePapers.puccDate).toLocaleDateString()}</span>
                   </div>
-                </CardContent>
-              </Card>
 
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center">
-                    <FileText className="h-5 w-5 mr-2" />
-                    Permits
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1  gap-4">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Permit Date:</span>
                       <span className="font-medium">{new Date(vehiclePapers.permitDate).toLocaleDateString()}</span>
@@ -471,6 +473,18 @@ console.log(vehicle,"vehicleMODEL")
                   </div>
                 </CardContent>
               </Card>
+
+              {/* <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <FileText className="h-5 w-5 mr-2" />
+                    Permits
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+               
+                </CardContent>
+              </Card> */}
             </div>
           </TabsContent>
 

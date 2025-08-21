@@ -72,7 +72,7 @@ const VehicleFinanceSummary = ({ vehicleId }) => {
         <p className="text-red-500">{error}</p>
       ) : financeData ? (
         <>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="bg-green-100 p-4 rounded">
               <h3 className="font-medium text-green-800">Total Income</h3>
               <p className="text-xl font-bold text-green-900">
@@ -83,6 +83,12 @@ const VehicleFinanceSummary = ({ vehicleId }) => {
               <h3 className="font-medium text-red-800">Total Expense</h3>
               <p className="text-xl font-bold text-red-900">
                 ₹{financeData.totalExpense}
+              </p>
+            </div>
+            <div className="bg-green-100 p-4 rounded">
+              <h3 className="font-medium text-green-800">Total Profit</h3>
+              <p className="text-xl font-bold text-green-900">
+                ₹{financeData.netProfit}
               </p>
             </div>
           </div>
@@ -121,7 +127,7 @@ const VehicleFinanceSummary = ({ vehicleId }) => {
                     className="p-2 rounded bg-red-50 border flex justify-between"
                   >
                     <span>
-                      <strong>{item.reason || "N/A"}</strong> —{" "}
+                      <strong>{item?.tripNumber} - {item.reason || "N/A"}</strong> —{" "}
                       {new Date(item.paidAt).toLocaleDateString("en-US")}
                     </span>
                     <span className="font-semibold">₹{item.amount}</span>

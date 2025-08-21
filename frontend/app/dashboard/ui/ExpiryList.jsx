@@ -6,8 +6,11 @@ const VehicleExpiryList = () => {
     days30: [],
     days90: [],
     days180: [],
+    "500km": [],
+    "1000km": [],
+    "2000km": [],
   });
-  const [activeTab, setActiveTab] = useState("30days");
+  const [activeTab, setActiveTab] = useState("days30");
   const [searchTerm, setSearchTerm] = useState("");
 
   const loadExpiries = async () => {
@@ -27,18 +30,18 @@ const VehicleExpiryList = () => {
 
   // Filter the data based on the search term
   const filteredData = (data) => {
-    if (!searchTerm) {
-      return data;
-    }
+    if (!searchTerm) return data;
     const lowercasedSearchTerm = searchTerm.toLowerCase();
     return data.filter(
       (item) =>
         item.vehicle.toLowerCase().includes(lowercasedSearchTerm) ||
-        item.docName.toLowerCase().includes(lowercasedSearchTerm) ||
-        new Date(item.expiryDate)
-          .toLocaleDateString("en-US")
-          .toLowerCase()
-          .includes(lowercasedSearchTerm)
+        (item.docName &&
+          item.docName.toLowerCase().includes(lowercasedSearchTerm)) ||
+        (item.expiryDate &&
+          new Date(item.expiryDate)
+            .toLocaleDateString("en-US")
+            .toLowerCase()
+            .includes(lowercasedSearchTerm))
     );
   };
 
@@ -47,17 +50,29 @@ const VehicleExpiryList = () => {
     let title;
 
     switch (activeTab) {
-      case "30days":
+      case "days30":
         dataToRender = filteredData(expiryData.days30);
-        title = "Expiring in 30 Days";
+        title = `Expiring in 30 Days (${dataToRender.length})`;
         break;
-      case "90days":
+      case "days90":
         dataToRender = filteredData(expiryData.days90);
-        title = "Expiring in 90 Days";
+        title = `Expiring in 90 Days (${dataToRender.length})`;
         break;
-      case "180days":
+      case "days180":
         dataToRender = filteredData(expiryData.days180);
-        title = "Expiring in 180 Days";
+        title = `Expiring in 180 Days (${dataToRender.length})`;
+        break;
+      case "500km":
+        dataToRender = filteredData(expiryData["500km"]);
+        title = `Service Due within 500 Km (${dataToRender.length})`;
+        break;
+      case "1000km":
+        dataToRender = filteredData(expiryData["1000km"]);
+        title = `Service Due within 1000 Km (${dataToRender.length})`;
+        break;
+      case "2000km":
+        dataToRender = filteredData(expiryData["2000km"]);
+        title = `Service Due within 2000 Km (${dataToRender.length})`;
         break;
       default:
         dataToRender = [];
@@ -80,38 +95,29 @@ const VehicleExpiryList = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200 mb-4">
-        <button
-          className={`py-2 px-4 text-center ${
-            activeTab === "30days"
-              ? "border-b-2 border-blue-500 text-blue-500 font-semibold"
-              : "text-gray-500"
-          }`}
-          onClick={() => setActiveTab("30days")}
-        >
-          Expiring in 30 Days
-        </button>
-        <button
-          className={`py-2 px-4 text-center ${
-            activeTab === "90days"
-              ? "border-b-2 border-blue-500 text-blue-500 font-semibold"
-              : "text-gray-500"
-          }`}
-          onClick={() => setActiveTab("90days")}
-        >
-          Expiring in 90 Days
-        </button>
-        <button
-          className={`py-2 px-4 text-center ${
-            activeTab === "180days"
-              ? "border-b-2 border-blue-500 text-blue-500 font-semibold"
-              : "text-gray-500"
-          }`}
-          onClick={() => setActiveTab("180days")}
-        >
-          Expiring in 180 Days
-        </button>
+      <div className="flex flex-wrap border-b border-gray-200 mb-4">
+        {[
+          { key: "days30", label: "30 Days", count: expiryData.days30.length },
+          { key: "days90", label: "90 Days", count: expiryData.days90.length },
+          { key: "days180", label: "180 Days", count: expiryData.days180.length },
+          { key: "500km", label: "500 Km", count: expiryData["500km"].length },
+          { key: "1000km", label: "1000 Km", count: expiryData["1000km"].length },
+          { key: "2000km", label: "2000 Km", count: expiryData["2000km"].length },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            className={`py-2 px-4 text-center ${
+              activeTab === tab.key
+                ? "border-b-2 border-blue-500 text-blue-500 font-semibold"
+                : "text-gray-500"
+            }`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label} ({tab.count})
+          </button>
+        ))}
       </div>
+
       {/* Tab Content */}
       {renderContent()}
     </div>
@@ -134,13 +140,30 @@ const ExpirySection = ({ title, data }) => {
             >
               <div>
                 <p className="font-medium text-gray-800">{item.vehicle}</p>
-                <p className="text-sm text-gray-500">{item.docName}</p>
+                {item.docName ? (
+                  <p className="text-sm text-gray-500">{item.docName}</p>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    Next Service at: {item.nextServiceAtKm} km
+                  </p>
+                )}
               </div>
               <div className="text-right">
-                <span className="text-red-600 font-bold">
-                  {new Date(item.expiryDate).toLocaleDateString("en-US")}
-                </span>
-                <p className="text-xs text-gray-400">Expiry Date</p>
+                {item.expiryDate ? (
+                  <>
+                    <span className="text-red-600 font-bold">
+                      {new Date(item.expiryDate).toLocaleDateString("en-US")}
+                    </span>
+                    <p className="text-xs text-gray-400">Expiry Date</p>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-green-600 font-bold">
+                      Remaining: {item.remainingKm} km
+                    </span>
+                    <p className="text-xs text-gray-400">Service Due</p>
+                  </>
+                )}
               </div>
             </li>
           ))}

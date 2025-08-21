@@ -71,7 +71,7 @@ const vehicleSchema = new mongoose.Schema(
     },
     nextServiceAtKm: {
       type: Number,
-      default: 10000, // default 10,000 km interval
+      default: 0, // default 10,000 km interval
       min: 0,
       description: "Next servicing required at this km reading",
     },
