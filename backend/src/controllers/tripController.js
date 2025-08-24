@@ -2275,6 +2275,122 @@ const getPodStatusReport = async (req, res) => {
 };
 
 
+const getFleetOwnerStatement = async (req, res) => {
+  try {
+    const { fleetOwnerId, filterType, startDate, endDate, search } = req.body;
+    console.log(req.body);
+
+    if (!fleetOwnerId) {
+      return res.status(400).json({
+        success: false,
+        message: "Fleet Owner ID is required",
+      });
+    }
+
+    // ✅ Base Query
+    let query = { "vehicleOwner.ownerId": new mongoose.Types.ObjectId(fleetOwnerId) };
+
+    // ✅ Date Filter
+    if (startDate && endDate) {
+      query.scheduledDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    }
+
+    // ✅ Search (tripNumber, driver name, vehicle number, client name, etc.)
+    if (search) {
+      query.$or = [
+        { tripNumber: { $regex: search, $options: "i" } },
+        { "driver.name": { $regex: search, $options: "i" } },
+        { "vehicle.vehicleNumber": { $regex: search, $options: "i" } },
+        { "client.name": { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const trips = await Trip.find(query);
+
+    if (!trips.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No trips found for this fleet owner",
+      });
+    }
+
+    // ✅ Trips Data + Advances Merge
+    let advancesMerged = [];
+    let totalAmount = 0;
+    let totalAdvancesPaid = 0;
+    let totalPod = 0;
+    let totalPodPending = 0;
+
+    const tripData = trips.map((trip) => {
+      let amount = 0;
+
+      if (filterType === "with_pod") {
+        amount = trip.rate;
+      } else if (filterType === "without_pod") {
+        amount = trip.rate - (trip.podBalance || 0);
+      } else {
+        amount = trip.rate; // default
+      }
+
+      // Summary calculations
+      totalAmount += amount;
+      totalAdvancesPaid += trip.totalFleetAdvance || 0;
+      totalPod += trip.podBalance || 0;
+      totalPodPending += (trip.podBalance || 0) - (trip.podBalanceTotalPaid || 0);
+
+      // Merge Fleet Advances with trip details
+      if (trip.fleetAdvances && trip.fleetAdvances.length > 0) {
+        trip.fleetAdvances.forEach((adv) => {
+          advancesMerged.push({
+            tripNumber: trip.tripNumber,
+            scheduledDate: trip.scheduledDate,
+            advanceDate: adv.date,
+            amount: adv.amount,
+            reason: adv.reason,
+            paymentType: adv.paymentType,
+          });
+        });
+      }
+
+      return {
+        tripNumber: trip.tripNumber,
+        scheduledDate: trip.scheduledDate,
+        amount,
+        podPending: (trip.podBalance || 0) - (trip.podBalanceTotalPaid || 0),
+        totalPod: trip.podBalance || 0,
+        fleetAdvancesTotal: trip.totalFleetAdvance || 0,
+      };
+    });
+
+    // ✅ Final Summary
+    const summary = {
+      totalAmount,
+      totalAdvancesPaid,
+      totalPending: totalAmount - totalAdvancesPaid,
+      totalPod,
+      totalPodPending,
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "Fleet Owner Statement fetched successfully",
+      summary,        // ✅ summary block added
+      trips: tripData,
+      advances: advancesMerged,
+    });
+  } catch (error) {
+    console.error("Error fetching fleet owner statement:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
 
 
 
@@ -2312,4 +2428,5 @@ module.exports = {
   clientUpdatePodStatus,
   uploadPodDocumentForClient,
   getPodStatusReport,
+  getFleetOwnerStatement
 };

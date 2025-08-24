@@ -6,6 +6,7 @@ import { Plus, Search, Filter, Wallet, Loader2 } from "lucide-react"
 import { useSelector } from "react-redux"
 import { toast } from "sonner"
 import Swal from "sweetalert2"
+import FleetOwnerViewDialog from "./components/FleetOwnerDetails"
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout"
 import { Button } from "@/components/ui/button"
@@ -190,31 +191,15 @@ export default function FleetOwnersPage() {
         </Card>
       </div>
 
-      {/* View Details Dialog */}
-      <Dialog open={openDetails} onOpenChange={setOpenDetails}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Fleet Owner Details</DialogTitle>
-            <DialogDescription>Details of {selectedOwner?.name}</DialogDescription>
-          </DialogHeader>
-          {detailsLoading ? (
-            <div className="flex justify-center items-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
-            </div>
-          ) : (
-            selectedOwner && (
-              <div className="space-y-3">
-                <p><strong>Name:</strong> {selectedOwner.name}</p>
-                <p><strong>Email:</strong> {selectedOwner.email}</p>
-                <p><strong>Phone:</strong> {selectedOwner.phone || "N/A"}</p>
-                <p><strong>Commission Rate:</strong> {selectedOwner.commissionRate || "N/A"}%</p>
-                <p><strong>Total Advance:</strong> {selectedOwner.advanceAmount || "0"}</p>
-              </div>
-            )
-          )}
-        </DialogContent>
-      </Dialog>
+     
 
+
+<FleetOwnerViewDialog
+  open={openDetails}
+  onOpenChange={setOpenDetails}
+  owner={selectedOwner}
+  loading={detailsLoading}
+/>
       {/* Advance Dialog */}
       <Dialog open={openAdvance} onOpenChange={setOpenAdvance}>
         <DialogContent className="max-w-2xl">

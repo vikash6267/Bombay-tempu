@@ -169,15 +169,17 @@ export const tripsApi = {
   updatePodDetails: (id, data) => apiPut(`/trips/${id}/pod-details`, data),
   updatePodStatus: (id, data) => apiPut(`/trips/pod-status/${id}`, data),
   updatePodDocs: (id, data) => apiPost(`/trips/${id}/podDocument`, data),
-
+  
   clientupdatePodStatus: (id, clientid, data) =>
     apiPut(`/trips/client-pod-status/${id}/${clientid}`, data),
   clientupdatePodDocs: (id, data) =>
     apiPost(`/trips/${id}/client/podDocument`, data),
-
+  
   getDashboard: () => apiGet("/auth/dashboard"),
-
+  
   getPodReport: () => apiGet("/trips/pod-status/statement"),
+
+  getFleetStatement: ( data) => apiPost(`/trips/fleet/statement`, data),
 };
 
 // Payments API

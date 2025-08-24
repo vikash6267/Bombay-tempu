@@ -376,6 +376,10 @@ const tripSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    podBalanceTotalPaid: {
+      type: Number,
+      default: 0,
+    },
 
     podDetails: {
       date: {

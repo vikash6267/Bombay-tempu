@@ -94,5 +94,6 @@ router.get("/argestment/:clientId", tripController.getClientArgestment);
 
 router.patch("/argestment/:clientId/pay", tripController.payClientAdjustment);
 router.get("/pod-status/statement", tripController.getPodStatusReport);
+router.post("/fleet/statement", tripController.getFleetOwnerStatement);
 
 module.exports = router;
