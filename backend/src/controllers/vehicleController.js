@@ -768,13 +768,13 @@ const getVehicleExpiries = async (req, res) => {
   try {
     const vehicles = await Vehicle.find({ ownershipType: "self" });
 
-    const result = { 
-      days30: [],   // documents expiry within 30 days
-      days90: [],   // documents expiry within 90 days
-      days180: [],  // documents expiry within 180 days
-      "500km": [],  // service due within 500 km
-      "1000km": [], // service due within 1000 km
-      "2000km": []  // service due within 2000 km
+    const result = {
+      month1: [], // expiry within 1 month
+      month2: [], // expiry within 2 months
+      month3: [], // expiry within 3 months
+      "500km": [],
+      "1000km": [],
+      "2000km": []
     };
 
     const today = dayjs();
@@ -819,25 +819,28 @@ const getVehicleExpiries = async (req, res) => {
 
       // ---------- DOCUMENT EXPIRY CATEGORIZATION ----------
       expiryDocs.forEach((doc) => {
-        const diff = dayjs(doc.expiryDate).diff(today, "day");
+        const diffMonths = dayjs(doc.expiryDate).diff(today, "month", true); // fractional months
 
-        if (diff <= 30 && diff >= 0) {
-          result.days30.push({
+        if (diffMonths <= 1 && diffMonths >= 0) {
+          result.month1.push({
             vehicle: vehicle.registrationNumber,
             docName: doc.name,
             expiryDate: doc.expiryDate,
+            remainingMonths: diffMonths.toFixed(1)
           });
-        } else if (diff <= 90 && diff > 30) {
-          result.days90.push({
+        } else if (diffMonths <= 2 && diffMonths > 1) {
+          result.month2.push({
             vehicle: vehicle.registrationNumber,
             docName: doc.name,
             expiryDate: doc.expiryDate,
+            remainingMonths: diffMonths.toFixed(1)
           });
-        } else if (diff <= 180 && diff > 90) {
-          result.days180.push({
+        } else if (diffMonths <= 3 && diffMonths > 2) {
+          result.month3.push({
             vehicle: vehicle.registrationNumber,
             docName: doc.name,
             expiryDate: doc.expiryDate,
+            remainingMonths: diffMonths.toFixed(1)
           });
         }
       });
@@ -885,6 +888,7 @@ const getVehicleExpiries = async (req, res) => {
     });
   }
 };
+  
 
 
 module.exports = {

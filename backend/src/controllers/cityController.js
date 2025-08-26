@@ -470,26 +470,16 @@ const addCity = async (req, res) => {
       return res.status(400).json({ message: "City name is required" });
     }
 
-    // If no pincode provided, generate a unique one
+    // If no pincode provided, generate a 6-digit one
     if (!pincode) {
-      let isUnique = false;
-      while (!isUnique) {
-        const randomPincode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
-        const existing = await City.findOne({ pincode: randomPincode });
-        if (!existing) {
-          pincode = randomPincode;
-          isUnique = true;
-        }
-      }
+      pincode = Math.floor(100000 + Math.random() * 900000);
     }
 
     const newCity = await City.create({ city, state, pincode });
 
     res.status(201).json({
       status: "success",
-      data: {
-        newCity,
-      },
+      data: { newCity },
     });
   } catch (error) {
     console.error("Error adding city:", error);
@@ -499,6 +489,7 @@ const addCity = async (req, res) => {
     });
   }
 };
+
   
 
 

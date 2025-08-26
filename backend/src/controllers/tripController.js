@@ -1842,11 +1842,13 @@ const uploadPodDocument = async (req, res) => {
 const getDashboardData = async (req, res) => {
   try {
     const trips = await Trip.find().lean();
-    const otherExpenses = await Expense.find().lean(); // ✅ Fetch other expenses
+    const otherExpenses = await Expense.find().lean();
 
     let totalTrips = trips.length;
     let totalPods = 0;
-    let totalProfitBeforeExpenses = 0;
+    let totalTripProfit = 0; // Trip profit excluding commission
+    let totalCommission = 0; // Commission earned
+    let totalTripDifference = 0; // Difference between client rate and truck cost
     let totalTripExpenses = 0;
     let pendingPodClientsCount = 0;
 
@@ -1856,9 +1858,7 @@ const getDashboardData = async (req, res) => {
 
       if (podBalance > 0 && Array.isArray(trip.clients)) {
         trip.clients.forEach((client) => {
-          if (!client.podReceived) {
-            pendingPodClientsCount += 1;
-          }
+          if (!client.podReceived) pendingPodClientsCount += 1;
         });
       }
 
@@ -1869,21 +1869,17 @@ const getDashboardData = async (req, res) => {
           trip.clients?.reduce((sum, c) => sum + (c.truckHireCost || 0), 0) ||
           0;
 
-        const profit =
-          clientTotalRate -
-          clientTruckCost +
-          clientTruckCost -
-          (trip.rate || 0) +
-          (trip.commission || 0);
+        const difference = clientTotalRate - clientTruckCost;
+        totalTripDifference += difference;
 
-        totalProfitBeforeExpenses += profit;
+        const profit = difference - (trip.rate || 0);
+        totalTripProfit += profit;
+
+        totalCommission += trip.commission || 0;
       } else if (trip.vehicleOwner?.ownershipType === "self") {
-        const profit =
-          (trip.totalClientAmount || 0) -
-          (trip.rate || 0) +
-          (trip.commission || 0);
-
-        totalProfitBeforeExpenses += profit;
+        const profit = (trip.totalClientAmount || 0) - (trip.rate || 0);
+        totalTripProfit += profit;
+        totalCommission += trip.commission || 0;
 
         if (Array.isArray(trip.selfExpenses)) {
           totalTripExpenses += trip.selfExpenses.reduce(
@@ -1900,23 +1896,24 @@ const getDashboardData = async (req, res) => {
       }
     });
 
-    // ✅ Sum all other expenses
     const totalOtherExpense = otherExpenses.reduce(
       (sum, exp) => sum + (exp.amount || 0),
       0
     );
 
     const totalExpenses = totalTripExpenses + totalOtherExpense;
-    const totalFinalProfit = totalProfitBeforeExpenses - totalExpenses;
+    const totalFinalProfit = totalTripProfit + totalCommission - totalExpenses;
 
     res.status(200).json({
       success: true,
       data: {
         totalTrips,
         totalPods,
-        totalProfitBeforeExpenses,
+        totalTripProfit,      // Trip profit without commission
+        totalCommission,      // Commission earned
+        totalTripDifference,  // Client rate - Truck cost
         totalExpenses,
-        otherExpense: totalOtherExpense, // ✅ Included
+        otherExpense: totalOtherExpense,
         totalFinalProfit,
         pendingPodClientsCount,
       },
@@ -1929,6 +1926,7 @@ const getDashboardData = async (req, res) => {
     });
   }
 };
+
 
 const getDriverSelfSummary = async (req, res) => {
   try {
@@ -2346,6 +2344,7 @@ const getFleetOwnerStatement = async (req, res) => {
         trip.fleetAdvances.forEach((adv) => {
           advancesMerged.push({
             tripNumber: trip.tripNumber,
+            _id: trip._id,
             scheduledDate: trip.scheduledDate,
             advanceDate: adv.date,
             amount: adv.amount,
@@ -2359,6 +2358,8 @@ const getFleetOwnerStatement = async (req, res) => {
         tripNumber: trip.tripNumber,
         scheduledDate: trip.scheduledDate,
         amount,
+            _id: trip._id,
+
         podPending: (trip.podBalance || 0) - (trip.podBalanceTotalPaid || 0),
         totalPod: trip.podBalance || 0,
         fleetAdvancesTotal: trip.totalFleetAdvance || 0,

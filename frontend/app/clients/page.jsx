@@ -806,6 +806,7 @@ export default function ClientsPage() {
                         statement={apiResponse.statement}
                         clientInfo={selectedClient}
                         totalBalance={apiResponse.totalBalance || 0}
+                        
                       />
                     </CardContent>
                   </Card>

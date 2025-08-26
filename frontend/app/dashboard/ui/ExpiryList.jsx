@@ -3,14 +3,14 @@ import { vehiclesApi } from "lib/api";
 
 const VehicleExpiryList = () => {
   const [expiryData, setExpiryData] = useState({
-    days30: [],
-    days90: [],
-    days180: [],
+    month1: [],
+    month2: [],
+    month3: [],
     "500km": [],
     "1000km": [],
     "2000km": [],
   });
-  const [activeTab, setActiveTab] = useState("days30");
+  const [activeTab, setActiveTab] = useState("month1");
   const [searchTerm, setSearchTerm] = useState("");
 
   const loadExpiries = async () => {
@@ -28,7 +28,6 @@ const VehicleExpiryList = () => {
     loadExpiries();
   }, []);
 
-  // Filter the data based on the search term
   const filteredData = (data) => {
     if (!searchTerm) return data;
     const lowercasedSearchTerm = searchTerm.toLowerCase();
@@ -50,17 +49,17 @@ const VehicleExpiryList = () => {
     let title;
 
     switch (activeTab) {
-      case "days30":
-        dataToRender = filteredData(expiryData.days30);
-        title = `Expiring in 30 Days (${dataToRender.length})`;
+      case "month1":
+        dataToRender = filteredData(expiryData.month1);
+        title = `Expiring in 1 Month (${dataToRender.length})`;
         break;
-      case "days90":
-        dataToRender = filteredData(expiryData.days90);
-        title = `Expiring in 90 Days (${dataToRender.length})`;
+      case "month2":
+        dataToRender = filteredData(expiryData.month2);
+        title = `Expiring in 2 Months (${dataToRender.length})`;
         break;
-      case "days180":
-        dataToRender = filteredData(expiryData.days180);
-        title = `Expiring in 180 Days (${dataToRender.length})`;
+      case "month3":
+        dataToRender = filteredData(expiryData.month3);
+        title = `Expiring in 3 Months (${dataToRender.length})`;
         break;
       case "500km":
         dataToRender = filteredData(expiryData["500km"]);
@@ -97,9 +96,9 @@ const VehicleExpiryList = () => {
       {/* Tab Navigation */}
       <div className="flex flex-wrap border-b border-gray-200 mb-4">
         {[
-          { key: "days30", label: "30 Days", count: expiryData.days30.length },
-          { key: "days90", label: "90 Days", count: expiryData.days90.length },
-          { key: "days180", label: "180 Days", count: expiryData.days180.length },
+          { key: "month1", label: "1 Month", count: expiryData.month1.length },
+          { key: "month2", label: "2 Months", count: expiryData.month2.length },
+          { key: "month3", label: "3 Months", count: expiryData.month3.length },
           { key: "500km", label: "500 Km", count: expiryData["500km"].length },
           { key: "1000km", label: "1000 Km", count: expiryData["1000km"].length },
           { key: "2000km", label: "2000 Km", count: expiryData["2000km"].length },

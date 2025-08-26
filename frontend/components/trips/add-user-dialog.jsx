@@ -32,11 +32,11 @@ const getUserSchema = userType => {
     return Yup.object().shape({
       ...baseSchema,
       address: Yup.object().shape({
-        street: Yup.string().required("Street is required"),
-        city: Yup.string().required("City is required"),
-        state: Yup.string().required("State is required"),
+        street: Yup.string().optional(),
+        city: Yup.string().optional(),
+        state: Yup.string().optional(),
         pincode: Yup.string()
-          .required("Pincode is required")
+          .optional()
           .matches(/^\d{6}$/, "Pincode must be 6 digits")
       })
     })
@@ -125,8 +125,8 @@ export function AddUserDialog({ open, onOpenChange, userType, onSuccess }) {
   const initialValues = getInitialValues(userType)
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={onOpenChange} >
+      <DialogContent className="sm:max-w-[425px] h-[90vh] overflow-scroll">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />

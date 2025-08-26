@@ -130,8 +130,7 @@ const tripSchema = new mongoose.Schema(
           state: { type: String, required: true },
           pincode: {
             type: String,
-            required: true,
-            match: [/^[0-9]{6}$/, "Please provide a valid 6-digit pincode"],
+          default:"123456"
           },
           coordinates: {
             latitude: Number,

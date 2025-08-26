@@ -10,7 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -21,25 +20,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Truck,
   Route,
   CreditCard,
-  Users,
-  TrendingUp,
-  TrendingDown,
-  MapPin,
   Package,
   Calculator,
   PiggyBank,
   Activity,
+  MapPin,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { tripsApi, vehiclesApi } from "lib/api";
+import { tripsApi } from "lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import VehicleExpiryList from "./ui/ExpiryList";
 import PodReport from "./ui/PodStatement";
 
+// StatCard Component
 function StatCard({
   title,
   value,
@@ -90,6 +88,7 @@ function StatCard({
   );
 }
 
+// ProfitBreakdownCard Component
 function ProfitBreakdownCard({ data, isLoading }) {
   if (isLoading) {
     return (
@@ -130,13 +129,33 @@ function ProfitBreakdownCard({ data, isLoading }) {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Revenue Before Expenses */}
+          {/* Trip Profit */}
           <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950 rounded-lg">
             <span className="font-medium text-green-700 dark:text-green-300">
-              Revenue (Before Expenses)
+              Trip Profit
             </span>
             <span className="font-bold text-green-700 dark:text-green-300">
-              ₹{data.totalProfitBeforeExpenses.toLocaleString("en-IN")}
+              ₹{data.totalTripProfit?.toLocaleString("en-IN")}
+            </span>
+          </div>
+
+          {/* Commission */}
+          <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+            <span className="font-medium text-blue-700 dark:text-blue-300">
+              Commission
+            </span>
+            <span className="font-bold text-blue-700 dark:text-blue-300">
+              ₹{data.totalCommission?.toLocaleString("en-IN")}
+            </span>
+          </div>
+
+          {/* Trip Difference */}
+          <div className="flex justify-between items-center p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
+            <span className="font-medium text-purple-700 dark:text-purple-300">
+              Trip Difference
+            </span>
+            <span className="font-bold text-purple-700 dark:text-purple-300">
+              ₹{data.totalTripDifference?.toLocaleString("en-IN")}
             </span>
           </div>
 
@@ -147,7 +166,9 @@ function ProfitBreakdownCard({ data, isLoading }) {
             </span>
             <span className="font-bold text-red-700 dark:text-red-300">
               -₹
-              {(data.totalExpenses - data.otherExpense).toLocaleString("en-IN")}
+              {(data.totalExpenses - data.otherExpense)?.toLocaleString(
+                "en-IN"
+              )}
             </span>
           </div>
 
@@ -157,7 +178,7 @@ function ProfitBreakdownCard({ data, isLoading }) {
               Other Expenses
             </span>
             <span className="font-bold text-red-700 dark:text-red-300">
-              -₹{data.otherExpense.toLocaleString("en-IN")}
+              -₹{data.otherExpense?.toLocaleString("en-IN")}
             </span>
           </div>
 
@@ -167,7 +188,7 @@ function ProfitBreakdownCard({ data, isLoading }) {
               Total Expenses
             </span>
             <span className="font-bold text-red-800 dark:text-red-200">
-              -₹{data.totalExpenses.toLocaleString("en-IN")}
+              -₹{data.totalExpenses?.toLocaleString("en-IN")}
             </span>
           </div>
 
@@ -178,23 +199,19 @@ function ProfitBreakdownCard({ data, isLoading }) {
                 Final Profit
               </span>
               <span className="font-bold text-xl text-blue-700 dark:text-blue-300">
-                ₹{data.totalFinalProfit.toLocaleString("en-IN")}
+                ₹{data.totalFinalProfit?.toLocaleString("en-IN")}
               </span>
             </div>
           </div>
 
           {/* Profit Margin */}
-          <div className="text-center pt-2">
-            <Badge variant="secondary" className="text-sm">
-              Profit Margin: {profitMargin}%
-            </Badge>
-          </div>
         </div>
       </CardContent>
     </Card>
   );
 }
 
+// RecentTrips Component
 function RecentTrips() {
   const { data: trips, isLoading } = useQuery({
     queryKey: ["recent-trips"],
@@ -292,90 +309,7 @@ function RecentTrips() {
   );
 }
 
-function UpcomingMaintenance() {
-  const { data: maintenance, isLoading } = useQuery({
-    queryKey: ["upcoming-maintenance"],
-    queryFn: () => api.get("/maintenance?status=scheduled&limit=5"),
-  });
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Maintenance</CardTitle>
-          <CardDescription>Scheduled vehicle maintenance</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-3 border rounded-lg"
-              >
-                <div className="flex items-center space-x-3">
-                  <Skeleton className="h-4 w-4" />
-                  <div className="space-y-1">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
-                </div>
-                <div className="text-right space-y-1">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-3 w-12" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Upcoming Maintenance</CardTitle>
-        <CardDescription>Scheduled vehicle maintenance</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {maintenance?.data?.data?.maintenanceRecords?.length > 0 ? (
-            maintenance.data.data.maintenanceRecords.map((item) => (
-              <div
-                key={item._id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  <Truck className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">
-                      {item.vehicle?.registrationNumber}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{item.type}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">
-                    {new Date(item.scheduledDate).toLocaleDateString("en-IN")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    ₹{item.estimatedCost?.toLocaleString("en-IN")}
-                  </p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              <Truck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No upcoming maintenance scheduled</p>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
+// DashboardPage Component
 export default function DashboardPage() {
   const { user } = useSelector((state) => state.auth);
   const [dashboardData, setDashboardData] = useState(null);
@@ -385,7 +319,6 @@ export default function DashboardPage() {
     try {
       setIsLoading(true);
       const res = await tripsApi.getDashboard();
-      console.log("Dashboard Data:", res.data);
       setDashboardData(res.data);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -394,7 +327,6 @@ export default function DashboardPage() {
     }
   };
 
- 
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -441,7 +373,7 @@ export default function DashboardPage() {
             isLoading={isLoading}
           />
           <StatCard
-            title="Pod Count"
+            title="Pending Pods"
             value={
               dashboardData?.pendingPodClientsCount?.toLocaleString("en-IN") ||
               "0"
@@ -484,7 +416,6 @@ export default function DashboardPage() {
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-
             <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
             <TabsTrigger value="pods">Pods</TabsTrigger>
           </TabsList>
@@ -493,61 +424,6 @@ export default function DashboardPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
               <ProfitBreakdownCard data={dashboardData} isLoading={isLoading} />
             </div>
-
-            {/* Business Metrics Summary */}
-            {dashboardData && !isLoading && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Business Performance Summary</CardTitle>
-                  <CardDescription>
-                    Key insights from your operations
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="text-center p-4 border rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">
-                        ₹
-                        {Math.round(
-                          dashboardData.totalFinalProfit /
-                            dashboardData.totalTrips
-                        ).toLocaleString("en-IN")}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Profit per Trip
-                      </div>
-                    </div>
-                    <div className="text-center p-4 border rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">
-                        {Math.round(
-                          dashboardData.totalPods / dashboardData.totalTrips
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Avg Pods per Trip
-                      </div>
-                    </div>
-                    <div className="text-center p-4 border rounded-lg">
-                      <div className="text-2xl font-bold text-purple-600">
-                        {(
-                          (dashboardData.totalFinalProfit /
-                            dashboardData.totalProfitBeforeExpenses) *
-                          100
-                        ).toFixed(1)}
-                        %
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Profit Margin
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="trips">
-            <RecentTrips />
           </TabsContent>
 
           <TabsContent value="maintenance">

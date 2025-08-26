@@ -1,5 +1,5 @@
-import {useState, useMemo, useCallback, useEffect, use} from "react";
-import {Search, MapPin} from "lucide-react";
+import { useState, useMemo, useCallback } from "react";
+import { Search, MapPin } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -8,13 +8,17 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
-import {Button} from "@/components/ui/button";
-import {Badge} from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import api from "@/lib/api";
-import {useDispatch, useSelector} from "react-redux";
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {getCitiesSuccess} from "@/lib/slices/citySlice";
+import { useDispatch, useSelector } from "react-redux";
+import { useMutation } from "@tanstack/react-query";
+import { getCitiesSuccess } from "@/lib/slices/citySlice";
 
 export function CitySelect({
   value,
@@ -30,11 +34,41 @@ export function CitySelect({
   const [newState, setNewState] = useState("");
   const [newPincode, setNewPincode] = useState("");
   const [addCity, setAddCity] = useState(false);
-  const {cities} = useSelector((state) => state.city);
+
+  const { cities } = useSelector((state) => state.city);
   const dispatch = useDispatch();
-  const mutaion = useMutation({
+
+  // Mutation to add city
+  const mutation = useMutation({
     mutationFn: (data) => api.post("/cities/add", data),
+    onSuccess: (res) => {
+      // Extract the new city object
+      const newCityObj = res.data?.data?.newCity;
+
+      if (!newCityObj) return;
+
+      // Get existing cities from Redux safely
+      const existingCities = Array.isArray(cities) ? cities : [];
+
+      // Add the new city to the list
+      const updatedCities = [...existingCities, newCityObj];
+
+      // Update Redux
+      dispatch(getCitiesSuccess(updatedCities));
+
+      // Select the new city in the dropdown
+      handleSelect(newCityObj);
+    },
   });
+
+  // Generate default date-based pincode DDMMYY
+  const generateDefaultDate = () => {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = String(now.getFullYear()).slice(-2);
+    return `${day}${month}${year}`;
+  };
 
   const handleSelect = useCallback(
     (city) => {
@@ -46,33 +80,36 @@ export function CitySelect({
   );
 
   const displayValue = value
-    ? `${value.city}, ${value.state},${value.pincode}`
+    ? `${value.city}, ${value.state}, ${value.pincode}`
     : "";
 
+  // Safe filteredCities, default to empty array if cities is not array
   const filteredCities = useMemo(() => {
-    if (!search) return cities?.slice(0, 59); // Show first 50 cities by default
-
-    return cities
-      ?.filter(
+    const cityList = Array.isArray(cities) ? cities : [];
+    if (!search) return cityList.slice(0, 50);
+    return cityList
+      .filter(
         (city) =>
           city.city.toLowerCase().includes(search.toLowerCase()) ||
           city.state.toLowerCase().includes(search.toLowerCase())
       )
-      .slice(0, 50); // Limit results for performance
-  }, [search]);
-  
+      .slice(0, 50);
+  }, [search, cities]);
 
   const handleAddCity = () => {
-    if (newCity ) {
-      const newCityData = {city: newCity, state: newState, pincode: newPincode};
-      mutaion.mutate(newCityData);
-      setNewCity("");
-      setNewState("");
-      setNewPincode("");
-      handleSelect({city: newCity, state: newState, pincode: newPincode});
-      setOpen(false);
-      setAddCity(false);
-    }
+    if (!newCity) return;
+
+    const pincode = newPincode || generateDefaultDate();
+    const newCityData = { city: newCity, state: newState, pincode };
+
+    mutation.mutate(newCityData);
+
+    // Reset fields
+    setNewCity("");
+    setNewState("");
+    setNewPincode("");
+    setOpen(false);
+    setAddCity(false);
   };
 
   return (
@@ -91,7 +128,8 @@ export function CitySelect({
             aria-expanded={open}
             className={`w-full justify-between ${
               error ? "border-red-500" : ""
-            }`}>
+            }`}
+          >
             <div className="flex items-center">
               <MapPin className="h-4 w-4 mr-2 text-gray-500" />
               <span className={!value ? "text-gray-500" : ""}>
@@ -103,29 +141,33 @@ export function CitySelect({
         </PopoverTrigger>
 
         <PopoverContent className="w-full p-0" align="start">
-          <Command className={"w-full"}>
+          <Command className="w-full">
             <CommandInput
               placeholder="Search cities..."
               value={search}
               onValueChange={setSearch}
             />
+
             {!addCity && (
               <Button
-                onClick={() => setAddCity((prev) => !prev)}
-                variant={"outline"}
-                className={"w-full"}>
+                onClick={() => setAddCity(true)}
+                variant="outline"
+                className="w-full"
+              >
                 Add New City
               </Button>
             )}
+
             <CommandList className="max-h-60">
               <CommandEmpty>No cities found.</CommandEmpty>
               <CommandGroup>
-                {filteredCities?.map((city, index) => (
+                {filteredCities.map((city) => (
                   <CommandItem
                     key={`${city.city}-${city.state}-${city.pincode}`}
                     value={`${city.city} ${city.state} ${city.pincode}`}
                     onSelect={() => handleSelect(city)}
-                    className="flex items-center justify-between">
+                    className="flex items-center justify-between"
+                  >
                     <div className="flex items-center">
                       <MapPin className="h-4 w-4 mr-2 text-gray-400" />
                       <div>
@@ -143,8 +185,8 @@ export function CitySelect({
               </CommandGroup>
             </CommandList>
           </Command>
-          <div
-            className={"mt-4 max-w-lg p-2 " + (addCity ? "block" : "hidden")}>
+
+          <div className={`mt-4 max-w-lg p-2 ${addCity ? "block" : "hidden"}`}>
             <input
               type="text"
               placeholder="City Name"
@@ -161,15 +203,13 @@ export function CitySelect({
             />
             <input
               type="text"
-              placeholder="Pincode"
+              placeholder="Pincode (optional)"
               value={newPincode}
               onChange={(e) => setNewPincode(e.target.value)}
               className="w-full p-2 border rounded mb-2"
             />
             <div className="flex flex-row justify-end gap-4">
-              <Button
-                variant={"outline"}
-                onClick={() => setAddCity((prev) => !prev)}>
+              <Button variant="outline" onClick={() => setAddCity(false)}>
                 Cancel
               </Button>
               <Button onClick={handleAddCity} className="w-auto">

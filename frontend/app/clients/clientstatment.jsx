@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import {
   Download,
   FileText,
@@ -7,62 +7,81 @@ import {
   User,
   Phone,
   Mail,
-  MapPin
-} from "lucide-react"
+  MapPin,
+} from "lucide-react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
-} from "@/components/ui/table"
-import { jsPDF } from "jspdf"
-import autoTable from "jspdf-autotable"
+  TableRow,
+} from "@/components/ui/table";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { UpdateClientDialog } from "components/trips/update-user-dialoag";
+import { useEffect, useState } from "react";
+import { usersApi } from "lib/api";
 
 export function StatementTable({
   statement,
-  clientInfo,
+  clientInfo:initialClientInfo,
   totalTrips,
   totalBalance,
-  tripBalances = []
+  tripBalances = [],
 }) {
-  const formatDate = dateString => {
+  const [editOpen, setEditOpen] = useState(false);
+  const [clientInfo, setClientInfo] = useState(initialClientInfo);
+ 
+  const handleClientUpdate = async (updatedClient) => {
+    try {
+      // Fetch updated client from API
+      console.log("UPDATEDATE",updatedClient.user)
+      const { data } = await usersApi.getById(updatedClient.user._id ||initialClientInfo._id );
+      console.log(data,"NEWDATA")
+      setClientInfo(data.user || initialClientInfo); // update local state
+    } catch (error) {
+      console.error("Failed to fetch updated client:", error);
+    }
+  };
+
+
+  const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
-      year: "numeric"
-    })
-  }
+      year: "numeric",
+    });
+  };
 
-  console.log(clientInfo)
+  console.log(clientInfo);
 
-  const formatDateTime = dateString => {
+  const formatDateTime = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
-    })
-  }
+      minute: "2-digit",
+    });
+  };
 
-  const formatCurrency = amount => {
+  const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-      minimumFractionDigits: 0
-    }).format(amount)
-  }
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
 
   const downloadStatement = () => {
     const csvContent = [
@@ -82,10 +101,10 @@ export function StatementTable({
         "Debit",
         "Credit",
         "Notes",
-        "Paid To"
+        "Paid To",
       ],
       // Data rows
-      ...statement.entries.map(entry => [
+      ...statement.entries.map((entry) => [
         entry.tripNumber,
         formatDate(entry.date),
         entry.reason,
@@ -93,7 +112,7 @@ export function StatementTable({
         entry.debit || 0,
         entry.credit || 0,
         entry.notes || entry.description || "",
-        entry.paidTo || ""
+        entry.paidTo || "",
       ]),
       [],
       // Summary
@@ -105,225 +124,225 @@ export function StatementTable({
         statement.totalDebit,
         statement.totalCredit,
         "",
-        ""
+        "",
       ],
-      ["", "", "", "CLOSING BALANCE", "", statement.closingBalance, "", ""]
+      ["", "", "", "CLOSING BALANCE", "", statement.closingBalance, "", ""],
     ]
-      .map(row => row.join(","))
-      .join("\n")
+      .map((row) => row.join(","))
+      .join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
     link.setAttribute(
       "download",
       `statement_${clientInfo.name.replace(/\s+/g, "_")}_${
         new Date().toISOString().split("T")[0]
       }.csv`
-    )
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-const downloadPDF = () => {
-  const doc = new jsPDF()
-  const pageWidth = doc.internal.pageSize.width
-  const margin = 20
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    const margin = 20;
 
-  // Header
-  doc.setFontSize(20)
-  doc.setFont("helvetica", "bold")
-  doc.text("ACCOUNT STATEMENT", pageWidth / 2, 25, { align: "center" })
+    // Header
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("ACCOUNT STATEMENT", pageWidth / 2, 25, { align: "center" });
 
-  // Client Information Section
-  doc.setFontSize(14)
-  doc.setFont("helvetica", "bold")
-  doc.text("CLIENT INFORMATION", margin, 45)
+    // Client Information Section
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("CLIENT INFORMATION", margin, 45);
 
-  doc.setFontSize(10)
-  doc.setFont("helvetica", "normal")
-  let yPos = 55
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    let yPos = 55;
 
-  // Client details in two columns
-  doc.text(`Name: ${clientInfo.name}`, margin, yPos)
-  doc.text(
-    `Status: ${clientInfo.active ? "Active" : "Inactive"}`,
-    pageWidth / 2,
-    yPos
-  )
-  yPos += 8
+    // Client details in two columns
+    doc.text(`Name: ${clientInfo.name}`, margin, yPos);
+    doc.text(
+      `Status: ${clientInfo.active ? "Active" : "Inactive"}`,
+      pageWidth / 2,
+      yPos
+    );
+    yPos += 8;
 
-  if (clientInfo.email) {
-    doc.text(`Email: ${clientInfo.email}`, margin, yPos)
-  }
-  if (clientInfo.phone) {
-    doc.text(`Phone: ${clientInfo.phone}`, pageWidth / 2, yPos)
-  }
-  yPos += 8
-
-  doc.text(
-    `Generated on: ${new Date().toLocaleDateString(
-      "en-IN"
-    )} ${new Date().toLocaleTimeString("en-IN")}`,
-    margin,
-    yPos
-  )
-  yPos += 15
-
-  // Statement Summary Section
-  doc.setFontSize(14)
-  doc.setFont("helvetica", "bold")
-  doc.text("STATEMENT SUMMARY", margin, yPos)
-  yPos += 10
-
-  doc.setFontSize(10)
-  doc.setFont("helvetica", "normal")
-
-  // Summary in a box format
-  const summaryData = [
-    ["Total Trips", totalTrips.toString()],
-    ["Total Credit", statement.totalCredit.toFixed(2)], // Assuming 2 decimal places for currency-like values
-    ["Total Debit", statement.totalDebit.toFixed(2)],
-    ["Closing Balance", statement.closingBalance.toFixed(2)],
-    ["Account Balance", totalBalance.toFixed(2)]
-  ]
-
-  autoTable(doc, {
-    startY: yPos,
-    head: [["Description", "Amount"]],
-    body: summaryData,
-    theme: "grid",
-    headStyles: {
-      fillColor: [41, 128, 185],
-      textColor: 255,
-      fontStyle: "bold"
-    },
-    bodyStyles: { fontSize: 10 },
-    columnStyles: {
-      0: { cellWidth: 60 },
-      1: { cellWidth: 60, halign: "right" }
-    },
-    margin: { left: margin, right: margin }
-  })
-
-  yPos = doc.lastAutoTable.finalY + 15
-
-  // Transaction Details Section
-  doc.setFontSize(14)
-  doc.setFont("helvetica", "bold")
-  doc.text("TRANSACTION DETAILS", margin, yPos)
-  yPos += 10
-
-  // Prepare transaction data for the table
-  const transactionData = statement.entries.map(entry => [
-    entry.tripNumber,
-    formatDate(entry.date),
-    entry.reason,
-    entry.type,
-    entry.debit > 0 ? entry.debit.toFixed(2) : "-",
-    entry.credit > 0 ? entry.credit.toFixed(2) : "-",
-    entry.notes || entry.description || "-"
-  ])
-
-  // Add totals row
-  transactionData.push([
-    "",
-    "",
-    "",
-    "TOTAL",
-    statement.totalDebit.toFixed(2),
-    statement.totalCredit.toFixed(2),
-    ""
-  ])
-
-  autoTable(doc, {
-    startY: yPos,
-    head: [
-      ["Trip No.", "Date", "Reason", "Type", "Debit", "Credit", "Notes"]
-    ],
-    body: transactionData,
-    theme: "striped",
-    headStyles: {
-      fillColor: [52, 152, 219],
-      textColor: 255,
-      fontStyle: "bold",
-      fontSize: 9
-    },
-    bodyStyles: { fontSize: 8 },
-    columnStyles: {
-      0: { cellWidth: 25 },
-      1: { cellWidth: 22 },
-      2: { cellWidth: 20 },
-      3: { cellWidth: 18 },
-      4: { cellWidth: 25, halign: "right" },
-      5: { cellWidth: 25, halign: "right" },
-      6: { cellWidth: 35 }
-    },
-    margin: { left: margin, right: margin },
-    didParseCell: data => {
-      // Highlight total row
-      if (data.row.index === transactionData.length - 1) {
-        data.cell.styles.fillColor = [241, 196, 15]
-        data.cell.styles.fontStyle = "bold"
-      }
-      // Color coding for debit/credit
-      if (
-        data.column.index === 4 &&
-        data.cell.text[0] !== "-" &&
-        data.cell.text[0] !== ""
-      ) {
-        data.cell.styles.textColor = [231, 76, 60] // Red for debit
-      }
-      if (
-        data.column.index === 5 &&
-        data.cell.text[0] !== "-" &&
-        data.cell.text[0] !== ""
-      ) {
-        data.cell.styles.textColor = [39, 174, 96] // Green for credit
-      }
+    if (clientInfo.email) {
+      doc.text(`Email: ${clientInfo.email}`, margin, yPos);
     }
-  })
+    if (clientInfo.phone) {
+      doc.text(`Phone: ${clientInfo.phone}`, pageWidth / 2, yPos);
+    }
+    yPos += 8;
 
-  // Footer
-  const finalY = doc.lastAutoTable.finalY + 20
-  doc.setFontSize(8)
-  doc.setFont("helvetica", "italic")
-  doc.text("This is a computer-generated statement.", pageWidth / 2, finalY, {
-    align: "center"
-  })
-  doc.text(
-    `Page 1 of 1`,
-    pageWidth - margin,
-    doc.internal.pageSize.height - 10,
-    { align: "right" }
-  )
+    doc.text(
+      `Generated on: ${new Date().toLocaleDateString(
+        "en-IN"
+      )} ${new Date().toLocaleTimeString("en-IN")}`,
+      margin,
+      yPos
+    );
+    yPos += 15;
 
-  // Save the PDF
-  doc.save(
-    `statement_${clientInfo.name.replace(/\s+/g, "_")}_${
-      new Date().toISOString().split("T")[0]
-    }.pdf`
-  )
-}
+    // Statement Summary Section
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("STATEMENT SUMMARY", margin, yPos);
+    yPos += 10;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+
+    // Summary in a box format
+    const summaryData = [
+      ["Total Trips", totalTrips.toString()],
+      ["Total Credit", statement.totalCredit.toFixed(2)], // Assuming 2 decimal places for currency-like values
+      ["Total Debit", statement.totalDebit.toFixed(2)],
+      ["Closing Balance", statement.closingBalance.toFixed(2)],
+      ["Account Balance", totalBalance.toFixed(2)],
+    ];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Description", "Amount"]],
+      body: summaryData,
+      theme: "grid",
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      bodyStyles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 60 },
+        1: { cellWidth: 60, halign: "right" },
+      },
+      margin: { left: margin, right: margin },
+    });
+
+    yPos = doc.lastAutoTable.finalY + 15;
+
+    // Transaction Details Section
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("TRANSACTION DETAILS", margin, yPos);
+    yPos += 10;
+
+    // Prepare transaction data for the table
+    const transactionData = statement.entries.map((entry) => [
+      entry.tripNumber,
+      formatDate(entry.date),
+      entry.reason,
+      entry.type,
+      entry.debit > 0 ? entry.debit.toFixed(2) : "-",
+      entry.credit > 0 ? entry.credit.toFixed(2) : "-",
+      entry.notes || entry.description || "-",
+    ]);
+
+    // Add totals row
+    transactionData.push([
+      "",
+      "",
+      "",
+      "TOTAL",
+      statement.totalDebit.toFixed(2),
+      statement.totalCredit.toFixed(2),
+      "",
+    ]);
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [
+        ["Trip No.", "Date", "Reason", "Type", "Debit", "Credit", "Notes"],
+      ],
+      body: transactionData,
+      theme: "striped",
+      headStyles: {
+        fillColor: [52, 152, 219],
+        textColor: 255,
+        fontStyle: "bold",
+        fontSize: 9,
+      },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 22 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 18 },
+        4: { cellWidth: 25, halign: "right" },
+        5: { cellWidth: 25, halign: "right" },
+        6: { cellWidth: 35 },
+      },
+      margin: { left: margin, right: margin },
+      didParseCell: (data) => {
+        // Highlight total row
+        if (data.row.index === transactionData.length - 1) {
+          data.cell.styles.fillColor = [241, 196, 15];
+          data.cell.styles.fontStyle = "bold";
+        }
+        // Color coding for debit/credit
+        if (
+          data.column.index === 4 &&
+          data.cell.text[0] !== "-" &&
+          data.cell.text[0] !== ""
+        ) {
+          data.cell.styles.textColor = [231, 76, 60]; // Red for debit
+        }
+        if (
+          data.column.index === 5 &&
+          data.cell.text[0] !== "-" &&
+          data.cell.text[0] !== ""
+        ) {
+          data.cell.styles.textColor = [39, 174, 96]; // Green for credit
+        }
+      },
+    });
+
+    // Footer
+    const finalY = doc.lastAutoTable.finalY + 20;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "italic");
+    doc.text("This is a computer-generated statement.", pageWidth / 2, finalY, {
+      align: "center",
+    });
+    doc.text(
+      `Page 1 of 1`,
+      pageWidth - margin,
+      doc.internal.pageSize.height - 10,
+      { align: "right" }
+    );
+
+    // Save the PDF
+    doc.save(
+      `statement_${clientInfo.name.replace(/\s+/g, "_")}_${
+        new Date().toISOString().split("T")[0]
+      }.pdf`
+    );
+  };
 
   // Calculate statement statistics
   const advanceEntries = statement.entries.filter(
-    entry => entry.type === "advance"
-  )
+    (entry) => entry.type === "advance"
+  );
   const expenseEntries = statement.entries.filter(
-    entry => entry.type === "expense"
-  )
+    (entry) => entry.type === "expense"
+  );
   const totalAdvances = advanceEntries.reduce(
     (sum, entry) => sum + entry.credit,
     0
-  )
+  );
   const totalExpenses = expenseEntries.reduce(
     (sum, entry) => sum + entry.debit,
     0
-  )
+  );
 
   return (
     <div className="space-y-6">
@@ -400,59 +419,67 @@ const downloadPDF = () => {
         </Card>
       </div> */}
 
- {/* Client Info Card */}
-<Card>
-  <CardHeader>
-    <CardTitle className="flex items-center gap-2">
-      <User className="h-5 w-5" />
-      Client Information
-    </CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="flex items-center space-x-3">
-        <User className="h-4 w-4 text-gray-500" />
-        <div>
-          <p className="text-sm text-gray-500">Name</p>
-          <p className="font-medium">{clientInfo.name}</p>
-        </div>
-      </div>
-
-      {clientInfo.phone && (
-        <div className="flex items-center space-x-3">
-          <Phone className="h-4 w-4 text-gray-500" />
-          <div>
-            <p className="text-sm text-gray-500">Phone</p>
-            <p className="font-medium">{clientInfo.phone}</p>
+      {/* Client Info Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Client Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-end mb-2">
+            <Button size="sm" onClick={() => setEditOpen(true)}>
+              Edit
+            </Button>
           </div>
-        </div>
-      )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center space-x-3">
+              <User className="h-4 w-4 text-gray-500" />
+              <div>
+                <p className="text-sm text-gray-500">Name</p>
+                <p className="font-medium">{clientInfo.name}</p>
+              </div>
+            </div>
 
-      {/* Address tab sirf jab data ho */}
-      {clientInfo.address && Object.keys(clientInfo.address).length > 0 && (
-        <div className="flex items-center space-x-3">
-          <MapPin className="h-4 w-4 text-gray-500" />
-          <div>
-            <p className="text-sm text-gray-500">Address</p>
-            <p className="font-medium">
-              {clientInfo.address.street && `${clientInfo.address.street}, `}
-              {clientInfo.address.city && `${clientInfo.address.city}, `}
-              {clientInfo.address.state && `${clientInfo.address.state}, `}
-              {clientInfo.address.pincode && clientInfo.address.pincode}
-            </p>
+            {clientInfo.phone && (
+              <div className="flex items-center space-x-3">
+                <Phone className="h-4 w-4 text-gray-500" />
+                <div>
+                  <p className="text-sm text-gray-500">Phone</p>
+                  <p className="font-medium">{clientInfo.phone}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Address tab sirf jab data ho */}
+            {clientInfo.address &&
+              Object.keys(clientInfo.address).length > 0 && (
+                <div className="flex items-center space-x-3">
+                  <MapPin className="h-4 w-4 text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">Address</p>
+                    <p className="font-medium">
+                      {clientInfo.address.street &&
+                        `${clientInfo.address.street}, `}
+                      {clientInfo.address.city &&
+                        `${clientInfo.address.city}, `}
+                      {clientInfo.address.state &&
+                        `${clientInfo.address.state}, `}
+                      {clientInfo.address.pincode && clientInfo.address.pincode}
+                    </p>
+                  </div>
+                </div>
+              )}
           </div>
-        </div>
-      )}
-    </div>
 
-    <div className="mt-4">
-      <Badge variant={clientInfo.active ? "default" : "secondary"}>
-        {clientInfo.active ? "Active Client" : "Inactive Client"}
-      </Badge>
-    </div>
-  </CardContent>
-</Card>
-
+          <div className="mt-4">
+            <Badge variant={clientInfo.active ? "default" : "secondary"}>
+              {clientInfo.active ? "Active Client" : "Inactive Client"}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Statement Table */}
       <Card>
@@ -513,7 +540,7 @@ const downloadPDF = () => {
                           <div className="text-xs text-gray-500">
                             {new Date(entry.date).toLocaleTimeString("en-IN", {
                               hour: "2-digit",
-                              minute: "2-digit"
+                              minute: "2-digit",
                             })}
                           </div>
                         </div>
@@ -617,6 +644,13 @@ const downloadPDF = () => {
           )}
         </CardContent>
       </Card>
+        <UpdateClientDialog
+              open={editOpen}
+              onOpenChange={setEditOpen}
+              clientData={clientInfo}
+                   onSuccess={handleClientUpdate}
+
+            />
     </div>
-  )
+  );
 }

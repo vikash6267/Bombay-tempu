@@ -53,13 +53,22 @@ const createUser = catchAsync(async (req, res, next) => {
 });
 
 const updateUser = catchAsync(async (req, res, next) => {
-  // Don't allow password updates through this route
   delete req.body.password;
 
-  const user = await User.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
+  const updateData = {
+    name: req.body.name,
+    phone: req.body.phone,
+    address: req.body.address,
+  };
+
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { $set: updateData },
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
 
   if (!user) {
     return next(new AppError("No user found with that ID", 404));
@@ -67,11 +76,10 @@ const updateUser = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: "success",
-    data: {
-      user,
-    },
+    data: { user },
   });
 });
+
 
 const deleteUser = catchAsync(async (req, res, next) => {
   const user = await User.findByIdAndDelete(req.params.id);

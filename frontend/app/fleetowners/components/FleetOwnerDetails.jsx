@@ -13,6 +13,7 @@ import { useEffect, useState } from "react"
 import { format } from "date-fns"
 import jsPDF from "jspdf"
 import "jspdf-autotable"
+import Link from "next/link"
 
 // 🔢 Helper function to format date
 const formatDate = (dateString) => {
@@ -424,7 +425,10 @@ export default function FleetOwnerViewDialog({ open, onOpenChange, owner, loadin
                                 {statementData.trips.map((trip, index) => (
                                   <tr key={index} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                                      {trip.tripNumber}
+                                     
+                                      <Link href={`trips/view/${trip._id || trip.id}`} target="_blank">
+                                       {trip.tripNumber}
+                                      </Link>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                       {formatDate(trip.scheduledDate)}
