@@ -42,6 +42,7 @@
     "nextjs-toploader": "^3.8.16",
     "pdfmake": "^0.2.20",
     "react": "^19.0.0",
+    "react-csv": "^2.2.2",
     "react-day-picker": "^9.7.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.57.0",

@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CSVLink } from "react-csv";
+
 import {
   Card,
   CardContent,
@@ -48,6 +50,8 @@ import {
   Calendar,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useMemo } from "react";
+
 import { AddTripDialog } from "@/components/trips/add-trip-dialog";
 import toast from "react-hot-toast";
 import { EditTripDialog } from "@/components/trips/edit-trip-dialog";
@@ -137,6 +141,44 @@ export default function TripsPage() {
     }
   };
 
+
+
+   const csvHeaders = [
+    { label: "Trip Number", key: "TripNumber" },
+    { label: "Vehicle Number", key: "VehicleNumber" },
+    { label: "Client Name", key: "ClientName" },
+    { label: "From", key: "From" },
+    { label: "To", key: "To" },
+    { label: "Rate", key: "Rate" },
+    { label: "Paid", key: "Paid" },
+    { label: "Pending", key: "Pending" },
+    { label: "Expenses Client", key: "ExpensesClient" },
+  ];
+
+  const csvData = useMemo(() => {
+    if (!trips?.data?.data?.trips) return [];
+
+    const rows = [];
+    trips.data.data.trips.forEach((trip) => {
+      trip.clients.forEach((clientEntry) => {
+        const client = clientEntry.client || clientEntry.CLIENT;
+        rows.push({
+          TripNumber: trip.tripNumber,
+          VehicleNumber: trip.vehicle?.registrationNumber || "",
+          ClientName: client?.name || client?.NAME || "",
+          From: clientEntry.origin?.city || clientEntry.ORIGIN || "",
+          To: clientEntry.destination?.city || clientEntry.DESTINATION || "",
+          Rate: clientEntry.rate || 0,
+          Paid: clientEntry.paidAmount || 0,
+          Pending: clientEntry.dueAmount || 0,
+          ExpensesClient: clientEntry.totalExpense || 0,
+        });
+      });
+    });
+
+    return rows;
+  }, [trips]);
+
   const router = useRouter();
   if (isLoading) {
     return (
@@ -163,6 +205,16 @@ export default function TripsPage() {
             <Plus className="mr-2 h-4 w-4" />
             Create Trip
           </Button>
+
+
+             {/* CSV Export Button */}
+            <CSVLink
+              data={csvData}
+              filename={`trips_export_${new Date().toISOString()}.csv`}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Export CSV
+            </CSVLink>
         </div>
 
         {/* Search and Filters */}
