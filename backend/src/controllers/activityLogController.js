@@ -52,19 +52,11 @@ const getAllActivityLogs = catchAsync(async (req, res, next) => {
   if (req.query.relatedVehicle) filter.relatedVehicle = req.query.relatedVehicle;
 
   // 🔹 Description search with regex
-if (req.query.search) {
-  const search = req.query.search;
-  const regex = new RegExp(search, "i");
-  filter.$or = [
-    { description: regex },
-    { category: regex },
-    { action: regex },
-    { status: regex },
-    { relatedTrip: regex },
-    { relatedUser: regex },
-    { relatedVehicle: regex }
-  ];
-}
+  if (req.query.search) {
+    const search = req.query.search;
+    const regex = new RegExp(search, "i");
+    filter.description = regex;
+  }
 
 
   console.log(filter);
@@ -79,7 +71,7 @@ if (req.query.search) {
     }
   }
 
-  const features = new APIFeatures(ActivityLog.find(filter), req.query)
+  const features = new APIFeatures(ActivityLog.find(), req.query, filter)
     .filter()
     .sort()
     .limitFields()
