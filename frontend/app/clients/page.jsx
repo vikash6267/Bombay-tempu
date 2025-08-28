@@ -241,6 +241,14 @@ export default function ClientsPage() {
       header: "Phone",
     },
     {
+      accessorKey: "totalPendingAll",
+      header: "Total Pending",
+    },
+    {
+      accessorKey: "pending70Percent",
+      header: "70% Achieve",
+    },
+    {
       id: "adjustment-button",
       header: "Adjustment",
       cell: ({ row }) => {

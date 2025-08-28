@@ -5,6 +5,7 @@ const User = require("../models/User")
 const catchAsync = require("../utils/catchAsync")
 const AppError = require("../utils/appError")
 const Email = require("../utils/email")
+const { authLogger } = require("../middleware/activityLogger")
 
 const signToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -110,17 +111,33 @@ const login = catchAsync(async (req, res, next) => {
   user.lastLogin = new Date()
   await user.save({ validateBeforeSave: false })
 
-  // 5) If everything ok, send token to client
+  // 5) Log login activity
+  await authLogger(user, 'user_login', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    loginTime: new Date()
+  })
+
+  // 6) If everything ok, send token to client
   createSendToken(user, 200, res)
 })
 
-const logout = (req, res) => {
+const logout = catchAsync(async (req, res, next) => {
+  // Log logout activity if user is authenticated
+  if (req.user) {
+    await authLogger(req.user, 'user_logout', {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      logoutTime: new Date()
+    })
+  }
+
   res.cookie("jwt", "loggedout", {
     expires: new Date(Date.now() + 10 * 1000),
     httpOnly: true,
   })
   res.status(200).json({ status: "success" })
-}
+})
 
 const forgotPassword = catchAsync(async (req, res, next) => {
   // 1) Get user based on POSTed email

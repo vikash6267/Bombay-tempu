@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Trip = require("../models/Trip");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const APIFeatures = require("../utils/apiFeatures");
@@ -13,14 +14,116 @@ const getAllUsers = catchAsync(async (req, res, next) => {
 
   const users = await features.query;
 
+  const toNum = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const usersWithPending = await Promise.all(
+    users.map(async (user) => {
+      if (user.role === "fleet_owner") {
+        // Fleet owner: unchanged logic
+        const trips = await Trip.find({ "vehicleOwner.ownerId": user._id });
+
+        let totalPendingAmount = 0;
+        let totalPodPending = 0;
+
+        trips.forEach((trip) => {
+          const podPending = toNum(trip.podBalance) - toNum(trip.podBalanceTotalPaid);
+          const pendingAmount = toNum(trip.rate) - toNum(trip.totalFleetAdvance);
+          totalPendingAmount += pendingAmount;
+          totalPodPending += podPending;
+        });
+
+        return {
+          ...user.toObject(),
+          totalPendingAmount: Number(totalPendingAmount.toFixed(2)),
+          totalPodPending: Number(totalPodPending.toFixed(2)),
+        };
+      }
+
+      if (user.role === "client") {
+        // Client: compute 70% metrics dynamically
+        const trips = await Trip.find({ "clients.client": user._id });
+
+        let totalTrips = 0;
+        let totalPaidAll = 0;
+        let totalPendingAll = 0;
+
+        // below-70 accumulators
+        let below70_totalTrips = 0;
+        let below70_totalPaid = 0;   // paid for those trips
+        let below70_totalAmount = 0; // sum of totalRate for those trips
+        let below70_seventySum = 0;  // sum of 70% of each trip
+
+        for (const trip of trips) {
+          const clientData = trip.clients.find((c) => {
+            if (!c) return false;
+            const cid = c.client && (c.client._id ? c.client._id.toString() : c.client.toString());
+            return cid === user._id.toString();
+          });
+
+          if (!clientData) continue;
+
+          totalTrips += 1;
+
+          const totalRate = toNum(clientData.totalRate);
+          const paidAmount = toNum(clientData.paidAmount);
+          const pending = Math.max(totalRate - paidAmount, 0);
+
+          totalPaidAll += paidAmount;
+          totalPendingAll += pending;
+
+          const percentagePaid = totalRate ? (paidAmount / totalRate) * 100 : 0;
+
+          if (percentagePaid < 70) {
+            below70_totalTrips += 1;
+            below70_totalPaid += paidAmount;
+            below70_totalAmount += totalRate;
+            below70_seventySum += totalRate * 0.7;
+          }
+        }
+
+        // remaining needed to reach 70% across below-70 trips
+        const pendingToReach70 = Math.max(below70_seventySum - below70_totalPaid, 0);
+
+        return {
+          ...user.toObject(),
+          totalTrips,
+          totalPaidAll: Number(totalPaidAll.toFixed(2)),
+          totalPendingAll: Number(totalPendingAll.toFixed(2)),
+
+          // EXACT fields you asked for:
+          pending70Percent: Number(pendingToReach70.toFixed(2)), // "70% hone me itna baaki"
+          total70Percent: Number(below70_totalAmount.toFixed(2)), // "total itna (sum of totalRate for those trips)",
+
+          // extra: breakdown if useful
+          below70: {
+            totalTrips: below70_totalTrips,
+            totalPaid: Number(below70_totalPaid.toFixed(2)),
+            totalAmount: Number(below70_totalAmount.toFixed(2)),
+            seventyPercentSum: Number(below70_seventySum.toFixed(2)),
+          },
+        };
+      }
+
+      // other roles unchanged
+      return user;
+    })
+  );
+
   res.status(200).json({
     status: "success",
-    results: users.length,
+    results: usersWithPending.length,
     data: {
-      users,
+      users: usersWithPending,
     },
   });
 });
+
+
+
+
 
 const getUser = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.params.id);

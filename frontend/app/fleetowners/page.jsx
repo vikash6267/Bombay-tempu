@@ -109,8 +109,10 @@ export default function FleetOwnersPage() {
 
   const columns = [
     { accessorKey: "name", header: "Name" },
-    { accessorKey: "email", header: "Email" },
+   
     { accessorKey: "phone", header: "Phone" },
+    { accessorKey: "totalPendingAmount", header: "Pending" },
+    { accessorKey: "totalPodPending", header: "POD Pending" },
     {
       accessorKey: "commissionRate",
       header: "Commission Rate",
