@@ -25,6 +25,7 @@ import {
   CircleUser,
   Torus,
   LifeBuoy,
+  ScrollText,
 } from "lucide-react";
 import {authApi} from "@/lib/api";
 import toast from "react-hot-toast";
@@ -88,6 +89,11 @@ const navigation = [
   //   href: "/reports",
   //   icon: FileText,
   // },
+  {
+    name: "Logs",
+    href: "/logs",
+    icon: ScrollText,
+  },
   {
     name: "Settings",
     href: "/settings",

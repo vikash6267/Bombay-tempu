@@ -1441,7 +1441,7 @@ export default function TripDetailPage() {
   const podBalance = trip.podBalance || 0;
 
   const finalAmount =
-    tripRate - totalGivenToFleetOwner - commission - podBalance;
+    tripRate - totalGivenToFleetOwner  - podBalance;
 
   const getCategoryColor = (category) => {
     const colors = {
@@ -2560,162 +2560,7 @@ export default function TripDetailPage() {
                         )}
                       </div>
 
-                      {/* Memo Management Section */}
-                      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Collection Memo Section */}
-                        <Card className="border-blue-200 bg-blue-50">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-blue-800 text-lg flex items-center">
-                                <Memo className="h-5 w-5 mr-2" />
-                                Collection Memos
-                              </CardTitle>
-                              <Button
-                                onClick={() => {
-                                  setSelectedClientForMemo(clientData);
-                                  setShowCollectionMemoDialog(true);
-                                }}
-                                size="sm"
-                                className="bg-blue-600 hover:bg-blue-700"
-                              >
-                                <Plus className="h-4 w-4 mr-1" />
-                                Create
-                              </Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            {clientData.collectionMemos &&
-                            clientData.collectionMemos.length > 0 ? (
-                              <div className="space-y-2">
-                                {clientData.collectionMemos.map(
-                                  (memo, memoIndex) => (
-                                    <div
-                                      key={memoIndex}
-                                      className="p-3 bg-white rounded-lg border shadow-sm"
-                                    >
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <div className="font-medium text-blue-800">
-                                            #{memo.collectionNumber}
-                                          </div>
-                                          <div className="text-sm text-gray-600">
-                                            Freight:{" "}
-                                            {formatCurrency(memo.freight)}
-                                          </div>
-                                          <div className="text-sm text-gray-600">
-                                            Balance:{" "}
-                                            {formatCurrency(memo.balance)}
-                                          </div>
-                                        </div>
-                                        {memo.documentUrl && (
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                              window.open(
-                                                memo.documentUrl,
-                                                "_blank"
-                                              )
-                                            }
-                                          >
-                                            <FileText className="h-4 w-4" />
-                                          </Button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            ) : (
-                              <div className="text-center py-4 text-gray-500">
-                                <Memo className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                                <p className="text-sm">
-                                  No collection memos yet
-                                </p>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-
-                        {/* Balance Memo Section */}
-                        <Card className="border-green-200 bg-green-50">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-green-800 text-lg flex items-center">
-                                <ReceiptText className="h-5 w-5 mr-2" />
-                                Balance Memos
-                              </CardTitle>
-                              <Button
-                                onClick={() => {
-                                  setSelectedClientForMemo(clientData);
-                                  setShowBalanceMemoDialog(true);
-                                }}
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <Plus className="h-4 w-4 mr-1" />
-                                Create
-                              </Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            {clientData.balanceMemos &&
-                            clientData.balanceMemos.length > 0 ? (
-                              <div className="space-y-2">
-                                {clientData.balanceMemos.map(
-                                  (memo, memoIndex) => (
-                                    <div
-                                      key={memoIndex}
-                                      className="p-3 bg-white rounded-lg border shadow-sm"
-                                    >
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <div className="font-medium text-green-800">
-                                            Bill #{memo.billNumber}
-                                          </div>
-                                          <div className="text-sm text-gray-600">
-                                            Total:{" "}
-                                            {formatCurrency(memo.totalAmount)}
-                                          </div>
-                                          <div className="text-sm text-gray-600">
-                                            Balance:{" "}
-                                            {formatCurrency(memo.balanceAmount)}
-                                          </div>
-                                        </div>
-                                        {memo.documentUrl && (
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                              window.open(
-                                                memo.documentUrl,
-                                                "_blank"
-                                              )
-                                            }
-                                          >
-                                            <FileText className="h-4 w-4" />
-                                          </Button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            ) : (
-                              <div className="text-center py-4 text-gray-500">
-                                <ReceiptText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                                <p className="text-sm">No balance memos yet</p>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
-
-                      {/* Client Statement Generator */}
-                      <ClientStatementGenerator
-                        clientData={clientData}
-                        tripData={trip}
-                      />
+                     
 
                       {/* Payments Section */}
                       <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
@@ -2871,6 +2716,164 @@ export default function TripDetailPage() {
                         />
                       </div>
 
+
+
+ {/* Memo Management Section */}
+                      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Collection Memo Section */}
+                        <Card className="border-blue-200 bg-blue-50">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-blue-800 text-lg flex items-center">
+                                <Memo className="h-5 w-5 mr-2" />
+                                Collection Memos
+                              </CardTitle>
+                              <Button
+                                onClick={() => {
+                                  setSelectedClientForMemo(clientData);
+                                  setShowCollectionMemoDialog(true);
+                                }}
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700"
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Create
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            {clientData.collectionMemos &&
+                            clientData.collectionMemos.length > 0 ? (
+                              <div className="space-y-2">
+                                {clientData.collectionMemos.map(
+                                  (memo, memoIndex) => (
+                                    <div
+                                      key={memoIndex}
+                                      className="p-3 bg-white rounded-lg border shadow-sm"
+                                    >
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <div className="font-medium text-blue-800">
+                                            #{memo.collectionNumber}
+                                          </div>
+                                          <div className="text-sm text-gray-600">
+                                            Freight:{" "}
+                                            {formatCurrency(memo.freight)}
+                                          </div>
+                                          <div className="text-sm text-gray-600">
+                                            Balance:{" "}
+                                            {formatCurrency(memo.balance)}
+                                          </div>
+                                        </div>
+                                        {memo.documentUrl && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() =>
+                                              window.open(
+                                                memo.documentUrl,
+                                                "_blank"
+                                              )
+                                            }
+                                          >
+                                            <FileText className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4 text-gray-500">
+                                <Memo className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm">
+                                  No collection memos yet
+                                </p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+
+                        {/* Balance Memo Section */}
+                        <Card className="border-green-200 bg-green-50">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-green-800 text-lg flex items-center">
+                                <ReceiptText className="h-5 w-5 mr-2" />
+                                Balance Memos
+                              </CardTitle>
+                              <Button
+                                onClick={() => {
+                                  setSelectedClientForMemo(clientData);
+                                  setShowBalanceMemoDialog(true);
+                                }}
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Create
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            {clientData.balanceMemos &&
+                            clientData.balanceMemos.length > 0 ? (
+                              <div className="space-y-2">
+                                {clientData.balanceMemos.map(
+                                  (memo, memoIndex) => (
+                                    <div
+                                      key={memoIndex}
+                                      className="p-3 bg-white rounded-lg border shadow-sm"
+                                    >
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <div className="font-medium text-green-800">
+                                            Bill #{memo.billNumber}
+                                          </div>
+                                          <div className="text-sm text-gray-600">
+                                            Total:{" "}
+                                            {formatCurrency(memo.totalAmount)}
+                                          </div>
+                                          <div className="text-sm text-gray-600">
+                                            Balance:{" "}
+                                            {formatCurrency(memo.balanceAmount)}
+                                          </div>
+                                        </div>
+                                        {memo.documentUrl && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() =>
+                                              window.open(
+                                                memo.documentUrl,
+                                                "_blank"
+                                              )
+                                            }
+                                          >
+                                            <FileText className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4 text-gray-500">
+                                <ReceiptText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm">No balance memos yet</p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* Client Statement Generator */}
+                      <ClientStatementGenerator
+                        clientData={clientData}
+                        tripData={trip}
+                      />
                       <PodStatusCard trip={trip} clientData={clientData} />
                     </TabsContent>
                   ))}

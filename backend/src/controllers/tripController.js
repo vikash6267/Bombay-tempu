@@ -9,6 +9,7 @@ const Email = require("../utils/email");
 const { CounterService } = require("../models/Counter");
 const mongoose = require("mongoose");
 const Expense = require("../models/Expenses"); // ✅ Import your Expense model
+const { logActivity } = require("../middleware/activityLogger");
 
 const { isValidObjectId } = mongoose;
 
@@ -702,6 +703,27 @@ const addAdvancePayment = catchAsync(async (req, res, next) => {
 
   await trip.addAdvance(advanceData, index);
 
+  // Log activity
+  await logActivity({
+    user: req.user._id,
+    action: 'client_advance_add',
+    category: 'financial',
+    description: `Client advance payment added: ₹${amount} for trip ${trip.tripNumber}`,
+    details: {
+      amount,
+      paidTo,
+      purpose,
+      notes,
+      paymentMethod: pymentMathod,
+      clientIndex: index,
+      tripNumber: trip.tripNumber,
+      clientName: client.client?.name || 'Unknown'
+    },
+    relatedTrip: trip._id,
+    relatedUser: client.client,
+    req
+  });
+
   // Update user record
   const user = await User.findById(client.client);
   if (user) {
@@ -766,6 +788,28 @@ const addExpense = catchAsync(async (req, res, next) => {
     console.log("📦 Saving trip...");
     await trip.save();
     console.log("✅ Trip saved");
+
+    // Log activity
+    await logActivity({
+      user: req.user._id,
+      action: 'client_expense_add',
+      category: 'financial',
+      description: `Client expense added: ₹${amount} for trip ${trip.tripNumber}`,
+      details: {
+        type,
+        amount,
+        description,
+        paidBy,
+        clientIndex: index,
+        tripNumber: trip.tripNumber,
+        oldExpense,
+        newExpense,
+        clientName: client.client?.name || 'Unknown'
+      },
+      relatedTrip: trip._id,
+      relatedUser: client.client,
+      req
+    });
 
     // Optional: User expense history
     const userId = client.client || client.user;
@@ -1212,6 +1256,32 @@ const addFleetAdvance = async (req, res) => {
       });
     }
 
+    // Log activity
+    console.log('🔍 Attempting to log fleet advance activity...');
+    try {
+      await logActivity({
+        user: req.user?._id,
+        action: 'advance',
+        category: 'financial',
+        description: `Fleet advance of ₹${amount} added to trip ${trip.tripNumber}`,
+        details: {
+          amount,
+          paymentType,
+          reason,
+          date: newAdvance.date,
+          tripNumber: trip.tripNumber,
+          totalFleetAdvance: trip.totalFleetAdvance,
+          fleetOwnerId: trip.vehicleOwner?.ownerId
+        },
+        relatedTrip: trip._id,
+        severity: 'medium',
+        req
+      });
+      console.log('✅ Fleet advance activity logged successfully');
+    } catch (logError) {
+      console.error('❌ Failed to log fleet advance activity:', logError);
+    }
+
     res.status(200).json({ success: true, trip });
   } catch (err) {
     console.error(err);
@@ -1265,6 +1335,26 @@ const deleteFleetAdvance = async (req, res) => {
       }
     }
 
+    // Log activity
+    await logActivity({
+      user: req.user?._id,
+      action: 'delete',
+      category: 'financial',
+      description: `Fleet advance of ₹${deletedAdvance.amount} deleted from trip ${trip.tripNumber}`,
+      details: {
+        deletedAmount: deletedAdvance.amount,
+        deletedReason: deletedAdvance.reason,
+        deletedPaymentType: deletedAdvance.paymentType,
+        advanceIndex,
+        tripNumber: trip.tripNumber,
+        remainingFleetAdvance: trip.totalFleetAdvance,
+        fleetOwnerId: trip.vehicleOwner?.ownerId
+      },
+      relatedTrip: trip._id,
+      severity: 'medium',
+      req
+    });
+
     res.status(200).json({
       success: true,
       message: "Fleet advance deleted successfully",
@@ -1315,6 +1405,27 @@ const addFleetExpense = async (req, res) => {
       });
     }
 
+    // Log activity
+    await logActivity({
+      user: req.user?._id,
+      action: 'expense',
+      category: 'financial',
+      description: `Fleet expense of ₹${amount} added to trip ${trip.tripNumber}`,
+      details: {
+        amount,
+        reason,
+        category,
+        description,
+        receiptNumber,
+        tripNumber: trip.tripNumber,
+        totalFleetExpense: trip.totalFleetExpense,
+        fleetOwnerId: trip.vehicleOwner?.ownerId
+      },
+      relatedTrip: trip._id,
+      severity: 'medium',
+      req
+    });
+
     res.status(200).json({ success: true, trip });
   } catch (err) {
     console.log(err);
@@ -1363,6 +1474,29 @@ const addSelfExpense = async (req, res) => {
     }
 
     await trip.save();
+
+    // Log activity
+    await logActivity({
+      user: req.user?._id,
+      action: 'expense',
+      category: 'financial',
+      description: `Self expense added: ₹${amount} for ${expenseFor} in trip ${trip.tripNumber}`,
+      details: {
+        amount,
+        reason,
+        category,
+        expenseFor,
+        description,
+        receiptNumber,
+        tripNumber: trip.tripNumber
+      },
+      relatedTrip: trip._id,
+      relatedUser: expenseFor === 'driver' ? trip.driver : null,
+      relatedVehicle: expenseFor === 'vehicle' ? trip.vehicle : null,
+      severity: 'medium',
+      req
+    });
+
     res
       .status(200)
       .json({ success: true, message: "Self expense added successfully" });
@@ -1411,6 +1545,27 @@ const deleteSelfExpense = async (req, res) => {
     // Remove from trip
     trip.selfExpenses.splice(expenseIndex, 1);
     await trip.save();
+
+    // Log activity
+    await logActivity({
+      user: req.user?._id,
+      action: 'delete',
+      category: 'financial',
+      description: `Self expense of ₹${expense.amount} deleted from trip ${trip.tripNumber}`,
+      details: {
+        deletedAmount: expense.amount,
+        deletedReason: expense.reason,
+        deletedCategory: expense.category,
+        expenseFor: expense.expenseFor,
+        expenseIndex,
+        tripNumber: trip.tripNumber
+      },
+      relatedTrip: trip._id,
+      relatedUser: expense.expenseFor === 'driver' ? trip.driver : null,
+      relatedVehicle: expense.expenseFor === 'vehicle' ? trip.vehicle : null,
+      severity: 'medium',
+      req
+    });
 
     res.status(200).json({
       success: true,
@@ -1469,6 +1624,29 @@ const addSelfAdvance = async (req, res) => {
     }
 
     await trip.save();
+
+    // Log activity
+    await logActivity({
+      user: req.user?._id,
+      action: 'advance',
+      category: 'financial',
+      description: `Self advance added: ₹${amount} for ${paymentFor} in trip ${trip.tripNumber}`,
+      details: {
+        amount,
+        reason,
+        paymentFor,
+        recipientName,
+        description,
+        referenceNumber,
+        tripNumber: trip.tripNumber
+      },
+      relatedTrip: trip._id,
+      relatedUser: paymentFor === 'driver' ? trip.driver : null,
+      relatedVehicle: paymentFor === 'vehicle' ? trip.vehicle : null,
+      severity: 'medium',
+      req
+    });
+
     res
       .status(200)
       .json({ success: true, message: "Self advance added successfully" });
@@ -1518,6 +1696,27 @@ const deleteSelfAdvance = async (req, res) => {
     trip.selfAdvances.splice(advanceIndex, 1);
     await trip.save();
 
+    // Log activity
+    await logActivity({
+      user: req.user?._id,
+      action: 'delete',
+      category: 'financial',
+      description: `Self advance of ₹${advance.amount} deleted from trip ${trip.tripNumber}`,
+      details: {
+        deletedAmount: advance.amount,
+        deletedReason: advance.reason,
+        paymentFor: advance.paymentFor,
+        description: advance.description,
+        advanceIndex,
+        tripNumber: trip.tripNumber
+      },
+      relatedTrip: trip._id,
+      relatedUser: advance.paymentFor === 'driver' ? trip.driver : null,
+      relatedVehicle: advance.paymentFor === 'vehicle' ? trip.vehicle : null,
+      severity: 'medium',
+      req
+    });
+
     res.status(200).json({
       success: true,
       message: "Self advance deleted successfully",
@@ -1552,6 +1751,23 @@ const updatePodDetails = async (req, res) => {
     };
     trip.podBalance = 0;
     await trip.save();
+
+    // Log activity
+    await logActivity({
+      user: req.user?._id,
+      action: 'pod_details_update',
+      category: 'trip_management',
+      description: `POD details updated for trip ${trip.tripNumber}`,
+      details: {
+        podGive,
+        paymentType,
+        notes,
+        tripNumber: trip.tripNumber,
+        podBalanceCleared: true
+      },
+      relatedTrip: trip._id,
+      req
+    });
 
     res.status(200).json({
       success: true,
@@ -1839,7 +2055,7 @@ const uploadPodDocument = async (req, res) => {
   }
 };
 
-const getDashboardData = async (req, res) => {
+const getDashboardData = async (req, res) => { 
   try {
     const trips = await Trip.find().lean();
     const otherExpenses = await Expense.find().lean();
@@ -1851,10 +2067,15 @@ const getDashboardData = async (req, res) => {
     let totalTripDifference = 0; // Difference between client rate and truck cost
     let totalTripExpenses = 0;
     let pendingPodClientsCount = 0;
+    let totalPodProfit = 0; // POD profit for fleet owners
 
     trips.forEach((trip) => {
       const podBalance = trip.podBalance || 0;
+      const podBalancePaid = trip.podBalanceTotalPaid || 0;
+      const tripAgresment = trip.argestment || 0;
+      const podProfit = podBalance - podBalancePaid; // remaining POD is our profit
       totalPods += podBalance;
+      totalPodProfit += podProfit > 0 ? podProfit : 0;
 
       if (podBalance > 0 && Array.isArray(trip.clients)) {
         trip.clients.forEach((client) => {
@@ -1866,18 +2087,23 @@ const getDashboardData = async (req, res) => {
         const clientTotalRate =
           trip.clients?.reduce((sum, c) => sum + (c.rate || 0), 0) || 0;
         const clientTruckCost =
-          trip.clients?.reduce((sum, c) => sum + (c.truckHireCost || 0), 0) ||
-          0;
+          trip.clients?.reduce((sum, c) => sum + (c.truckHireCost || 0), 0) || 0;
 
         const difference = clientTotalRate - clientTruckCost;
         totalTripDifference += difference;
 
-        const profit = difference - (trip.rate || 0);
+        // Correct profit calculation for fleet_owner
+        const profit = difference + (trip.commission || 0) + podProfit;
         totalTripProfit += profit;
 
         totalCommission += trip.commission || 0;
       } else if (trip.vehicleOwner?.ownershipType === "self") {
-        const profit = (trip.totalClientAmount || 0) - (trip.rate || 0);
+        
+const tripAgresment =
+  trip.argestment || // top-level
+  (Array.isArray(trip.clients)
+    ? trip.clients.reduce((sum, c) => sum + (c.argestment || 0), 0)
+    : 0);  const profit = (trip.totalClientAmount || 0) - (trip.rate || 0) - tripAgresment;
         totalTripProfit += profit;
         totalCommission += trip.commission || 0;
 
@@ -1902,16 +2128,17 @@ const getDashboardData = async (req, res) => {
     );
 
     const totalExpenses = totalTripExpenses + totalOtherExpense;
-    const totalFinalProfit = totalTripProfit + totalCommission - totalExpenses;
+    const totalFinalProfit = totalTripProfit - totalExpenses; // already included commission in profit
 
     res.status(200).json({
       success: true,
       data: {
         totalTrips,
         totalPods,
-        totalTripProfit,      // Trip profit without commission
-        totalCommission,      // Commission earned
-        totalTripDifference,  // Client rate - Truck cost
+        totalPodProfit,       // POD profit included
+        totalTripProfit,      // includes difference + commission + podProfit
+        totalCommission,
+        totalTripDifference,
         totalExpenses,
         otherExpense: totalOtherExpense,
         totalFinalProfit,

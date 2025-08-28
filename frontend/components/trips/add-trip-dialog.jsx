@@ -222,6 +222,7 @@ const CalculationSummary = ({
   clients,
   overallRate,
   isSelfOwned,
+  podBalance,
   overallTripCommission,
 }) => {
   const calculations = useMemo(() => {
@@ -234,8 +235,8 @@ const CalculationSummary = ({
     // For now, let's assume client.commission is NOT there, or is just 0.
     // The `overallTripCommission` will be the one from the fleet owner.
 
-    const parsedOverallTripCommission = Number(overallTripCommission) || 0; // Parse the new prop
-
+    const parsedOverallTripCommission = Number(overallTripCommission) || 0;
+  const parsedPodBalance = Number(podBalance) || 0; // Add this line
     // Calculate individual client P&L and accumulate totals
     const clientBreakdown = clients.map((client) => {
       const clientRate = Number(client.rate) || 0;
@@ -265,8 +266,8 @@ const CalculationSummary = ({
       overallTripProfit =
         totalClientRevenue -
         totalTruckHireExpenses -
-        totalAdjustments +
-        parsedOverallTripCommission;
+        totalAdjustments + 
+        parsedOverallTripCommission +parsedPodBalance;
     } else {
       // For Non-Self-Owned Vehicles (Hired from Fleet Owner):
       const parsedOverallRate = Number(overallRate) || 0;
@@ -274,7 +275,7 @@ const CalculationSummary = ({
         totalClientRevenue -
         parsedOverallRate -
         totalAdjustments + // ✅ INCLUDE adjustments here too
-        parsedOverallTripCommission;
+        parsedOverallTripCommission + parsedPodBalance;
     }
 
     return {
@@ -286,6 +287,7 @@ const CalculationSummary = ({
       // since the 3000 is overall. We use parsedOverallTripCommission directly.
       overallTripProfit,
       parsedOverallTripCommission, // Pass this to display in summary
+      parsedPodBalance
     };
   }, [clients, overallRate, isSelfOwned, overallTripCommission]); // Dependencies for memoization
 
@@ -397,33 +399,28 @@ const CalculationSummary = ({
         </div>
 
         {/* Detailed Calculation Explanation */}
-        {isSelfOwned ? (
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
-            <strong>Calculation for Self-Owned Vehicle:</strong> <br />
-            Total Client Revenue (₹
-            {calculations.totalClientRevenue.toLocaleString()}) - Total Truck
-            Hire Costs (₹{calculations.totalTruckHireExpenses.toLocaleString()})
-            - Total Adjustments (₹
-            {calculations.totalAdjustments.toLocaleString()}) + Overall Trip
-            Commission (₹
-            {calculations.parsedOverallTripCommission.toLocaleString()}) ={" "}
-            <span className="font-bold">
-              ₹{calculations.overallTripProfit.toLocaleString()}
-            </span>
-          </div>
-        ) : (
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
-            <strong>Calculation for Hired Vehicle:</strong> <br />
-            Total Client Revenue (₹
-            {calculations.totalClientRevenue.toLocaleString()}) - Overall Trip
-            Rate (paid to fleet owner: ₹{Number(overallRate).toLocaleString()})
-            + Overall Trip Commission (from fleet owner: ₹
-            {calculations.parsedOverallTripCommission.toLocaleString()}) ={" "}
-            <span className="font-bold">
-              ₹{calculations.overallTripProfit.toLocaleString()}
-            </span>
-          </div>
-        )}
+       {/* Update the detailed calculation explanation */}
+{isSelfOwned ? (
+  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+    <strong>Calculation for Self-Owned Vehicle:</strong> <br />
+    Total Client Revenue (₹{calculations.totalClientRevenue.toLocaleString()}) 
+    - Total Truck Hire Costs (₹{calculations.totalTruckHireExpenses.toLocaleString()})
+    - Total Adjustments (₹{calculations.totalAdjustments.toLocaleString()}) 
+    + Overall Trip Commission (₹{calculations.parsedOverallTripCommission.toLocaleString()})
+    + POD Balance (₹{calculations.parsedPodBalance.toLocaleString()}) = {" "}
+    <span className="font-bold">₹{calculations.overallTripProfit.toLocaleString()}</span>
+  </div>
+) : (
+  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+    <strong>Calculation for Hired Vehicle:</strong> <br />
+    Total Client Revenue (₹{calculations.totalClientRevenue.toLocaleString()}) 
+    - Overall Trip Rate (paid to fleet owner: ₹{Number(overallRate).toLocaleString()})
+    - Total Adjustments (₹{calculations.totalAdjustments.toLocaleString()}) 
+    + Overall Trip Commission (from fleet owner: ₹{calculations.parsedOverallTripCommission.toLocaleString()})
+    + POD Balance (₹{calculations.parsedPodBalance.toLocaleString()}) = {" "}
+    <span className="font-bold">₹{calculations.overallTripProfit.toLocaleString()}</span>
+  </div>
+)}
       </CardContent>
     </Card>
   );
@@ -1280,6 +1277,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                     <CalculationSummary
                       clients={formik.values.clients}
                       overallRate={formik.values.rate} // This is the 'rate' from the main form (paid to fleet owner if not self-owned)
+                      podBalance={formik.values.podBalance || 0} // This is the 'rate' from the main form (paid to fleet owner if not self-owned)
                       isSelfOwned={isSelfOwned} // Pass the ownership type
                       overallTripCommission={formik.values.commission} // <--
                     />

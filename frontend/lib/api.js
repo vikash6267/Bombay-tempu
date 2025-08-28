@@ -198,6 +198,38 @@ export const paymentsApi = {
     apiUpload(`/payments/${id}/documents`, formData),
 };
 
+// Activity Logs API
+export const activityLogsApi = {
+  getAll: (params) => apiGet("/activity-logs", params),
+  getById: (id) => apiGet(`/activity-logs/${id}`),
+  create: (data) => apiPost("/activity-logs", data),
+  getByCategory: (category, params) => apiGet(`/activity-logs/category/${category}`, params),
+  getRecent: (params) => apiGet("/activity-logs/recent", params),
+  getUserActivitySummary: (userId, params) => apiGet(`/activity-logs/summary/user/${userId}`, params),
+  getFinancialSummary: (params) => apiGet("/activity-logs/summary/financial", params),
+  delete: (id) => apiDelete(`/activity-logs/${id}`),
+  bulkDelete: (ids) => apiPost("/activity-logs/bulk-delete", { ids }),
+};
+
+// Logs API for frontend
+export const logsApi = {
+  getLogs: (params) => {
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.action) queryParams.append('action', params.action);
+    if (params.category) queryParams.append('category', params.category);
+    if (params.severity) queryParams.append('severity', params.severity);
+    if (params.userId) queryParams.append('userId', params.userId);
+    if (params.startDate) queryParams.append('startDate', params.startDate.toISOString());
+    if (params.endDate) queryParams.append('endDate', params.endDate.toISOString());
+    
+    return apiGet(`/activity-logs?${queryParams.toString()}`);
+  },
+};
+
 // Maintenance API
 export const maintenanceApi = {
   getAll: (params) => apiGet("/maintenance", params),
