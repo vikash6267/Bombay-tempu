@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const expenseController = require('../controllers/expensesCtrl');
+const { protect } = require('../middleware/auth');
+
+router.use(protect)
 
 // Create
 router.post('/create', expenseController.createExpense);

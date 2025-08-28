@@ -34,7 +34,8 @@ const createActivityLog = catchAsync(async (req, res, next) => {
 // Get all activity logs with filtering and pagination
 const getAllActivityLogs = catchAsync(async (req, res, next) => {
   let filter = {};
-console.log(req.query)
+  console.log(req.query);
+
   // Role-based access control
   if (req.user.role !== "admin") {
     // Non-admin users can only see their own logs
@@ -50,6 +51,23 @@ console.log(req.query)
   if (req.query.relatedUser) filter.relatedUser = req.query.relatedUser;
   if (req.query.relatedVehicle) filter.relatedVehicle = req.query.relatedVehicle;
 
+  // 🔹 Description search with regex
+if (req.query.search) {
+  const search = req.query.search;
+  const regex = new RegExp(search, "i");
+  filter.$or = [
+    { description: regex },
+    { category: regex },
+    { action: regex },
+    { status: regex },
+    { relatedTrip: regex },
+    { relatedUser: regex },
+    { relatedVehicle: regex }
+  ];
+}
+
+
+  console.log(filter);
   // Date range filter
   if (req.query.startDate || req.query.endDate) {
     filter.createdAt = {};
@@ -81,6 +99,7 @@ console.log(req.query)
     },
   });
 });
+
 
 // Get activity log by ID
 const getActivityLog = catchAsync(async (req, res, next) => {

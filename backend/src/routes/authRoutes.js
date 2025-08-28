@@ -31,7 +31,7 @@ router.patch("/update-password", authController.updatePassword);
 
 
 //ADNVACE
-router.post("/create-advance", createAdvance);
-router.post("/create-deposite", createDeposit);
+router.post("/create-advance", protect,createAdvance);
+router.post("/create-deposite", protect,createDeposit);
 router.get("/user/:userId", getAdvancesByUser);
 module.exports = router;

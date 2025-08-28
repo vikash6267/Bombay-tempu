@@ -32,19 +32,7 @@ const activityLogSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: [
-        "trip",
-        "user",
-        "vehicle",
-        "payment",
-        "advance",
-        "expense",
-        "authentication",
-        "document",
-        "pod",
-        "financial",
-        "system",
-      ],
+     
     },
     description: {
       type: String,
@@ -123,8 +111,7 @@ const activityLogSchema = new mongoose.Schema(
     },
     severity: {
       type: String,
-      enum: ["low", "medium", "high", "critical"],
-      default: "medium",
+          default: "medium",
     },
     status: {
       type: String,

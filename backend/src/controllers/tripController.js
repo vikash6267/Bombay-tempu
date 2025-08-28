@@ -1630,7 +1630,7 @@ const addSelfAdvance = async (req, res) => {
       user: req.user?._id,
       action: 'advance',
       category: 'financial',
-      description: `Self advance added: ₹${amount} for ${paymentFor} in trip ${trip.tripNumber}`,
+      description: `Self advance added: ₹${amount} for driver in trip ${trip.tripNumber}`,
       details: {
         amount,
         reason,

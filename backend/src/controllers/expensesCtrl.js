@@ -1,5 +1,6 @@
 const Expense = require('../models/Expenses');
 const Vehicle = require('../models/Vehicle');
+const ActivityLog = require('../models/ActivityLog');
 
 // ✅ Create Expense
 exports.createExpense = async (req, res) => {
@@ -36,9 +37,39 @@ exports.createExpense = async (req, res) => {
       },
     },
   });
-
+ await ActivityLog.create({
+        user: req.user._id,
+        action: 'create',
+        category: 'EXPENSE',
+        description: `Created expense of ${amount} for ${type} - ${vehicleUpdateResult.registrationNumber} (${notes})`,
+        details: {
+          expenseId: expense._id,
+          amount,
+          type,
+          notes,
+          vehicleId
+        },
+        severity: 'INFO'
+      });
+}else{
+ await ActivityLog.create({
+        user: req.user._id,
+        action: 'create',
+        category: 'EXPENSE',
+        description: `Created expense of ${amount} for ${type}`,
+        details: {
+          expenseId: expense._id,
+          amount,
+          type,
+          notes,
+          vehicleId
+        },
+        severity: 'INFO'
+      });
 }
 
+
+    
 
     res.status(201).json({
       success: true,
@@ -92,6 +123,23 @@ exports.deleteExpense = async (req, res) => {
       console.log("Not a vehicle expense or vehicleId missing.");
     }
 
+    // Log the activity (if user is authenticated)
+    if (req.user && req.user._id) {
+      await ActivityLog.create({
+        user: req.user._id,
+        action: 'DELETE',
+        category: 'EXPENSE',
+        description: `Deleted expense of ${deleted.amount} for ${deleted.type}`,
+        details: {
+          expenseId: deleted._id,
+          amount: deleted.amount,
+          type: deleted.type,
+          notes: deleted.notes
+        },
+        severity: 'WARNING'
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: "Expense deleted successfully.",
@@ -128,6 +176,23 @@ exports.updateExpense = async (req, res) => {
 
     if (!updatedExpense) {
       return res.status(404).json({ success: false, message: 'Expense not found.' });
+    }
+
+    // Log the activity (if user is authenticated)
+    if (req.user && req.user._id) {
+      await ActivityLog.create({
+        user: req.user._id,
+        action: 'UPDATE',
+        category: 'EXPENSE',
+        description: `Updated expense of ${amount} for ${type}`,
+        details: {
+          expenseId: updatedExpense._id,
+          amount,
+          type,
+          notes
+        },
+        severity: 'INFO'
+      });
     }
 
     res.json({
