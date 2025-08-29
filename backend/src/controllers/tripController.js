@@ -673,8 +673,11 @@ const addAdvancePayment = catchAsync(async (req, res, next) => {
   const { amount, paidTo, purpose, notes, index, pymentMathod } = req.body;
 
   console.log(req.body);
-  const trip = await Trip.findById(req.params.id);
-  if (!trip || !trip.clients[index]) {
+const trip = await Trip.findById(req.params.id)
+  .populate({
+    path: "clients.client", // ✅ clients array ke andar client ko populate karega
+    select: "name email phone", // jo fields chahiye wo select karo
+  });  if (!trip || !trip.clients[index]) {
     return next(new AppError("Trip or client not found", 404));
   }
 
@@ -701,14 +704,14 @@ const addAdvancePayment = catchAsync(async (req, res, next) => {
     pymentMathod: pymentMathod || "cash",
   };
 
-  await trip.addAdvance(advanceData, index);
-
+  const tripDetails = await trip.addAdvance(advanceData, index);
+console.log(client)
   // Log activity
   await logActivity({
     user: req.user._id,
-    action: 'client_advance_add',
+    action: 'advance',
     category: 'financial',
-    description: `Client advance payment added: ₹${amount} for trip ${trip.tripNumber}`,
+    description: `Client (${client?.client?.name}) advance payment added: ₹${amount} for trip ${trip.tripNumber}`,
     details: {
       amount,
       paidTo,
@@ -752,7 +755,14 @@ const addExpense = catchAsync(async (req, res, next) => {
   console.log("➡️ Expense Request Body:", req.body);
 
   try {
-    const trip = await Trip.findById(req.params.id);
+   const trip = await Trip.findById(req.params.id)
+  .populate({
+    path: "clients.client", // ✅ clients array ke andar client ko populate karega
+    select: "name email phone", // jo fields chahiye wo select karo
+  });
+
+
+
     if (!trip || !trip.clients[index]) {
       return next(new AppError("Trip or client not found", 404));
     }
@@ -792,9 +802,9 @@ const addExpense = catchAsync(async (req, res, next) => {
     // Log activity
     await logActivity({
       user: req.user._id,
-      action: 'client_expense_add',
+      action: 'expense',
       category: 'financial',
-      description: `Client expense added: ₹${amount} for trip ${trip.tripNumber}`,
+      description: `Client (${client?.client?.name}) expense added: ₹${amount} for trip ${trip.tripNumber}`,
       details: {
         type,
         amount,
@@ -1225,7 +1235,10 @@ const addFleetAdvance = async (req, res) => {
   const { date, paymentType, reason, amount } = req.body;
 
   try {
-    const trip = await Trip.findById(tripId);
+    const trip = await Trip.findById(tripId).populate({
+    path: "vehicleOwner.ownerId", // ✅ Vehicle Owner details
+    select: "name email phone",
+  });
     if (!trip) return res.status(404).json({ message: "Trip not found" });
 
     const newAdvance = {
@@ -1263,7 +1276,7 @@ const addFleetAdvance = async (req, res) => {
         user: req.user?._id,
         action: 'advance',
         category: 'financial',
-        description: `Fleet advance of ₹${amount} added to trip ${trip.tripNumber}`,
+        description: `Fleet advance (${trip?.vehicleOwner?.ownerId?.name}) of ₹${amount} added to trip ${trip.tripNumber}`,
         details: {
           amount,
           paymentType,
@@ -1294,7 +1307,13 @@ const deleteFleetAdvance = async (req, res) => {
   const { advanceIndex } = req.body;
 
   try {
-    const trip = await Trip.findById(tripId);
+const trip = await Trip.findById(tripId)
+  .populate({
+    path: "vehicleOwner.ownerId", // ✅ Vehicle Owner ke andar ownerId
+    select: "name email phone", // jo fields chahiye
+  });
+
+
     if (!trip) return res.status(404).json({ message: "Trip not found" });
 
     if (
@@ -1338,9 +1357,9 @@ const deleteFleetAdvance = async (req, res) => {
     // Log activity
     await logActivity({
       user: req.user?._id,
-      action: 'delete',
+      action: 'advance',
       category: 'financial',
-      description: `Fleet advance of ₹${deletedAdvance.amount} deleted from trip ${trip.tripNumber}`,
+      description: `Fleet (${trip?.vehicleOwner?.ownerId?.name}) advance of ₹${deletedAdvance.amount} deleted from trip ${trip.tripNumber}`,
       details: {
         deletedAmount: deletedAdvance.amount,
         deletedReason: deletedAdvance.reason,
@@ -1371,8 +1390,12 @@ const addFleetExpense = async (req, res) => {
   const { amount, reason, category, description, receiptNumber } = req.body;
 
   try {
-    const trip = await Trip.findById(tripId);
-    if (!trip) return res.status(404).json({ message: "Trip not found" });
+const trip = await Trip.findById(tripId)
+  .populate({
+    path: "vehicleOwner.ownerId", // ✅ Vehicle Owner ke andar ownerId
+    select: "name email phone", // jo fields chahiye
+  });
+      if (!trip) return res.status(404).json({ message: "Trip not found" });
 
     const newExpense = {
       amount,
@@ -1410,7 +1433,7 @@ const addFleetExpense = async (req, res) => {
       user: req.user?._id,
       action: 'expense',
       category: 'financial',
-      description: `Fleet expense of ₹${amount} added to trip ${trip.tripNumber}`,
+      description: `Fleet (${trip?.vehicleOwner?.ownerId?.name}) expense of ₹${amount} added to trip ${trip.tripNumber}`,
       details: {
         amount,
         reason,
@@ -1440,7 +1463,12 @@ const addSelfExpense = async (req, res) => {
     req.body;
 
   try {
-    const trip = await Trip.findById(tripId);
+    const trip = await Trip.findById(tripId)
+  .populate({
+    path: "driver", // ✅ Driver details
+    select: "name email phone",
+  });
+
     if (!trip) return res.status(404).json({ message: "Trip not found" });
 
     const expenseData = {
@@ -1480,7 +1508,7 @@ const addSelfExpense = async (req, res) => {
       user: req.user?._id,
       action: 'expense',
       category: 'financial',
-      description: `Self expense added: ₹${amount} for ${expenseFor} in trip ${trip.tripNumber}`,
+      description: `Self expense (${trip.driver?.name}) added: ₹${amount} for ${expenseFor} in trip ${trip.tripNumber}`,
       details: {
         amount,
         reason,
@@ -1511,8 +1539,12 @@ const deleteSelfExpense = async (req, res) => {
   const { expenseIndex } = req.body;
 
   try {
-    const trip = await Trip.findById(tripId);
-    if (!trip || !trip.selfExpenses?.[expenseIndex]) {
+    const trip = await Trip.findById(tripIdeq.params.id)
+  .populate({
+    path: "driver", // ✅ Driver details
+    select: "name email phone",
+  });
+      if (!trip || !trip.selfExpenses?.[expenseIndex]) {
       return res.status(404).json({ message: "Trip or expense not found" });
     }
 
@@ -1551,7 +1583,7 @@ const deleteSelfExpense = async (req, res) => {
       user: req.user?._id,
       action: 'delete',
       category: 'financial',
-      description: `Self expense of ₹${expense.amount} deleted from trip ${trip.tripNumber}`,
+      description: `Self expense (${trip.driver?.name})(${trip.driver?.name}) of ₹${expense.amount} deleted from trip ${trip.tripNumber}`,
       details: {
         deletedAmount: expense.amount,
         deletedReason: expense.reason,
@@ -1591,8 +1623,12 @@ const addSelfAdvance = async (req, res) => {
   } = req.body;
 
   try {
-    const trip = await Trip.findById(tripId);
-    if (!trip) return res.status(404).json({ message: "Trip not found" });
+    const trip = await Trip.findById(tripId)
+  .populate({
+    path: "driver", // ✅ Driver details
+    select: "name email phone",
+  });
+      if (!trip) return res.status(404).json({ message: "Trip not found" });
 
     const advanceData = {
       amount,
@@ -1630,7 +1666,7 @@ const addSelfAdvance = async (req, res) => {
       user: req.user?._id,
       action: 'advance',
       category: 'financial',
-      description: `Self advance added: ₹${amount} for driver in trip ${trip.tripNumber}`,
+      description: `Self advance (${trip.driver?.name}) added: ₹${amount} for driver in trip ${trip.tripNumber}`,
       details: {
         amount,
         reason,

@@ -112,11 +112,11 @@ const login = catchAsync(async (req, res, next) => {
   await user.save({ validateBeforeSave: false })
 
   // 5) Log login activity
-  await authLogger(user, 'user_login', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    loginTime: new Date()
-  })
+  // await authLogger(user, 'user_login', {
+  //   ipAddress: req.ip,
+  //   userAgent: req.get('User-Agent'),
+  //   loginTime: new Date()
+  // })
 
   // 6) If everything ok, send token to client
   createSendToken(user, 200, res)
@@ -124,13 +124,13 @@ const login = catchAsync(async (req, res, next) => {
 
 const logout = catchAsync(async (req, res, next) => {
   // Log logout activity if user is authenticated
-  if (req.user) {
-    await authLogger(req.user, 'user_logout', {
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      logoutTime: new Date()
-    })
-  }
+  // if (req.user) {
+  //   await authLogger(req.user, 'user_logout', {
+  //     ipAddress: req.ip,
+  //     userAgent: req.get('User-Agent'),
+  //     logoutTime: new Date()
+  //   })
+  // }
 
   res.cookie("jwt", "loggedout", {
     expires: new Date(Date.now() + 10 * 1000),

@@ -160,22 +160,34 @@ export default function TripsPage() {
     if (!trips?.data?.data?.trips) return [];
 
     const rows = [];
-    trips.data.data.trips.forEach((trip) => {
-      trip.clients.forEach((clientEntry) => {
-        const client = clientEntry.client || clientEntry.CLIENT;
-        rows.push({
-          TripNumber: trip.tripNumber,
-          VehicleNumber: trip.vehicle?.registrationNumber || "",
-          ClientName: client?.name || client?.NAME || "",
-          From: clientEntry.origin?.city || clientEntry.ORIGIN || "",
-          To: clientEntry.destination?.city || clientEntry.DESTINATION || "",
-          Rate: clientEntry.rate || 0,
-          Paid: clientEntry.paidAmount || 0,
-          Pending: clientEntry.dueAmount || 0,
-          ExpensesClient: clientEntry.totalExpense || 0,
-        });
-      });
+   trips.data.data.trips.forEach((trip) => {
+  trip.clients.forEach((clientEntry) => {
+    const client = clientEntry.client || clientEntry.CLIENT;
+
+    // Format date if loadDate exists
+    const formattedDate = clientEntry.loadDate
+      ? new Date(clientEntry.loadDate).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        })
+      : "";
+
+    rows.push({
+      TripNumber: trip.tripNumber,
+      VehicleNumber: trip.vehicle?.registrationNumber || "",
+      ClientName: client?.name || client?.NAME || "",
+      From: clientEntry.origin?.city || clientEntry.ORIGIN || "",
+      To: clientEntry.destination?.city || clientEntry.DESTINATION || "",
+      Rate: clientEntry.rate || 0,
+      Date: formattedDate, // ✅ Now date is formatted
+      Paid: clientEntry.paidAmount || 0,
+      Pending: clientEntry.dueAmount || 0,
+      ExpensesClient: clientEntry.totalExpense || 0,
     });
+  });
+});
+
 
     return rows;
   }, [trips]);
@@ -192,7 +204,7 @@ export default function TripsPage() {
     
     // Create worksheet data with headers (uppercase)
     const wsData = [
-      ['TRIP NUMBER', 'VEHICLE NUMBER', 'CLIENT NAME', 'FROM', 'TO', 'RATE', 'PAID', 'PENDING', 'EXPENSES CLIENT'],
+      ['TRIP NUMBER', 'VEHICLE NUMBER', 'CLIENT NAME', 'FROM', 'TO', 'RATE', 'DATE', 'PAID', 'PENDING', 'EXPENSES CLIENT'],
       ...csvData.map(row => [
         row.TripNumber,
         row.VehicleNumber,
@@ -200,6 +212,7 @@ export default function TripsPage() {
         row.From,
         row.To,
         row.Rate,
+        row.Date,
         row.Paid,
         row.Pending,
         row.ExpensesClient
