@@ -6,6 +6,7 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CSVLink } from "react-csv";
+import * as XLSX from 'xlsx';
 
 import {
   Card,
@@ -179,6 +180,81 @@ export default function TripsPage() {
     return rows;
   }, [trips]);
 
+  // Excel Export Function with Styled Headers
+  const exportToExcel = () => {
+    if (!csvData || csvData.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    // Create a new workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Create worksheet data with headers (uppercase)
+    const wsData = [
+      ['TRIP NUMBER', 'VEHICLE NUMBER', 'CLIENT NAME', 'FROM', 'TO', 'RATE', 'PAID', 'PENDING', 'EXPENSES CLIENT'],
+      ...csvData.map(row => [
+        row.TripNumber,
+        row.VehicleNumber,
+        row.ClientName,
+        row.From,
+        row.To,
+        row.Rate,
+        row.Paid,
+        row.Pending,
+        row.ExpensesClient
+      ])
+    ];
+
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Style the header row
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "000000" }, sz: 12 }, // Black text, bold, size 12
+      fill: { patternType: "solid", fgColor: { rgb: "FFFF00" } }, // Yellow background
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } }
+      }
+    };
+
+    // Apply header styling
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+      if (!ws[cellAddress]) continue;
+      ws[cellAddress].s = headerStyle;
+    }
+
+    // Set column widths
+    ws['!cols'] = [
+      { width: 15 }, // Trip Number
+      { width: 18 }, // Vehicle Number
+      { width: 20 }, // Client Name
+      { width: 15 }, // From
+      { width: 15 }, // To
+      { width: 12 }, // Rate
+      { width: 12 }, // Paid
+      { width: 12 }, // Pending
+      { width: 15 }  // Expenses Client
+    ];
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Trips Data');
+
+    // Generate filename with current date
+    const filename = `trips_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    // Save the file
+    XLSX.writeFile(wb, filename);
+    
+    toast.success('Excel file exported successfully!');
+  };
+
   const router = useRouter();
   if (isLoading) {
     return (
@@ -207,14 +283,24 @@ export default function TripsPage() {
           </Button>
 
 
+          <div className="flex gap-2">
              {/* CSV Export Button */}
-            <CSVLink
+            {/* <CSVLink
               data={csvData}
               filename={`trips_export_${new Date().toISOString()}.csv`}
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               Export CSV
-            </CSVLink>
+            </CSVLink> */}
+            
+            {/* Excel Export Button */}
+            <Button
+              onClick={exportToExcel}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              Export Excel
+            </Button>
+          </div>
         </div>
 
         {/* Search and Filters */}
