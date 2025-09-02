@@ -15,11 +15,8 @@ const { isValidObjectId } = mongoose;
 
 const getAllTrips = catchAsync(async (req, res, next) => {
   const filter = {};
-  const { search, page = 1, limit = 10 } = req.query;
 
-  console.log(req.query); // Debugging
-
-  // Role-based filtering
+  // Apply role-based filtering
   switch (req.user.role) {
     case "client":
       filter["clients.client"] = req.user.id;
@@ -31,40 +28,79 @@ const getAllTrips = catchAsync(async (req, res, next) => {
     case "driver":
       filter.driver = req.user.id;
       break;
+    // admin can see all trips
   }
 
-  // Search by Trip Number
-  if (search) {
-    filter.tripNumber = { $regex: search, $options: "i" };
-  }
+  // const features = new APIFeatures(Trip.find(filter), req.query).filter().sort().limitFields().paginate()
 
-  // Pagination calculation
-  const skip = (Number(page) - 1) * Number(limit);
-
-  // Query with pagination
-  const [trips, total] = await Promise.all([
-    Trip.find(filter)
-      .populate("clients.client", "name email phone")
-      .populate("vehicle", "registrationNumber make model ownershipType")
-      .populate("driver", "name email phone")
-      .populate("vehicleOwner.ownerId", "name email phone")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit)),
-    Trip.countDocuments(filter),
-  ]);
-
+  const trips = await Trip.find(filter)
+    .populate("clients.client", "name email phone")
+    .populate("vehicle", "registrationNumber make model ownershipType")
+    .populate("driver", "name email phone")
+    .populate("vehicleOwner.ownerId", "name email phone")
+    .sort({ createdAt: -1 });
   res.status(200).json({
     status: "success",
     results: trips.length,
-    total,
-    currentPage: Number(page),
-    totalPages: Math.ceil(total / Number(limit)),
-    data: { trips },
+    data: {
+      trips,
+    },
   });
 });
 
 
+
+
+// const getAllTrips = catchAsync(async (req, res, next) => {
+//   const filter = {};
+//   const { search, page = 1, limit = 10 } = req.query;
+
+//   console.log(req.query); // Debugging
+
+//   // Role-based filtering
+//   switch (req.user.role) {
+//     case "client":
+//       filter["clients.client"] = req.user.id;
+//       break;
+//     case "fleet_owner":
+//       filter["vehicleOwner.ownerId"] = req.user.id;
+//       filter["vehicleOwner.ownershipType"] = "fleet_owner";
+//       break;
+//     case "driver":
+//       filter.driver = req.user.id;
+//       break;
+//   }
+
+//   // Search by Trip Number
+//   if (search) {
+//     filter.tripNumber = { $regex: search, $options: "i" };
+//   }
+
+//   // Pagination calculation
+//   const skip = (Number(page) - 1) * Number(limit);
+
+//   // Query with pagination
+//   const [trips, total] = await Promise.all([
+//     Trip.find(filter)
+//       .populate("clients.client", "name email phone")
+//       .populate("vehicle", "registrationNumber make model ownershipType")
+//       .populate("driver", "name email phone")
+//       .populate("vehicleOwner.ownerId", "name email phone")
+//       .sort({ createdAt: -1 })
+//       .skip(skip)
+//       .limit(Number(limit)),
+//     Trip.countDocuments(filter),
+//   ]);
+
+//   res.status(200).json({
+//     status: "success",
+//     results: trips.length,
+//     total,
+//     currentPage: Number(page),
+//     totalPages: Math.ceil(total / Number(limit)),
+//     data: { trips },
+//   });
+// });
 
 const getTrip = catchAsync(async (req, res, next) => {
   const filter = { _id: req.params.id };
