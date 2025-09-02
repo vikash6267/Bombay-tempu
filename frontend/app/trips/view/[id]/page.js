@@ -92,6 +92,7 @@ import axios from "axios";
 import { EnhancedAddEditTripDialog } from "components/trips/enhanced-edit-trip-dialog";
 import PodStatusCard from "../ClientPod";
 import DriverAdvanceCard from "../DepositeAmount";
+import { format } from "date-fns";
 
 // Self Owner Expense Form Schema
 const selfExpenseSchema = z.object({
@@ -1407,7 +1408,7 @@ export default function TripDetailPage() {
       </DashboardLayout>
     );
   }
-
+  console.log(trip, "TRIPS");
   const canEdit = user?.role === "admin";
   const canManagePOD = user?.role === "admin" || user?.role === "driver";
   const isFleetOwner =
@@ -1440,8 +1441,7 @@ export default function TripDetailPage() {
   const commission = trip.commission || 0;
   const podBalance = trip.podBalance || 0;
 
-  const finalAmount =
-    tripRate - totalGivenToFleetOwner  - podBalance;
+  const finalAmount = tripRate - totalGivenToFleetOwner - podBalance - commission;
 
   const getCategoryColor = (category) => {
     const colors = {
@@ -1641,7 +1641,7 @@ export default function TripDetailPage() {
                   <div className="font-semibold text-gray-800">
                     {isSelfOwner
                       ? "Self Owned"
-                      : trip.vehicle?.ownerName || "Fleet Owner"}
+                      : trip?.vehicleOwner?.ownerId?.name || "Fleet Owner"}
                   </div>
                 </div>
 
@@ -2428,10 +2428,10 @@ export default function TripDetailPage() {
                               <div className="font-semibold text-lg">
                                 {clientData.client.name}
                               </div>
-                              <div className="text-sm text-muted-foreground flex items-center">
+                              {/* <div className="text-sm text-muted-foreground flex items-center">
                                 <Mail className="h-3 w-3 mr-1" />
                                 {clientData.client.email}
-                              </div>
+                              </div> */}
                             </div>
                           </div>
                           <div className="flex flex-row items-center gap-3 text-lg font-medium">
@@ -2542,9 +2542,19 @@ export default function TripDetailPage() {
                             <div className="text-sm text-muted-foreground mb-1">
                               Status
                             </div>
-                            <Badge className="font-medium">
-                              {clientData.status}
-                            </Badge>
+                            <div className="flex flex-col">
+                              <Badge className="font-medium mb-1">
+                                {clientData.status}
+                              </Badge>
+                              <span className="text-sm text-gray-600">
+                                {clientData.loadDate
+                                  ? format(
+                                      new Date(clientData.loadDate),
+                                      "MM/dd/yyyy"
+                                    )
+                                  : ""}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
@@ -2559,8 +2569,6 @@ export default function TripDetailPage() {
                           </div>
                         )}
                       </div>
-
-                     
 
                       {/* Payments Section */}
                       <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
@@ -2716,9 +2724,7 @@ export default function TripDetailPage() {
                         />
                       </div>
 
-
-
- {/* Memo Management Section */}
+                      {/* Memo Management Section */}
                       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Collection Memo Section */}
                         <Card className="border-blue-200 bg-blue-50">

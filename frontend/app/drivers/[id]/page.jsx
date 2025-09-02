@@ -20,6 +20,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { Input } from "components/ui/input";
 import Swal from "sweetalert2"
+import Link from "next/link";
 
 const Page = () => {
   const { id } = useParams();
@@ -238,7 +239,7 @@ useEffect(() => {
                   onChange={() => handleTripToggle(trip.tripId)}
                 />
                 <div className="flex flex-col">
-                  <span>{trip.tripNumber}</span>
+                  <Link href={`/trips/view/${trip?.tripId}`} target="_blank" className="text-blue-900 underline text-bold">{trip.tripNumber}</Link>
                   <span>{trip?.vehicle?.registrationNumber}</span>
                   <span className="text-xs">
                     ({format(new Date(trip.scheduledDate), "dd MMM yyyy")})

@@ -50,32 +50,29 @@ export default function DriversPage() {
       accessorKey: "name",
       header: "Name",
     },
-    {
-      accessorKey: "email",
-      header: "Email",
-    },
+   
     {
       accessorKey: "phone",
       header: "Phone",
     },
-    {
-      accessorKey: "licenseNumber",
-      header: "License Number",
-    },
-    {
-      accessorKey: "licenseExpiry",
-      header: "License Expiry",
-      cell: ({ row }) => {
-        const expiry = row.getValue("licenseExpiry");
-        if (!expiry) return "N/A";
-        const isExpired = new Date(expiry) < new Date();
-        return (
-          <span className={isExpired ? "text-red-600" : ""}>
-            {formatDate(expiry, "MMM dd, yyyy")}
-          </span>
-        );
-      },
-    },
+    // {
+    //   accessorKey: "licenseNumber",
+    //   header: "License Number",
+    // },
+    // {
+    //   accessorKey: "licenseExpiry",
+    //   header: "License Expiry",
+    //   cell: ({ row }) => {
+    //     const expiry = row.getValue("licenseExpiry");
+    //     if (!expiry) return "N/A";
+    //     const isExpired = new Date(expiry) < new Date();
+    //     return (
+    //       <span className={isExpired ? "text-red-600" : ""}>
+    //         {formatDate(expiry, "MMM dd, yyyy")}
+    //       </span>
+    //     );
+    //   },
+    // },
     {
       accessorKey: "active",
       header: "Status",

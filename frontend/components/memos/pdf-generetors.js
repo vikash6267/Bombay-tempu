@@ -13,108 +13,181 @@ const companyDetails = {
   state: "Maharashtra"
 }
 
-export const generateCollectionMemoPDF = (memoData, clientData, tripData) => {
-  const doc = new jsPDF()
+export function generateCollectionMemoPDF(data) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
 
-  // Company Header
-  doc.setFontSize(20)
-  doc.setFont("helvetica", "bold")
-  doc.text(companyDetails.name, 105, 20, { align: "center" })
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 10;
+  const innerW = pageW - margin * 2;
+  const centerX = pageW / 2;
+  const rightX = pageW - margin;
+  let y = margin + 5; // Start with some top padding
+  const startY = y;
 
-  doc.setFontSize(10)
-  doc.setFont("helvetica", "normal")
-  doc.text(companyDetails.address, 105, 30, { align: "center" })
+  const drawLine = () => {
+    doc.line(margin, y, rightX, y);
+  };
+
+  // --- Header Section ---
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text("Gopiram", margin, y);
+  doc.text("श्री गणेशाय नमः", centerX, y, { align: "center" });
+  doc.text("Mob: 9022223698", rightX, y, { align: "right" });
+  y += 6;
+  doc.text("Mohit", margin, y);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("BUTS", centerX, y, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text("6375916182", rightX, y, { align: "right" });
+  y += 5;
+  drawLine();
+
+  // --- Company Title & Subtitle ---
+  y += 5;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text("Bombay Uttranchal Tempo Service", centerX, y, { align: "center" });
+  y += 7;
+  doc.setFontSize(11);
+  doc.text("Transport Contractor & Commission Agent", centerX, y, {
+    align: "center",
+  });
+  y += 5;
+  drawLine();
+
+  // --- Services ---
+  y += 5;
+  doc.setFontSize(10);
   doc.text(
-    `Phone: ${companyDetails.phone} | Email: ${companyDetails.email}`,
-    105,
-    37,
-    { align: "center" }
-  )
-  doc.text(`State: ${companyDetails.state}`, 105, 44, { align: "center" })
-
-  // Title
-  doc.setFontSize(16)
-  doc.setFont("helvetica", "bold")
-  doc.text("COLLECTION MEMO", 105, 60, { align: "center" })
-
-  // Memo Details Box
-  doc.setDrawColor(0, 0, 0)
-  doc.setLineWidth(0.5)
-  doc.rect(15, 70, 180, 80)
-
-  // Left Column
-  doc.setFontSize(11)
-  doc.setFont("helvetica", "normal")
-
-  let yPos = 80
-  doc.text(`Collection No: ${memoData.collectionNumber}`, 20, yPos)
-  yPos += 8
-  doc.text(`Date: ${formatDate(new Date(), "dd/MM/yyyy")}`, 20, yPos)
-  yPos += 8
-  doc.text(`Lorry No: ${memoData.lorryNumber}`, 20, yPos)
-  yPos += 8
-  doc.text(`From: ${memoData.from}`, 20, yPos)
-  yPos += 8
-  doc.text(`To: ${memoData.to}`, 20, yPos)
-  yPos += 8
-  doc.text(`Weight: ${memoData.weight}`, 20, yPos)
-  yPos += 8
-  doc.text(`Guarantee: ${memoData.guarantee || "As per LR"}`, 20, yPos)
-
-  // Right Column
-  yPos = 80
-  doc.text(`Client: ${clientData.client.name}`, 110, yPos)
-  yPos += 8
-  doc.text(`Trip No: ${tripData.tripNumber}`, 110, yPos)
-  yPos += 8
-  doc.text(`Payable At: ${memoData.payableAt}`, 110, yPos)
-  yPos += 8
-  doc.text(`Per Day Detention: ${memoData.perDayDetention}`, 110, yPos)
-  yPos += 8
-  if (memoData.extraHeightLength) {
-    doc.text(`Extra H&L: ${memoData.extraHeightLength}`, 110, yPos)
-    yPos += 8
-  }
-
-  // Financial Details Table
-  const financialData = [
-    ["Freight", formatCurrency(memoData.freight)],
-    ["Advance", formatCurrency(memoData.advance)],
-    ["Balance", formatCurrency(memoData.balance)]
-  ]
-
-  autoTable(doc, {
-    startY: 160,
-    head: [["Description", "Amount"]],
-    body: financialData,
-    theme: "grid",
-    headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-    styles: { fontSize: 11, cellPadding: 5 },
-    columnStyles: {
-      0: { cellWidth: 90 },
-      1: { cellWidth: 90, halign: "right" }
-    }
-  })
-
-  // Remarks
-  if (memoData.remarks) {
-    doc.setFontSize(10)
-    doc.text(`Remarks: ${memoData.remarks}`, 20, doc.lastAutoTable.finalY + 15)
-  }
-
-  // Footer
-  doc.setFontSize(9)
-  doc.text("This is a computer generated document.", 105, 280, {
-    align: "center"
-  })
+    "Daily Service: Delhi, Haryana, Rajasthan, Punjab, UP, UK & All Over India",
+    margin,
+    y
+  );
+  y += 5;
   doc.text(
-    `Generated on: ${formatDate(new Date(), "dd/MM/yyyy HH:mm")}`,
-    105,
-    287,
+    "Services: 1109, 1110, 407, 20ft, 22ft Open & Container etc.",
+    centerX,
+    y,
     { align: "center" }
-  )
+  );
+  y += 5;
+  drawLine();
 
-  return doc
+  // --- Address ---
+  y += 5;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text(
+    "Add: Building No. C13, Gala No.01, Parasnath Complex,",
+    centerX,
+    y,
+    { align: "center" }
+  );
+  y += 5;
+  doc.setFont("helvetica", "normal");
+  doc.text("Dapoda, Bhiwandi, Dist. Thane 421302.", centerX, y, {
+    align: "center",
+  });
+  y += 5;
+  drawLine();
+
+  // --- Collection Memo Header ---
+  y += 5;
+  doc.setFontSize(10);
+  doc.text(`Collection No: ${data.collectionNumber || "01"}`, margin, y);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("COLLECTION MEMO", centerX, y, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(`Date: ${data.date || new Date().toLocaleDateString("en-GB")}`, rightX, y, { align: "right" });
+  y += 5;
+  drawLine();
+
+  // --- Main Content ---
+  y += 5;
+  doc.text(`M/s. ${data.msName || ""}`, margin, y);
+  y += 7;
+  doc.text("Dear Sir,", margin, y);
+  y += 7;
+  doc.text("As Per Your Instruction We Are Sending Herewith Our", margin + 10, y);
+  y += 7;
+  doc.text(
+    `Lorry No: ${data.lorryNumber || "________________"} For The Collection Of Your Goods To Be Despatched`,
+    margin,
+    y
+  );
+  y += 7;
+  doc.text(`From: ${data.from || "________________"} To: ${data.to || "________________"}`, margin, y);
+  y += 7;
+  drawLine();
+
+  // --- Details Table ---
+  const col2X = centerX - 10;
+  y += 6;
+  doc.text(`Rate: ${data.rate || "________________"}` , margin, y);
+  doc.text(`Freight: ${fmtMoneyOrBlank(data.freight)}`, col2X, y);
+  y += 7;
+  doc.text(`Weight: ${data.weight || "________________"}`, margin, y);
+  doc.text(`Advance: ${fmtMoneyOrBlank(data.advance)}`, col2X, y);
+  y += 7;
+  doc.text(`Guarantee: ${data.guarantee || "________________"}` , margin, y);
+  doc.text(`Balance: ${fmtMoneyOrBlank(data.balance)}`, col2X, y);
+  y += 6;
+  drawLine();
+
+  // --- Footer ---
+  y += 6;
+  doc.text("PAN CARD No. BDJPK0529D", margin, y);
+  doc.setFont("helvetica", "bold");
+  doc.text("Your's Faithfully", rightX, y, { align: "right" });
+  doc.setFont("helvetica", "normal");
+  y += 6;
+  drawLine();
+
+  // --- Terms ---
+  y += 5;
+  doc.setFont("helvetica", "bold");
+  doc.text("TERMS:", margin, y);
+  y += 5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("* We are not responsible for leakage, Breakage & consequent damages in Transit.", margin, y);
+  y += 5;
+  doc.text("* Goods carried at Owner's Risk.", margin, y);
+  y += 5;
+  doc.text("* Pleased check lorry engine, chases and all necessary documents.", margin, y);
+  y += 5;
+  drawLine();
+
+  // --- Bank Details & Signature ---
+  y += 5;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("HDFC - A/c. 50200006579916", margin, y);
+  y += 5;
+  doc.text("IFSC HDFC-0009218- Mankoli Branch", margin, y);
+  y += 10;
+  doc.setFont("helvetica", "normal");
+  doc.text("For Bombay Uttranchal Tempo Service", rightX, y, { align: "right" });
+  y += 5;
+  const endY = y;
+  drawLine();
+
+  // --- Vertical Borders ---
+  doc.line(margin, startY, margin, endY); // Left border
+  doc.line(rightX, startY, rightX, endY); // Right border
+
+  return doc;
+}
+
+
+function fmtMoneyOrBlank(n) {
+  if (typeof n !== "number" || isNaN(n)) return "________"
+  return `₹ ${n.toLocaleString("en-IN")}`
 }
 
 export const generateBalanceMemoPDF = (memoData, clientData, tripData) => {

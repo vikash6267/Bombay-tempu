@@ -688,29 +688,34 @@ export default function ExpenseDashboard() {
                   key={expense._id}
                   className="flex items-center justify-between p-4 border rounded-xl hover:shadow-md transition-all duration-200 bg-gradient-to-r from-background to-muted/20"
                 >
-                  <div className="flex-1">
+                  <div className="flex-1 justify-between">
                     <div className="flex items-center gap-3 mb-2">
-                      <Badge
+                    
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        {expense.paidAt
+                          ? format(parseISO(expense.paidAt), "dd/MM/yyyy")
+                          : "N/A"}
+                      </div>
+
+                      <p className="text-sm text-muted-foreground">
+                        {expense.notes}
+                      </p>
+
+                        <Badge
                         variant="outline"
                         className="capitalize font-medium"
                       >
-                        {expense.type}
+                        {expense.type === "vehicle"
+                          ? expense?.vehicleId?.registrationNumber ||
+                            expense.type
+                          : expense.type}
                       </Badge>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {format(parseISO(expense.paidAt), "MMM dd, yyyy")}
-                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {expense.notes}
-                    </p>
                   </div>
-                  <div className="text-right ml-4">
+                  <div className="text-right ml-4 flex  gap-3">
                     <div className="text-xl font-bold">
                       ₹{expense.amount.toLocaleString()}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {format(parseISO(expense.createdAt), "HH:mm")}
                     </div>
 
                     <button

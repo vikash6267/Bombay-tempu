@@ -39,7 +39,7 @@ exports.createExpense = async (req, res) => {
   });
  await ActivityLog.create({
         user: req.user._id,
-        action: 'create',
+        action: 'expense',
         category: 'EXPENSE',
         description: `Created expense of ${amount} for ${type} - ${vehicleUpdateResult.registrationNumber} (${notes})`,
         details: {
@@ -54,7 +54,7 @@ exports.createExpense = async (req, res) => {
 }else{
  await ActivityLog.create({
         user: req.user._id,
-        action: 'create',
+        action: 'expense',
         category: 'EXPENSE',
         description: `Created expense of ${amount} for ${type}`,
         details: {
@@ -208,7 +208,10 @@ exports.updateExpense = async (req, res) => {
 // ✅ Get All Expenses
 exports.getAllExpenses = async (req, res) => {
   try {
-    const expenses = await Expense.find().sort({ createdAt: -1 });
+    const expenses = await Expense.find()
+      .populate("vehicleId", "registrationNumber") // populate only registrationNumber
+      .sort({ createdAt: -1 });
+
     res.json({
       success: true,
       total: expenses.length,
@@ -218,3 +221,4 @@ exports.getAllExpenses = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+

@@ -144,12 +144,14 @@ function formatDate(dateString) {
   if (!dateString) return "N/A"; // Handle null/undefined/empty
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return "Invalid Date"; // Handle bad strings
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+
+  // Return in dd/mm/yyyy format
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
 }
+
 
 
 
@@ -304,12 +306,13 @@ function formatDate(dateString) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Timestamp</TableHead>
-                      <TableHead>User</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Trip No.</TableHead>
+                      <TableHead>Narration</TableHead>
                       <TableHead>Action</TableHead>
+                      <TableHead>User</TableHead>
                       {/* <TableHead>Category</TableHead> */}
                     
-                      <TableHead>Description</TableHead>
                      
                     </TableRow>
                   </TableHeader>
@@ -321,11 +324,17 @@ function formatDate(dateString) {
       </TableCell>
       <TableCell>
         <div className="flex items-center space-x-2">
-          <User className="h-4 w-4 text-gray-400" />
-          <span>{log.user?.name || "System"}</span>
+        
+          <span>{log.relatedTrip?.tripNumber  || ""}</span>
         </div>
       </TableCell>
-      <TableCell>
+
+       <TableCell className="max-w-md">
+        <div className="truncate" title={log.description}>
+          {log.description}
+        </div>
+      </TableCell>
+       <TableCell>
         <Badge
           className={cn(
             "capitalize",
@@ -335,17 +344,20 @@ function formatDate(dateString) {
           {log.action}
         </Badge>
       </TableCell>
+      <TableCell>
+        <div className="flex items-center space-x-2">
+          <User className="h-4 w-4 text-gray-400" />
+          <span>{log.user?.name || "System"}</span>
+        </div>
+      </TableCell>
+     
       {/* <TableCell>
         <span className="capitalize text-sm font-medium">
           {log.category}
         </span>
       </TableCell> */}
     
-      <TableCell className="max-w-md">
-        <div className="truncate" title={log.description}>
-          {log.description}
-        </div>
-      </TableCell>
+     
      
     </TableRow>
   ))}
