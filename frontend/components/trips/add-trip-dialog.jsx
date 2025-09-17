@@ -52,14 +52,13 @@ const createTripValidationSchema = (selectedVehicle) => {
           client: Yup.string().required("Client is required"),
           loadDetails: Yup.object({
             description: Yup.string().optional(),
-            weight: Yup.number()
-             ,
+            weight: Yup.number(),
             quantity: Yup.number()
               .min(1, "Quantity must be at least 1")
               .required("Quantity is required"),
             loadType: Yup.string(),
-            packagingType: Yup.string()
-              
+            packagingType:
+              Yup.string()
               .required(),
             specialInstructions: Yup.string(),
           }),
@@ -107,6 +106,18 @@ const createTripValidationSchema = (selectedVehicle) => {
   });
 };
 
+const getCurrentDateTimeLocal = () => {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0"); // Month index starts from 0
+  const date = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${date}T${hours}:${minutes}`;
+};
+
 const initialValues = {
   clients: [
     {
@@ -144,7 +155,7 @@ const initialValues = {
     state: "",
     pincode: "",
   },
-  scheduledDate: "",
+  scheduledDate: getCurrentDateTimeLocal(),
   estimatedDuration: undefined,
   estimatedDistance: undefined,
   specialInstructions: "",
@@ -152,8 +163,6 @@ const initialValues = {
   rate: 0,
   commission: 0,
 };
-
-
 
 const defaultOptions = [
   { value: "boxes", label: "Boxes" },
@@ -185,7 +194,10 @@ const PackagingTypeSelect = ({ value, onChange, error }) => {
   return (
     <div>
       <Label>Packaging *</Label>
-      <Select value={value && !customValue ? value : "add_new"} onValueChange={handleChange}>
+      <Select
+        value={value && !customValue ? value : "add_new"}
+        onValueChange={handleChange}
+      >
         <SelectTrigger className={error ? "border-red-500" : ""}>
           <SelectValue placeholder="Select packaging" />
         </SelectTrigger>
@@ -236,7 +248,7 @@ const CalculationSummary = ({
     // The `overallTripCommission` will be the one from the fleet owner.
 
     const parsedOverallTripCommission = Number(overallTripCommission) || 0;
-  const parsedPodBalance = Number(podBalance) || 0; // Add this line
+    const parsedPodBalance = Number(podBalance) || 0; // Add this line
     // Calculate individual client P&L and accumulate totals
     const clientBreakdown = clients.map((client) => {
       const clientRate = Number(client.rate) || 0;
@@ -266,8 +278,9 @@ const CalculationSummary = ({
       overallTripProfit =
         totalClientRevenue -
         totalTruckHireExpenses -
-        totalAdjustments + 
-        parsedOverallTripCommission +parsedPodBalance;
+        totalAdjustments +
+        parsedOverallTripCommission +
+        parsedPodBalance;
     } else {
       // For Non-Self-Owned Vehicles (Hired from Fleet Owner):
       const parsedOverallRate = Number(overallRate) || 0;
@@ -275,7 +288,8 @@ const CalculationSummary = ({
         totalClientRevenue -
         parsedOverallRate -
         totalAdjustments + // ✅ INCLUDE adjustments here too
-        parsedOverallTripCommission + parsedPodBalance;
+        parsedOverallTripCommission +
+        parsedPodBalance;
     }
 
     return {
@@ -287,7 +301,7 @@ const CalculationSummary = ({
       // since the 3000 is overall. We use parsedOverallTripCommission directly.
       overallTripProfit,
       parsedOverallTripCommission, // Pass this to display in summary
-      parsedPodBalance
+      parsedPodBalance,
     };
   }, [clients, overallRate, isSelfOwned, overallTripCommission]); // Dependencies for memoization
 
@@ -399,28 +413,38 @@ const CalculationSummary = ({
         </div>
 
         {/* Detailed Calculation Explanation */}
-       {/* Update the detailed calculation explanation */}
-{isSelfOwned ? (
-  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
-    <strong>Calculation for Self-Owned Vehicle:</strong> <br />
-    Total Client Revenue (₹{calculations.totalClientRevenue.toLocaleString()}) 
-    - Total Truck Hire Costs (₹{calculations.totalTruckHireExpenses.toLocaleString()})
-    - Total Adjustments (₹{calculations.totalAdjustments.toLocaleString()}) 
-    + Overall Trip Commission (₹{calculations.parsedOverallTripCommission.toLocaleString()})
-    + POD Balance (₹{calculations.parsedPodBalance.toLocaleString()}) = {" "}
-    <span className="font-bold">₹{calculations.overallTripProfit.toLocaleString()}</span>
-  </div>
-) : (
-  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
-    <strong>Calculation for Hired Vehicle:</strong> <br />
-    Total Client Revenue (₹{calculations.totalClientRevenue.toLocaleString()}) 
-    - Overall Trip Rate (paid to fleet owner: ₹{Number(overallRate).toLocaleString()})
-    - Total Adjustments (₹{calculations.totalAdjustments.toLocaleString()}) 
-    + Overall Trip Commission (from fleet owner: ₹{calculations.parsedOverallTripCommission.toLocaleString()})
-    + POD Balance (₹{calculations.parsedPodBalance.toLocaleString()}) = {" "}
-    <span className="font-bold">₹{calculations.overallTripProfit.toLocaleString()}</span>
-  </div>
-)}
+        {/* Update the detailed calculation explanation */}
+        {isSelfOwned ? (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+            <strong>Calculation for Self-Owned Vehicle:</strong> <br />
+            Total Client Revenue (₹
+            {calculations.totalClientRevenue.toLocaleString()}) - Total Truck
+            Hire Costs (₹{calculations.totalTruckHireExpenses.toLocaleString()})
+            - Total Adjustments (₹
+            {calculations.totalAdjustments.toLocaleString()}) + Overall Trip
+            Commission (₹
+            {calculations.parsedOverallTripCommission.toLocaleString()}) + POD
+            Balance (₹{calculations.parsedPodBalance.toLocaleString()}) ={" "}
+            <span className="font-bold">
+              ₹{calculations.overallTripProfit.toLocaleString()}
+            </span>
+          </div>
+        ) : (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+            <strong>Calculation for Hired Vehicle:</strong> <br />
+            Total Client Revenue (₹
+            {calculations.totalClientRevenue.toLocaleString()}) - Overall Trip
+            Rate (paid to fleet owner: ₹{Number(overallRate).toLocaleString()})
+            - Total Adjustments (₹
+            {calculations.totalAdjustments.toLocaleString()}) + Overall Trip
+            Commission (from fleet owner: ₹
+            {calculations.parsedOverallTripCommission.toLocaleString()}) + POD
+            Balance (₹{calculations.parsedPodBalance.toLocaleString()}) ={" "}
+            <span className="font-bold">
+              ₹{calculations.overallTripProfit.toLocaleString()}
+            </span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -749,7 +773,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                           </div>
                         )}
 
-                        <div>
+                        {/* <div>
                           <Label>Scheduled Date *</Label>
                           <Input
                             type="datetime-local"
@@ -771,60 +795,9 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                               {formik.errors.scheduledDate}
                             </p>
                           )}
-                        </div>
+                        </div> */}
 
-                        {!isSelfOwned && (
-                          <>
-                            <div>
-                              <Label>Overall Trip Rate (₹)</Label>
-                              <Input
-                                type="number"
-                                value={formik.values.rate}
-                                onChange={(e) =>
-                                  formik.setFieldValue("rate", e.target.value)
-                                }
-                                className={
-                                  formik.errors.rate ? "border-red-500" : ""
-                                }
-                                placeholder="Fleet owner payment"
-                              />
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Amount to pay fleet owner
-                              </p>
-                              {formik.errors.rate && (
-                                <p className="text-sm text-red-500 mt-1">
-                                  {formik.errors.rate}
-                                </p>
-                              )}
-                            </div>
-
-                       <CommissionSelector formik={formik}  />
-
-                            <div>
-                              <Label>POD Balance *</Label>
-                              <Input
-                                type="number"
-                                value={formik.values.podBalance}
-                                onChange={(e) =>
-                                  formik.setFieldValue(
-                                    "podBalance",
-                                    e.target.value
-                                  )
-                                }
-                                className={
-                                  formik.errors.podBalance
-                                    ? "border-red-500"
-                                    : ""
-                                }
-                              />
-                              {formik.errors.podBalance && (
-                                <p className="text-sm text-red-500 mt-1">
-                                  {formik.errors.podBalance}
-                                </p>
-                              )}
-                            </div>
-                          </>
-                        )}
+                       
                       </div>
                     </CardContent>
 
@@ -923,7 +896,6 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                                 >
                                                   <div className="flex flex-col">
                                                     <span>{client.name}</span>
-                                                  
                                                   </div>
                                                 </SelectItem>
                                               ))
@@ -943,7 +915,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                       <div>
                                         <Label>Load Date *</Label>
                                         <Input
-                                          type="datetime-local"
+                                          type="date"
                                           value={
                                             formik.values?.clients[index]
                                               ?.loadDate
@@ -1157,7 +1129,6 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                         )}
                                       </div>
                                       <div>
-                                      
                                         {clientErrors?.loadDetails?.weight && (
                                           <p className="text-sm text-red-500 mt-1">
                                             {clientErrors.loadDetails.weight}
@@ -1165,7 +1136,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                         )}
                                       </div>
 
-                                      <div>
+                                      {/* <div>
                                         <Label>Quantity *</Label>
                                         <Input
                                           type="number"
@@ -1192,9 +1163,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                             {clientErrors.loadDetails.quantity}
                                           </p>
                                         )}
-                                      </div>
-
-                                   
+                                      </div> */}
 
                                       <PackagingTypeSelect
                                         value={
@@ -1270,6 +1239,62 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                     </CardContent>
                   </Card>
 
+
+ <div className="grid grid-cols-2 w-full justify-center gap-4">
+
+                     {!isSelfOwned && (
+                          <>
+                            <div>
+                              <Label>Overall Trip Rate (₹)</Label>
+                              <Input
+                                type="number"
+                                value={formik.values.rate}
+                                onChange={(e) =>
+                                  formik.setFieldValue("rate", e.target.value)
+                                }
+                                className={
+                                  formik.errors.rate ? "border-red-500" : ""
+                                }
+                                placeholder="Fleet owner payment"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Amount to pay fleet owner
+                              </p>
+                              {formik.errors.rate && (
+                                <p className="text-sm text-red-500 mt-1">
+                                  {formik.errors.rate}
+                                </p>
+                              )}
+                            </div>
+
+                            <CommissionSelector formik={formik} />
+
+                            <div>
+                              <Label>POD Balance *</Label>
+                              <Input
+                                type="number"
+                                value={formik.values.podBalance}
+                                onChange={(e) =>
+                                  formik.setFieldValue(
+                                    "podBalance",
+                                    e.target.value
+                                  )
+                                }
+                                className={
+                                  formik.errors.podBalance
+                                    ? "border-red-500"
+                                    : ""
+                                }
+                              />
+                              {formik.errors.podBalance && (
+                                <p className="text-sm text-red-500 mt-1">
+                                  {formik.errors.podBalance}
+                                </p>
+                              )}
+                            </div>
+                          </>
+                        )}
+                  </div>
                   {/* Calculation Summary */}
                   {formik.values.clients.some(
                     (client) => client.rate > 0 || client.truckHireCost > 0
@@ -1282,6 +1307,10 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                       overallTripCommission={formik.values.commission} // <--
                     />
                   )}
+
+
+
+                 
 
                   {/* Special Instructions */}
                   <Card>

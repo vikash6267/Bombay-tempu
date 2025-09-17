@@ -48,11 +48,7 @@ const navigation = [
     href: "/trips",
     icon: Route,
   },
-  {
-    name: "Payments",
-    href: "/payments",
-    icon: CreditCard,
-  },{
+ {
     name: "Clients",
     href: "/clients",
     icon: User,

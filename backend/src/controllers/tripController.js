@@ -210,9 +210,9 @@ const createTrip = catchAsync(async (req, res, next) => {
       return next(new AppError("Invalid vehicle specified", 400));
     }
 
-    // if (vehicleDoc.status !== "available") {
-    //   return next(new AppError("Vehicle is not available for booking", 400));
-    // }
+    if (vehicleDoc.status !== "available") {
+      return next(new AppError("Vehicle is not available for booking", 400));
+    }
 
     const vehicleOwnerDetails = vehicleDoc.getOwnerDetails();
     const ownershipType = vehicleOwnerDetails.type;

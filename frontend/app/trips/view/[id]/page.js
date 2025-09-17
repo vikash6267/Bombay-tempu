@@ -156,7 +156,7 @@ const fleetAdvanceSchema = z.object({
 });
 
 // Self Owner Expense Form Component
-function SelfExpenseForm({ handleSubmit, open, onClose }) {
+ function SelfExpenseForm({ handleSubmit, open, onClose }) {
   const form = useForm({
     resolver: zodResolver(selfExpenseSchema),
     defaultValues: {
@@ -368,7 +368,7 @@ function SelfExpenseForm({ handleSubmit, open, onClose }) {
 }
 
 // Self Owner Advance Payment Form Component
-function SelfAdvanceForm({ handleSubmit, open, onClose }) {
+export function SelfAdvanceForm({ handleSubmit, open, onClose }) {
   const form = useForm({
     resolver: zodResolver(selfAdvanceSchema),
     defaultValues: {
