@@ -15,8 +15,15 @@ const { isValidObjectId } = mongoose;
 
 const getAllTrips = catchAsync(async (req, res, next) => {
   const filter = {};
+  const {
+    search,
+    page = 1,
+    limit = 10,
+    clientPaymentNo,
+    clientRateLt,
+  } = req.query;
 
-  // Apply role-based filtering
+  // Role-based filtering
   switch (req.user.role) {
     case "client":
       filter["clients.client"] = req.user.id;
@@ -28,20 +35,67 @@ const getAllTrips = catchAsync(async (req, res, next) => {
     case "driver":
       filter.driver = req.user.id;
       break;
-    // admin can see all trips
   }
 
-  // const features = new APIFeatures(Trip.find(filter), req.query).filter().sort().limitFields().paginate()
+  // Enhanced search: trip number, vehicle reg number, client name
+  if (search && typeof search === "string" && search.trim().length > 0) {
+    const regex = new RegExp(search.trim(), "i");
+    const orClauses = [{ tripNumber: { $regex: regex } }];
 
-  const trips = await Trip.find(filter)
-    .populate("clients.client", "name email phone")
-    .populate("vehicle", "registrationNumber make model ownershipType")
-    .populate("driver", "name email phone")
-    .populate("vehicleOwner.ownerId", "name email phone")
-    .sort({ createdAt: -1 });
+    // Match vehicles by registration number
+    const vehicleIds = await Vehicle.find({ registrationNumber: { $regex: regex } })
+      .select("_id")
+      .then((docs) => docs.map((d) => d._id));
+    if (vehicleIds.length > 0) {
+      orClauses.push({ vehicle: { $in: vehicleIds } });
+    }
+
+    // Match clients by name
+    const clientIds = await User.find({ name: { $regex: regex }, role: "client" })
+      .select("_id")
+      .then((docs) => docs.map((d) => d._id));
+    if (clientIds.length > 0) {
+      orClauses.push({ "clients.client": { $in: clientIds } });
+    }
+
+    filter.$or = orClauses;
+  }
+
+  // Client-based filters using $elemMatch so they apply to the same client entry
+  const clientsElemMatch = {};
+  if (clientPaymentNo && String(clientPaymentNo).trim().length > 0) {
+    clientsElemMatch.invoiceNumber = String(clientPaymentNo).trim();
+  }
+  if (clientRateLt !== undefined && clientRateLt !== null && clientRateLt !== "") {
+    const rateThreshold = Number(clientRateLt);
+    if (!Number.isNaN(rateThreshold)) {
+      clientsElemMatch.rate = { $lt: rateThreshold };
+    }
+  }
+  if (Object.keys(clientsElemMatch).length > 0) {
+    filter.clients = { $elemMatch: clientsElemMatch };
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const [trips, total] = await Promise.all([
+    Trip.find(filter)
+      .populate("clients.client", "name email phone")
+      .populate("vehicle", "registrationNumber make model ownershipType")
+      .populate("driver", "name email phone")
+      .populate("vehicleOwner.ownerId", "name email phone")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit)),
+    Trip.countDocuments(filter),
+  ]);
+
   res.status(200).json({
     status: "success",
     results: trips.length,
+    total,
+    currentPage: Number(page),
+    totalPages: Math.ceil(total / Number(limit)),
     data: {
       trips,
     },
@@ -1279,6 +1333,41 @@ const getTripStats = catchAsync(async (req, res, next) => {
       monthlyStats,
       topClients,
     },
+  });
+});
+
+// List distinct client payment/invoice numbers for dropdown
+const getPaymentNumbers = catchAsync(async (req, res, next) => {
+  const filter = {};
+
+  // Role-based scope: same as getAllTrips
+  switch (req.user.role) {
+    case "client":
+      filter["clients.client"] = req.user.id;
+      break;
+    case "fleet_owner":
+      filter["vehicleOwner.ownerId"] = req.user.id;
+      filter["vehicleOwner.ownershipType"] = "fleet_owner";
+      break;
+    case "driver":
+      filter.driver = req.user.id;
+      break;
+  }
+
+  const agg = [
+    { $match: filter },
+    { $unwind: "$clients" },
+    { $match: { "clients.invoiceNumber": { $ne: null, $ne: "" } } },
+    { $group: { _id: "$clients.invoiceNumber", count: { $sum: 1 } } },
+    { $sort: { _id: 1 } },
+  ];
+
+  const results = await Trip.aggregate(agg);
+  const paymentNumbers = results.map((r) => r._id);
+
+  res.status(200).json({
+    status: "success",
+    data: { paymentNumbers },
   });
 });
 
@@ -2765,6 +2854,7 @@ module.exports = {
   deleteTrip,
   getMyTrips,
   getTripStats,
+  getPaymentNumbers,
   addFleetAdvance,
   addFleetExpense,
   addSelfExpense,

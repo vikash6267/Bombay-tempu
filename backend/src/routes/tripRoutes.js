@@ -14,6 +14,8 @@ router
   .post(restrictTo("admin", "client"), tripController.createTrip);
 
 router.get("/stats", restrictTo("admin"), tripController.getTripStats);
+// Payment numbers dropdown options
+router.get("/payment-numbers", tripController.getPaymentNumbers);
 
 router.get("/my-trips", tripController.getMyTrips);
 

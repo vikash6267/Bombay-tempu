@@ -180,6 +180,9 @@ export const tripsApi = {
   getPodReport: () => apiGet("/trips/pod-status/statement"),
 
   getFleetStatement: ( data) => apiPost(`/trips/fleet/statement`, data),
+
+  // Payment numbers for fixed dropdown
+  getPaymentNumbers: () => apiGet("/trips/payment-numbers"),
 };
 
 // Payments API
