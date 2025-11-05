@@ -772,6 +772,7 @@ const getVehicleExpiries = async (req, res) => {
       month1: [], // expiry within 1 month
       month2: [], // expiry within 2 months
       month3: [], // expiry within 3 months
+      expired: [], // already expired documents
       "500km": [],
       "1000km": [],
       "2000km": []
@@ -837,6 +838,13 @@ const getVehicleExpiries = async (req, res) => {
           });
         } else if (diffMonths <= 3 && diffMonths > 2) {
           result.month3.push({
+            vehicle: vehicle.registrationNumber,
+            docName: doc.name,
+            expiryDate: doc.expiryDate,
+            remainingMonths: diffMonths.toFixed(1)
+          });
+        } else if (diffMonths < 0) {
+          result.expired.push({
             vehicle: vehicle.registrationNumber,
             docName: doc.name,
             expiryDate: doc.expiryDate,

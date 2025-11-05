@@ -6,6 +6,7 @@ const VehicleExpiryList = () => {
     month1: [],
     month2: [],
     month3: [],
+    expired: [],
     "500km": [],
     "1000km": [],
     "2000km": [],
@@ -61,6 +62,10 @@ const VehicleExpiryList = () => {
         dataToRender = filteredData(expiryData.month3);
         title = `Expiring in 3 Months (${dataToRender.length})`;
         break;
+      case "expired":
+        dataToRender = filteredData(expiryData.expired);
+        title = `Expired (${dataToRender.length})`;
+        break;
       case "500km":
         dataToRender = filteredData(expiryData["500km"]);
         title = `Service Due within 500 Km (${dataToRender.length})`;
@@ -99,6 +104,7 @@ const VehicleExpiryList = () => {
           { key: "month1", label: "1 Month", count: expiryData.month1.length },
           { key: "month2", label: "2 Months", count: expiryData.month2.length },
           { key: "month3", label: "3 Months", count: expiryData.month3.length },
+          { key: "expired", label: "Expired", count: expiryData.expired.length },
           { key: "500km", label: "500 Km", count: expiryData["500km"].length },
           { key: "1000km", label: "1000 Km", count: expiryData["1000km"].length },
           { key: "2000km", label: "2000 Km", count: expiryData["2000km"].length },

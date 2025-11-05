@@ -175,7 +175,7 @@ export const tripsApi = {
   clientupdatePodDocs: (id, data) =>
     apiPost(`/trips/${id}/client/podDocument`, data),
   
-  getDashboard: () => apiGet("/auth/dashboard"),
+  getDashboard: (params) => apiGet("/auth/dashboard", params),
   
   getPodReport: () => apiGet("/trips/pod-status/statement"),
 

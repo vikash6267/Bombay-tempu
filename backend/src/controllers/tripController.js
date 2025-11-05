@@ -2147,8 +2147,36 @@ const uploadPodDocument = async (req, res) => {
 
 const getDashboardData = async (req, res) => { 
   try {
-    const trips = await Trip.find().lean();
-    const otherExpenses = await Expense.find().lean();
+    const { month, monthsBack } = req.query;
+
+    let rangeStart = null;
+    let rangeEnd = null;
+    const backCount = Number(monthsBack) > 0 ? Number(monthsBack) : 18;
+
+    if (month) {
+      // month expected in YYYY-MM
+      const [yearStr, monStr] = String(month).split("-");
+      const year = Number(yearStr);
+      const mon = Number(monStr);
+      if (!year || !mon || mon < 1 || mon > 12) {
+        return res.status(400).json({ success: false, message: "Month format must be YYYY-MM" });
+      }
+      const monthStart = new Date(Date.UTC(year, mon - 1, 1, 0, 0, 0));
+      const monthEnd = new Date(Date.UTC(year, mon, 1, 0, 0, 0)); // next month start
+      rangeEnd = monthEnd;
+      rangeStart = new Date(monthStart);
+      rangeStart.setUTCMonth(rangeStart.getUTCMonth() - (backCount - 1));
+    }
+
+    const tripQuery = {};
+    const expenseQuery = {};
+    if (rangeStart && rangeEnd) {
+      tripQuery.scheduledDate = { $gte: rangeStart, $lt: rangeEnd };
+      expenseQuery.paidAt = { $gte: rangeStart, $lt: rangeEnd };
+    }
+
+    const trips = await Trip.find(tripQuery).lean();
+    const otherExpenses = await Expense.find(expenseQuery).lean();
 
     let totalTrips = trips.length;
     let totalPods = 0;
@@ -2233,6 +2261,14 @@ const tripAgresment =
         otherExpense: totalOtherExpense,
         totalFinalProfit,
         pendingPodClientsCount,
+        filter: month
+          ? {
+              month,
+              monthsBack: backCount,
+              rangeStart,
+              rangeEnd,
+            }
+          : null,
       },
     });
   } catch (error) {

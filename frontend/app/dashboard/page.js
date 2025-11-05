@@ -314,11 +314,22 @@ export default function DashboardPage() {
   const { user } = useSelector((state) => state.auth);
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState("");
+
+  // limit month selection to last 18 months from current month
+  const now = new Date();
+  const maxMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const minDate = new Date(now);
+  minDate.setMonth(minDate.getMonth() - 17); // include current month + previous 17 = 18 months
+  const minMonthStr = `${minDate.getFullYear()}-${String(minDate.getMonth() + 1).padStart(2, "0")}`;
 
   const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
-      const res = await tripsApi.getDashboard();
+      const params = selectedMonth
+        ? { month: selectedMonth, monthsBack: 18 }
+        : undefined;
+      const res = await tripsApi.getDashboard(params);
       setDashboardData(res.data);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -329,7 +340,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [selectedMonth]);
 
   return (
     <DashboardLayout>
@@ -343,14 +354,45 @@ export default function DashboardPage() {
             <p className="text-muted-foreground">
               Here's your business overview and performance metrics.
             </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Activity className="h-5 w-5 text-green-500" />
-            <span className="text-sm text-muted-foreground">
-              Live Dashboard
-            </span>
-          </div>
         </div>
+        <div className="flex items-center space-x-2">
+          <Activity className="h-5 w-5 text-green-500" />
+          <span className="text-sm text-muted-foreground">
+            Live Dashboard
+          </span>
+        </div>
+      </div>
+
+      {/* Month Filter */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Month-wise Filter
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <label className="text-sm">Select Month:</label>
+            <input
+              type="month"
+              value={selectedMonth}
+              min={minMonthStr}
+              max={maxMonthStr}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="border rounded px-2 py-1 text-sm"
+            />
+          </div>
+          <button
+            className="text-blue-600 text-sm underline"
+            onClick={() => setSelectedMonth("")}
+          >
+            View All
+          </button>
+          {selectedMonth && (
+            <Badge variant="secondary">Showing last 18 months from {selectedMonth}</Badge>
+          )}
+        </CardContent>
+      </Card>
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
