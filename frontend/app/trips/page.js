@@ -127,6 +127,137 @@ export default function TripsPage() {
     );
   }
 
+const fetchAllTripsForExport = async () => {
+  const response = await api.get(`/trips?limit=2000`);
+  return response.data?.data?.trips || [];
+};
+
+
+  
+
+  // Excel Export Function with Styled Headers
+ const exportToExcel = async () => {
+  try {
+    toast.loading("Preparing Excel export...");
+
+    // ✅ Refetch all trips (max 2000)
+    const freshTrips = await fetchAllTripsForExport();
+
+    if (!freshTrips || freshTrips.length === 0) {
+      toast.dismiss();
+      toast.error("No trips available for export");
+      return;
+    }
+
+    // Transform data
+    const csvData = [];
+    freshTrips.forEach((trip) => {
+      trip.clients.forEach((clientEntry) => {
+        const client = clientEntry.client || clientEntry.CLIENT;
+
+        const formattedDate = clientEntry.loadDate
+          ? new Date(clientEntry.loadDate).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            })
+          : "";
+
+        csvData.push({
+          TripNumber: trip.tripNumber,
+          VehicleNumber: trip.vehicle?.registrationNumber || "",
+          ClientName: client?.name || client?.NAME || "",
+          From: clientEntry.origin?.city || clientEntry.ORIGIN || "",
+          To: clientEntry.destination?.city || clientEntry.DESTINATION || "",
+          Rate: clientEntry.rate || 0,
+          Date: formattedDate,
+          Paid: clientEntry.paidAmount || 0,
+          Pending: clientEntry.dueAmount || 0,
+          ExpensesClient: clientEntry.totalExpense || 0,
+        });
+      });
+    });
+
+    // ✅ Create Excel
+    const wb = XLSX.utils.book_new();
+    const wsData = [
+      [
+        "TRIP NUMBER",
+        "VEHICLE NUMBER",
+        "CLIENT NAME",
+        "FROM",
+        "TO",
+        "RATE",
+        "DATE",
+        "PAID",
+        "PENDING",
+        "EXPENSES CLIENT",
+      ],
+      ...csvData.map((r) => [
+        r.TripNumber,
+        r.VehicleNumber,
+        r.ClientName,
+        r.From,
+        r.To,
+        r.Rate,
+        r.Date,
+        r.Paid,
+        r.Pending,
+        r.ExpensesClient,
+      ]),
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Style header
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "000000" }, sz: 12 },
+      fill: { patternType: "solid", fgColor: { rgb: "FFFF00" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
+    };
+
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c });
+      if (ws[cellAddress]) ws[cellAddress].s = headerStyle;
+    }
+
+    ws["!cols"] = [
+      { width: 15 },
+      { width: 18 },
+      { width: 20 },
+      { width: 15 },
+      { width: 15 },
+      { width: 12 },
+      { width: 12 },
+      { width: 12 },
+      { width: 15 },
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Trips Data");
+
+    const filename = `trips_export_${new Date()
+      .toISOString()
+      .split("T")[0]}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+
+    toast.dismiss();
+    toast.success(`Excel exported successfully (${freshTrips.length} trips)!`);
+  } catch (error) {
+    toast.dismiss();
+    toast.error("Failed to export Excel");
+    console.error("Export error:", error);
+  }
+};
+console.log(trips)
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -142,6 +273,24 @@ export default function TripsPage() {
             <Plus className="mr-2 h-4 w-4" />
             Create Trip
           </Button>
+           <div className="flex gap-2">
+             {/* CSV Export Button */}
+            {/* <CSVLink
+              data={csvData}
+              filename={`trips_export_${new Date().toISOString()}.csv`}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Export CSV
+            </CSVLink> */}
+            
+            {/* Excel Export Button */}
+            <Button
+              onClick={exportToExcel}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              Export Excel
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}

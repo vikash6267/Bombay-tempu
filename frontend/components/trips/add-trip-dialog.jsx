@@ -456,7 +456,9 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
   const [showAddDriver, setShowAddDriver] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const { user } = useSelector((state) => state.auth);
-  const [searchQuery, setSearchQuery] = useState(""); // State to hold the search query
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [vehicleSearchQuery, setVehicleSearchQuery] = useState("");
+  const [driverSearchQuery, setDriverSearchQuery] = useState("");
 
   // Optimized queries with proper caching
   const {
@@ -502,18 +504,20 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
   const drivers = useMemo(() => driversData?.data?.users || [], [driversData]);
 
   const filteredVehicles = vehicles.filter((vehicle) =>
-    vehicle.registrationNumber.toLowerCase().includes(searchQuery.toLowerCase())
+    vehicle.registrationNumber
+      .toLowerCase()
+      .includes(vehicleSearchQuery.toLowerCase())
   );
 
   const filteredClients = clients.filter(
     (client) =>
-      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchQuery.toLowerCase())
+      client.name.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
+      client.email.toLowerCase().includes(clientSearchQuery.toLowerCase())
   );
   const filteredDrivers = drivers.filter(
     (driver) =>
-      driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      driver.phone.includes(searchQuery) // Phone number search can be exact or partial
+      driver.name.toLowerCase().includes(driverSearchQuery.toLowerCase()) ||
+      driver.phone.includes(driverSearchQuery) // Phone number search can be exact or partial
   );
 
   const handleSubmit = useCallback(
@@ -629,6 +633,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                 formik.setFieldValue("commission", 0);
                                 formik.setFieldValue("podBalance", 0);
                               }
+                              setVehicleSearchQuery("");
                             }}
                             value={formik.values.vehicle} // Ensure the selected value is displayed
                           >
@@ -645,15 +650,16 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                 }
                               />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent onOpenAutoFocus={(e) => e.preventDefault()}>
                               {/* Search Input Field */}
                               <div className="px-2 py-1">
                                 <Input
                                   placeholder="Search vehicle by registration number..."
-                                  value={searchQuery}
+                                  value={vehicleSearchQuery}
                                   onChange={(e) =>
-                                    setSearchQuery(e.target.value)
+                                    setVehicleSearchQuery(e.target.value)
                                   }
+                                  onKeyDown={(e) => e.stopPropagation()}
                                   className="w-full"
                                 />
                               </div>
@@ -713,6 +719,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                   return;
                                 }
                                 formik.setFieldValue("driver", value);
+                                setDriverSearchQuery("");
                               }}
                             >
                               <SelectTrigger
@@ -728,15 +735,16 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                   }
                                 />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent onOpenAutoFocus={(e) => e.preventDefault()}>
                                 {/* Search Input Field for Drivers */}
                                 <div className="px-2 py-1">
                                   <Input
                                     placeholder="Search driver by name or phone..."
-                                    value={searchQuery}
+                                    value={driverSearchQuery}
                                     onChange={(e) =>
-                                      setSearchQuery(e.target.value)
+                                      setDriverSearchQuery(e.target.value)
                                     }
+                                    onKeyDown={(e) => e.stopPropagation()}
                                     className="w-full"
                                   />
                                 </div>
@@ -850,6 +858,7 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                               `clients.${index}.client`,
                                               value
                                             );
+                                            setClientSearchQuery("");
                                           }}
                                         >
                                           <SelectTrigger
@@ -867,15 +876,16 @@ export function EnhancedAddTripDialog({ open, onOpenChange, onSuccess }) {
                                               }
                                             />
                                           </SelectTrigger>
-                                          <SelectContent>
+                                          <SelectContent onOpenAutoFocus={(e) => e.preventDefault()}>
                                             {/* Search Input Field for Clients */}
                                             <div className="px-2 py-1">
                                               <Input
                                                 placeholder="Search client by name or email..."
-                                                value={searchQuery}
+                                                value={clientSearchQuery}
                                                 onChange={(e) =>
-                                                  setSearchQuery(e.target.value)
+                                                  setClientSearchQuery(e.target.value)
                                                 }
+                                                onKeyDown={(e) => e.stopPropagation()}
                                                 className="w-full"
                                               />
                                             </div>

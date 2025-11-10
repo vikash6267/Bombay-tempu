@@ -137,7 +137,7 @@ export default function LogsPage() {
                     <TableHead>Narration</TableHead>
                     <TableHead>Action</TableHead>
                     <TableHead className="text-right">Withdrawal Amt</TableHead>
-                    <TableHead className="text-right">Deposit Amt</TableHead>
+                    <TableHead className="text-right">Credit Amt</TableHead>
                     <TableHead>User Name</TableHead>
                     {/* <TableHead className="text-right">Closing Balance</TableHead> */}
                   </TableRow>

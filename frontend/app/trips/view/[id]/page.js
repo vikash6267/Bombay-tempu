@@ -2052,76 +2052,77 @@ export default function TripDetailPage() {
                           </p>
                         </div>
 
-                        {trip.selfAdvances && trip.selfAdvances.length > 0 ? (
-                          <div className="space-y-3">
-                            {trip.selfAdvances.map((advance, index) => (
-                              <div
-                                key={index}
-                                className="flex justify-between items-start p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
-                              >
-                                <div className="flex items-start space-x-3">
-                                  <div className="text-2xl">💰</div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      <Badge
-                                        className={getRecipientColor(
-                                          advance.paymentFor
-                                        )}
-                                      >
-                                        {getExpenseForIcon(advance.paymentFor)}{" "}
-                                        {advance.paymentFor}
-                                      </Badge>
-                                      <span className="text-sm text-gray-500">
-                                        {formatDate(
-                                          advance.createdAt,
-                                          "MMM dd, yyyy HH:mm"
-                                        )}
-                                      </span>
-                                    </div>
-                                    <div className="font-medium text-gray-900 mb-1">
-                                      {advance.reason}
-                                    </div>
-                                    <div className="text-sm text-gray-600 mb-1">
-                                      To: {advance.recipientName}
-                                    </div>
-                                    {advance.description && (
-                                      <div className="text-sm text-gray-600 mb-1">
-                                        {advance.description}
-                                      </div>
-                                    )}
-                                    {advance.referenceNumber && (
-                                      <div className="text-xs text-blue-600">
-                                        Ref: {advance.referenceNumber}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-lg font-bold text-purple-600">
-                                    {formatCurrency(advance.amount)}
-                                  </div>
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteSelfAdvance(index)
-                                    }
-                                    className="text-red-500 text-sm mt-2 hover:underline"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-gray-500">
-                            <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                            <p>No advance payments recorded yet</p>
-                            <p className="text-sm">
-                              Click "Add Advance" to start tracking your advance
-                              payments
-                            </p>
-                          </div>
-                        )}
+                       {trip.selfAdvances && trip.selfAdvances.length > 0 ? (
+  <div className="space-y-3">
+    {[...trip.selfAdvances]  // clone array to avoid mutation
+      .sort((a, b) => new Date(b.paidAt || b.createdAt) - new Date(a.paidAt || a.createdAt)) // newest first
+      .map((advance, index) => (
+        <div
+          key={index}
+          className="flex justify-between items-start p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-start space-x-3">
+            <div className="text-2xl">💰</div>
+            <div className="flex-1">
+              <div className="flex items-center space-x-2 mb-1">
+                <Badge className={getRecipientColor(advance.paymentFor)}>
+                  {getExpenseForIcon(advance.paymentFor)} {advance.paymentFor}
+                </Badge>
+
+                {/* ✅ Here paidAt date shown */}
+                <span className="text-sm text-gray-500">
+                  {formatDate(
+                    advance.paidAt || advance.createdAt,
+                    "MMM dd, yyyy HH:mm"
+                  )}
+                </span>
+              </div>
+
+              <div className="font-medium text-gray-900 mb-1">
+                {advance.reason}
+              </div>
+              <div className="text-sm text-gray-600 mb-1">
+                To: {advance.recipientName}
+              </div>
+
+              {advance.description && (
+                <div className="text-sm text-gray-600 mb-1">
+                  {advance.description}
+                </div>
+              )}
+
+              {advance.referenceNumber && (
+                <div className="text-xs text-blue-600">
+                  Ref: {advance.referenceNumber}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="text-right">
+            <div className="text-lg font-bold text-purple-600">
+              {formatCurrency(advance.amount)}
+            </div>
+            <button
+              onClick={() => handleDeleteSelfAdvance(index)}
+              className="text-red-500 text-sm mt-2 hover:underline"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+    ))}
+  </div>
+) : (
+  <div className="text-center py-8 text-gray-500">
+    <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+    <p>No advance payments recorded yet</p>
+    <p className="text-sm">
+      Click "Add Advance" to start tracking your advance payments
+    </p>
+  </div>
+)}
+
                       </div>
                     </TabsContent>
                   </Tabs>

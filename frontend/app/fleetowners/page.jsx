@@ -111,7 +111,7 @@ export default function FleetOwnersPage() {
     { accessorKey: "name", header: "Name" },
    
     { accessorKey: "phone", header: "Phone" },
-    { accessorKey: "totalPendingAmount", header: "Pending" },
+    { accessorKey: "totalPendingAmount", header: "TotalTrips Amt" },
     { accessorKey: "totalPodPending", header: "POD Pending" },
     {
       accessorKey: "commissionRate",
