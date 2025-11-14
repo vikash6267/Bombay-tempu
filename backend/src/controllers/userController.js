@@ -31,7 +31,7 @@ const getAllUsers = catchAsync(async (req, res, next) => {
         trips.forEach((trip) => {
           const podPending = toNum(trip.podBalance) - toNum(trip.podBalanceTotalPaid);
           const pendingAmount = toNum(trip.rate) - toNum(trip.totalFleetAdvance);
-          totalPendingAmount += pendingAmount;
+          totalPendingAmount += pendingAmount - toNum(trip.commission)  ;
           totalPodPending += podPending;
         });
 

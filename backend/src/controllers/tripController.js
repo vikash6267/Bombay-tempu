@@ -9,6 +9,7 @@ const Email = require("../utils/email");
 const { CounterService } = require("../models/Counter");
 const mongoose = require("mongoose");
 const Expense = require("../models/Expenses"); // ✅ Import your Expense model
+const ActivityLog = require("../models/ActivityLog"); // ✅ Import your Expense model
 const { logActivity } = require("../middleware/activityLogger");
 
 const { isValidObjectId } = mongoose;
@@ -778,29 +779,30 @@ const addPaidAmount = catchAsync(async (req, res, next) => {
 });
 
 const addAdvancePayment = catchAsync(async (req, res, next) => {
-  const { amount, paidTo, purpose, notes, index, pymentMathod } = req.body;
+  const { amount, paidTo, purpose, notes, index, pymentMathod, paidAt } = req.body;
 
   console.log(req.body);
-const trip = await Trip.findById(req.params.id)
-  .populate({
-    path: "clients.client", // ✅ clients array ke andar client ko populate karega
-    select: "name email phone", // jo fields chahiye wo select karo
-  });  if (!trip || !trip.clients[index]) {
+
+  const trip = await Trip.findById(req.params.id)
+    .populate({
+      path: "clients.client",
+      select: "name email phone",
+    });
+
+  if (!trip || !trip.clients[index]) {
     return next(new AppError("Trip or client not found", 404));
   }
 
   const client = trip.clients[index];
 
-  // Validate
+  // Validation
   if (amount <= 0) {
     return next(new AppError("Advance amount must be positive", 400));
   }
 
   const newPaidAmount = client.paidAmount + amount;
   if (newPaidAmount > client.totalRate) {
-    return next(
-      new AppError("Advance exceeds total rate for this client", 400)
-    );
+    return next(new AppError("Advance exceeds total rate for this client", 400));
   }
 
   const advanceData = {
@@ -809,16 +811,18 @@ const trip = await Trip.findById(req.params.id)
     paidTo,
     purpose: purpose || "general",
     notes,
-    pymentMathod: pymentMathod || "cash",
+    paymentMethod: pymentMathod || "cash", // ✅ keep same key everywhere
+    paidAt: paidAt ? new Date(paidAt) : new Date(), // ✅ ensure valid date
   };
 
+  // Add advance to trip
   const tripDetails = await trip.addAdvance(advanceData, index);
-console.log(client)
+
   // Log activity
   await logActivity({
     user: req.user._id,
-    action: 'advance',
-    category: 'financial',
+    action: "advance",
+    category: "financial",
     description: `Client (${client?.client?.name}) advance payment added: ₹${amount} for trip ${trip.tripNumber}`,
     details: {
       amount,
@@ -828,11 +832,12 @@ console.log(client)
       paymentMethod: pymentMathod,
       clientIndex: index,
       tripNumber: trip.tripNumber,
-      clientName: client.client?.name || 'Unknown'
+      clientName: client.client?.name || "Unknown",
     },
     relatedTrip: trip._id,
     relatedUser: client.client,
-    req
+    date: paidAt ? new Date(paidAt) : new Date(), // ✅ consistent logging date
+    req,
   });
 
   // Update user record
@@ -844,101 +849,169 @@ console.log(client)
       purpose,
       notes,
       tripId: trip._id,
+      paidAt: paidAt ? new Date(paidAt) : new Date(), // ✅ added to user record too
     });
     await user.save();
   }
 
   res.status(200).json({
     status: "success",
+    message: "Advance payment added successfully",
     data: {
       trip,
-      message: "Advance payment added successfully",
     },
   });
 });
 
+
+
+
+
+
+const deleteAdvancePayment = catchAsync(async (req, res, next) => {
+  const { id } = req.params; // tripId
+  const { clientIndex, advanceIndex } = req.body;
+
+  const trip = await Trip.findById(id);
+  if (!trip || !trip.clients?.[clientIndex]) {
+    return next(new AppError("Trip or client not found", 404));
+  }
+
+  const client = trip.clients[clientIndex];
+  const advance = client.advances?.[advanceIndex];
+
+  if (!advance) {
+    return next(new AppError("Advance payment not found", 404));
+  }
+
+  const { amount, paidTo, purpose, notes } = advance;
+
+  // Subtract amount from paidAmount
+  client.paidAmount = (client.paidAmount || 0) - amount;
+
+  // Remove from client advances
+  client.advances.splice(advanceIndex, 1);
+  trip.markModified(`clients.${clientIndex}`);
+  await trip.save();
+
+  // Remove from user.advanceRecords
+  const user = await User.findById(client.client);
+  if (user) {
+    user.advanceRecords = user.advanceRecords.filter((record) => {
+      return !(
+        record.tripId?.toString() === trip._id.toString() &&
+        record.amount === amount &&
+        record.paidTo === paidTo &&
+        record.purpose === purpose &&
+        record.notes === notes
+      );
+    });
+    await user.save();
+  }
+
+  // 🧹 Delete related ActivityLog
+  await ActivityLog.deleteOne({
+    relatedTrip: trip._id,
+    relatedUser: client.client,
+    action: "advance",
+    "details.amount": amount,
+    "details.paidTo": paidTo,
+    "details.purpose": purpose
+  });
+
+  res.status(200).json({
+    status: "success",
+    message: "Advance payment and related logs deleted successfully",
+    data: { trip },
+  });
+});
+
+
+// ================= addExpense =================
 const addExpense = catchAsync(async (req, res, next) => {
-  const { type, amount, description, paidBy, index } = req.body;
+  const { type, amount, description, paidBy, index, paidAt } = req.body;
 
   console.log("➡️ Expense Request Body:", req.body);
 
   try {
-   const trip = await Trip.findById(req.params.id)
-  .populate({
-    path: "clients.client", // ✅ clients array ke andar client ko populate karega
-    select: "name email phone", // jo fields chahiye wo select karo
-  });
-
-
+    const trip = await Trip.findById(req.params.id).populate({
+      path: "clients.client",
+      select: "name email phone",
+    });
 
     if (!trip || !trip.clients[index]) {
       return next(new AppError("Trip or client not found", 404));
     }
 
-    if (amount <= 0) {
+    const expenseAmount = Number(amount);
+    if (!expenseAmount || expenseAmount <= 0) {
       return next(new AppError("Expense amount must be positive", 400));
     }
 
-    const client = trip.clients[index];
+    // Set defaults for type and description
+    const expenseType = type?.trim() || "General";
+    const expenseDesc = description?.trim() || "No description";
 
+    const client = trip.clients[index];
     const oldExpense = client.totalExpense || 0;
-    const newExpense = oldExpense + amount;
+    const newExpense = oldExpense + expenseAmount;
 
     console.log("📌 Old totalExpense:", oldExpense);
-    console.log("📌 Adding Expense Amount:", amount);
+    console.log("📌 Adding Expense Amount:", expenseAmount);
     console.log("✅ Updated totalExpense:", newExpense);
 
     client.totalExpense = newExpense;
-    client.dueAmount += newExpense;
+    client.dueAmount += expenseAmount;
+
     const expenseData = {
-      type,
-      amount,
-      description,
+      type: expenseType,
+      amount: expenseAmount,
+      description: expenseDesc,
       paidBy: paidBy || "driver",
-      paidAt: new Date(),
+      paidAt: paidAt ? new Date(paidAt) : new Date(),
     };
 
     client.expenses.push(expenseData);
-
-    // Mark entire client object as modified if needed
     trip.markModified(`clients.${index}`);
-
-    console.log("📦 Saving trip...");
     await trip.save();
     console.log("✅ Trip saved");
 
-    // Log activity
+    // 🧾 Log activity
     await logActivity({
       user: req.user._id,
-      action: 'expense',
-      category: 'financial',
-      description: `Client (${client?.client?.name}) expense added: ₹${amount} for trip ${trip.tripNumber}`,
+      action: "expense",
+      category: "financial",
+      description: `Client (${client?.client?.name}) expense added: ₹${expenseAmount.toFixed(
+        2
+      )} for trip ${trip.tripNumber}`,
       details: {
-        type,
-        amount,
-        description,
-        paidBy,
+        type: expenseType,
+        amount: expenseAmount,
+        description: expenseDesc,
+        paidBy: paidBy || "driver",
         clientIndex: index,
         tripNumber: trip.tripNumber,
         oldExpense,
         newExpense,
-        clientName: client.client?.name || 'Unknown'
+        clientName: client.client?.name || "Unknown",
       },
       relatedTrip: trip._id,
       relatedUser: client.client,
-      req
+      date: paidAt ? new Date(paidAt) : new Date(),
+      req,
     });
 
-    // Optional: User expense history
+    // 👤 Update user expense history
     const userId = client.client || client.user;
     if (userId) {
       const user = await User.findById(userId);
       if (user) {
         user.expenseRecords.push({
-          type,
-          amount,
-          description,
+          type: expenseType,
+          amount: expenseAmount,
+          description: expenseDesc,
           tripId: trip._id,
+          paidAt: paidAt ? new Date(paidAt) : new Date(),
         });
         await user.save();
         console.log("✅ User expense record updated");
@@ -960,58 +1033,7 @@ const addExpense = catchAsync(async (req, res, next) => {
   }
 });
 
-const deleteAdvancePayment = catchAsync(async (req, res, next) => {
-  const { id } = req.params; // tripId
-  const { clientIndex, advanceIndex } = req.body;
-
-  const trip = await Trip.findById(id);
-  if (!trip || !trip.clients?.[clientIndex]) {
-    return next(new AppError("Trip or client not found", 404));
-  }
-
-  const client = trip.clients[clientIndex];
-  const advance = client.advances?.[advanceIndex];
-
-  if (!advance) {
-    return next(new AppError("Advance payment not found", 404));
-  }
-
-  const amount = advance.amount || 0;
-  const paidTo = advance.paidTo;
-  const purpose = advance.purpose;
-  const notes = advance.notes;
-
-  // Subtract amount from paidAmount
-  client.paidAmount = (client.paidAmount || 0) - amount;
-
-  // Remove from client advances
-  client.advances.splice(advanceIndex, 1);
-  trip.markModified(`clients.${clientIndex}`);
-
-  await trip.save();
-
-  // Remove from user.advanceRecords
-  const user = await User.findById(client.client);
-  if (user) {
-    user.advanceRecords = user.advanceRecords.filter((record) => {
-      return !(
-        record.tripId?.toString() === trip._id.toString() &&
-        record.amount === amount &&
-        record.paidTo === paidTo &&
-        record.purpose === purpose &&
-        record.notes === notes
-      );
-    });
-    await user.save();
-  }
-
-  res.status(200).json({
-    status: "success",
-    message: "Advance payment deleted successfully",
-    data: { trip },
-  });
-});
-
+// ================= deleteExpense =================
 const deleteExpense = catchAsync(async (req, res, next) => {
   const { id } = req.params; // tripId
   const { clientIndex, expenseIndex } = req.body;
@@ -1023,48 +1045,72 @@ const deleteExpense = catchAsync(async (req, res, next) => {
 
   const client = trip.clients[clientIndex];
   const expense = client.expenses?.[expenseIndex];
-
   if (!expense) {
     return next(new AppError("Expense not found", 404));
   }
 
-  const amount = expense.amount || 0;
-  const type = expense.type;
-  const description = expense.description;
+  const { amount, type, description, paidBy } = expense;
 
-  // Subtract from totalExpense and dueAmount
+  // Update totals
   client.totalExpense = (client.totalExpense || 0) - amount;
   client.dueAmount = (client.dueAmount || 0) - amount;
 
-  // Remove from client expenses
+  // Remove expense from trip
   client.expenses.splice(expenseIndex, 1);
   trip.markModified(`clients.${clientIndex}`);
-
   await trip.save();
 
   // Remove from user.expenseRecords
-  const userId = client.client || client.user;
+  const userId = client.client?._id || client.user;
   if (userId) {
     const user = await User.findById(userId);
     if (user) {
-      user.expenseRecords = user.expenseRecords.filter((record) => {
-        return !(
-          record.tripId?.toString() === trip._id.toString() &&
-          record.amount === amount &&
-          record.type === type &&
-          record.description === description
-        );
-      });
+      const before = user.expenseRecords.length;
+      user.expenseRecords = user.expenseRecords.filter(
+        r =>
+          !(r.tripId?.toString() === trip._id.toString() &&
+            Number(r.amount) === Number(amount) &&
+            r.type === type &&
+            r.description?.trim() === description?.trim())
+      );
       await user.save();
+      console.log(`🗑️ Removed ${before - user.expenseRecords.length} expense record(s) from user`);
     }
   }
 
+  // Delete ActivityLogs
+  const relatedUserId = client.client?._id || client.user;
+ const deletedLogs = await ActivityLog.deleteMany({
+  relatedTrip: trip._id,
+  action: "expense",
+  "details.amount": Number(amount),
+  "details.type": type,
+  "details.description": { $regex: new RegExp(description?.trim(), "i") },
+  "details.paidBy": paidBy || "driver",
+  $or: [
+    { relatedUser: client.client?._id },
+    { "relatedUser._id": client.client?._id }
+  ]
+});
+
+
+  console.log(`🗑️ Deleted logs: ${deletedLogs.deletedCount || 0}`);
+
   res.status(200).json({
     status: "success",
-    message: "Expense deleted successfully",
+    message: "Expense and related logs deleted successfully",
     data: { trip },
   });
 });
+
+
+
+
+
+
+
+
+
 
 const uploadDocument = catchAsync(async (req, res, next) => {
   if (!req.file) {
@@ -1431,6 +1477,7 @@ const addFleetAdvance = async (req, res) => {
         },
         relatedTrip: trip._id,
         severity: 'medium',
+        date: date ? new Date(date) : new Date(),
         req
       });
       console.log('✅ Fleet advance activity logged successfully');
@@ -1514,6 +1561,7 @@ const trip = await Trip.findById(tripId)
       },
       relatedTrip: trip._id,
       severity: 'medium',
+      date: deletedAdvance.date ? new Date(deletedAdvance.date) : new Date(),
       req
     });
 
@@ -1530,7 +1578,7 @@ const trip = await Trip.findById(tripId)
 
 const addFleetExpense = async (req, res) => {
   const { tripId } = req.params;
-  const { amount, reason, category, description, receiptNumber } = req.body;
+  const { amount, reason, category, description, receiptNumber, date } = req.body;
 
   try {
 const trip = await Trip.findById(tripId)
@@ -1589,6 +1637,7 @@ const trip = await Trip.findById(tripId)
       },
       relatedTrip: trip._id,
       severity: 'medium',
+      date: date ? new Date(date) : new Date(),
       req
     });
 
@@ -1602,7 +1651,7 @@ const trip = await Trip.findById(tripId)
 // Add Self Expense
 const addSelfExpense = async (req, res) => {
   const { tripId } = req.params;
-  const { amount, reason, category, expenseFor, description, receiptNumber } =
+  const { amount, reason, category, expenseFor, description, receiptNumber, date } =
     req.body;
 
   try {
@@ -1621,7 +1670,7 @@ const addSelfExpense = async (req, res) => {
       expenseFor,
       description,
       receiptNumber,
-      paidAt: new Date(),
+  paidAt: date ? new Date(date) : new Date(), 
       tripId,
     };
 
@@ -1665,6 +1714,7 @@ const addSelfExpense = async (req, res) => {
       relatedUser: expenseFor === 'driver' ? trip.driver : null,
       relatedVehicle: expenseFor === 'vehicle' ? trip.vehicle : null,
       severity: 'medium',
+      date: date ? new Date(date) : new Date(),
       req
     });
 
@@ -1739,6 +1789,7 @@ const deleteSelfExpense = async (req, res) => {
       relatedUser: expense.expenseFor === 'driver' ? trip.driver : null,
       relatedVehicle: expense.expenseFor === 'vehicle' ? trip.vehicle : null,
       severity: 'medium',
+      date: expense.paidAt ? new Date(expense.paidAt) : new Date(),
       req
     });
 
@@ -1763,6 +1814,7 @@ const addSelfAdvance = async (req, res) => {
     recipientName,
     description,
     referenceNumber,
+    date,
   } = req.body;
 
   try {
@@ -1780,7 +1832,7 @@ const addSelfAdvance = async (req, res) => {
       recipientName,
       description,
       referenceNumber,
-      paidAt: new Date(),
+  paidAt: date ? new Date(date) : new Date(), // <-- use request date
       tripId,
     };
 
@@ -1823,6 +1875,7 @@ const addSelfAdvance = async (req, res) => {
       relatedUser: paymentFor === 'driver' ? trip.driver : null,
       relatedVehicle: paymentFor === 'vehicle' ? trip.vehicle : null,
       severity: 'medium',
+      date: date ? new Date(date) : new Date(),
       req
     });
 
@@ -1893,6 +1946,7 @@ const deleteSelfAdvance = async (req, res) => {
       relatedUser: advance.paymentFor === 'driver' ? trip.driver : null,
       relatedVehicle: advance.paymentFor === 'vehicle' ? trip.vehicle : null,
       severity: 'medium',
+      date: advance.paidAt ? new Date(advance.paidAt) : new Date(),
       req
     });
 
@@ -1909,7 +1963,7 @@ const deleteSelfAdvance = async (req, res) => {
 
 const updatePodDetails = async (req, res) => {
   const { id } = req.params; // Trip ID
-  const { podGive, paymentType, notes } = req.body;
+  const { podGive, paymentType, notes, date } = req.body;
 
   try {
     const trip = await Trip.findById(id);
@@ -1945,6 +1999,7 @@ const updatePodDetails = async (req, res) => {
         podBalanceCleared: true
       },
       relatedTrip: trip._id,
+      date: date ? new Date(date) : new Date(),
       req
     });
 

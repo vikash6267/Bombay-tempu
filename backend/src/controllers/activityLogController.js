@@ -34,6 +34,7 @@ const createActivityLog = catchAsync(async (req, res, next) => {
 // Get all activity logs with filtering and pagination
 const getAllActivityLogs = catchAsync(async (req, res, next) => {
   let filter = {};
+  const { page = 1, limit = 10 } = req.query;
   console.log(req.query);
 
   // Role-based access control
@@ -58,7 +59,6 @@ const getAllActivityLogs = catchAsync(async (req, res, next) => {
     filter.description = regex;
   }
 
-
   console.log(filter);
   // Date range filter
   if (req.query.startDate || req.query.endDate) {
@@ -71,21 +71,28 @@ const getAllActivityLogs = catchAsync(async (req, res, next) => {
     }
   }
 
-  const features = new APIFeatures(ActivityLog.find(), req.query, filter)
-    .filter()
-    .sort()
-    .limitFields()
-    .paginate();
+  // Pagination calculation
+  const skip = (Number(page) - 1) * Number(limit);
 
-  const logs = await features.query
-    .populate("user", "name email role")
-    .populate("relatedTrip", "tripNumber")
-    .populate("relatedUser", "name email")
-    .populate("relatedVehicle", "registrationNumber");
+  // Query with pagination
+  const [logs, total] = await Promise.all([
+    ActivityLog.find(filter)
+      .populate("user", "name email role")
+      .populate("relatedTrip", "tripNumber")
+      .populate("relatedUser", "name email")
+      .populate("relatedVehicle", "registrationNumber")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit)),
+    ActivityLog.countDocuments(filter),
+  ]);
 
   res.status(200).json({
     status: "success",
     results: logs.length,
+    total,
+    currentPage: Number(page),
+    totalPages: Math.ceil(total / Number(limit)),
     data: {
       logs,
     },

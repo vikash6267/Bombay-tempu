@@ -1993,10 +1993,8 @@ export default function TripDetailPage() {
                                         {expense.expenseFor}
                                       </Badge>
                                       <span className="text-sm text-gray-500">
-                                        {formatDate(
-                                          expense.createdAt,
-                                          "MMM dd, yyyy HH:mm"
-                                        )}
+                                       {formatDate(expense.paidAt || expense.createdAt, "MMM dd, yyyy HH:mm")}
+
                                       </span>
                                     </div>
                                     <div className="font-medium text-gray-900 mb-1">

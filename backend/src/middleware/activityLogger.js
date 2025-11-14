@@ -13,6 +13,7 @@ const logActivity = async ({
   relatedVehicle,
   relatedPayment,
   severity = 'medium',
+  date,
   req
 }) => {
   try {
@@ -29,7 +30,8 @@ const logActivity = async ({
         userAgent: req?.get('User-Agent'),
         timestamp: new Date()
       },
-      severity
+      severity,
+      createdAt: date || new Date()
     };
 
     // Add related entities if provided
