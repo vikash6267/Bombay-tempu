@@ -142,6 +142,7 @@ const fleetExpenseSchema = z.object({
     "permit",
     "other",
   ]),
+  date: z.string().min(1, "Date is required"),
   description: z.string().optional(),
   receiptNumber: z.string().optional(),
 });
@@ -156,7 +157,7 @@ const fleetAdvanceSchema = z.object({
 });
 
 // Self Owner Expense Form Component
- function SelfExpenseForm({ handleSubmit, open, onClose }) {
+function SelfExpenseForm({ handleSubmit, open, onClose }) {
   const form = useForm({
     resolver: zodResolver(selfExpenseSchema),
     defaultValues: {
@@ -523,6 +524,7 @@ function FleetExpenseForm({ handleSubmit, open, onClose }) {
       amount: 0,
       reason: "",
       category: "fuel",
+      date: new Date().toISOString().split("T")[0],
       description: "",
       receiptNumber: "",
     },
@@ -601,6 +603,24 @@ function FleetExpenseForm({ handleSubmit, open, onClose }) {
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      {...field}
+                      className="focus:ring-red-500 focus:border-red-500"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -1148,6 +1168,19 @@ export default function TripDetailPage() {
       toast.error(error.response?.data?.message || "Failed to delete advance");
     }
   };
+const handleDeleteFleetExpenses = async (expenseId) => {
+  if (!window.confirm("Are you sure you want to delete this expense?")) return;
+
+  try {
+    await tripsApi.deleteFleetExpense(params.id, expenseId);
+    toast.success("Expense deleted");
+    queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Failed to delete expense");
+  }
+};
+
+
 
   const handleDeleteSelfExpense = async (expenseIndex) => {
     const confirmed = window.confirm(
@@ -1437,11 +1470,12 @@ export default function TripDetailPage() {
     totalRevenue - (isFleetOwner ? totalFleetCosts : totalSelfCosts);
 
   const tripRate = trip.rate || 0;
-  const totalGivenToFleetOwner = totalFleetExpenses + totalFleetAdvances;
+  const totalGivenToFleetOwner =  totalFleetAdvances;
   const commission = trip.commission || 0;
   const podBalance = trip.podBalance || 0;
 
-  const finalAmount = tripRate - totalGivenToFleetOwner - podBalance - commission;
+  const finalAmount =
+    tripRate - totalGivenToFleetOwner - podBalance - commission;
 
   const getCategoryColor = (category) => {
     const colors = {
@@ -1695,9 +1729,18 @@ export default function TripDetailPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total Freight</span>
                     <span className="font-semibold text-blue-800">
-                      ₹{trip?.rate?.toLocaleString() || 0}
+                      ₹{((trip?.rate || 0) + (trip?.totalFleetExpense || 0)).toLocaleString()}
                     </span>
                   </div>
+
+                  {trip?.totalFleetExpense > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Fleet Owner Expense</span>
+                      <span className="font-semibold text-orange-800">
+                        - ₹{trip?.totalFleetExpense?.toLocaleString() || 0}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Commission</span>
@@ -1713,6 +1756,22 @@ export default function TripDetailPage() {
                     </span>
                   </div>
 
+                  {(() => {
+                    const totalClientArgestment = trip.clients?.reduce(
+                      (sum, c) => sum + (Number(c?.argestment) || 0),
+                      0
+                    ) || 0;
+                    
+                    return totalClientArgestment > 0 ? (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Argestment</span>
+                        <span className="font-semibold text-red-800">
+                          ₹{totalClientArgestment.toLocaleString()}
+                        </span>
+                      </div>
+                    ) : null;
+                  })()}
+
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Paid Balance</span>
                     <span className="font-semibold text-teal-800">
@@ -1725,7 +1784,7 @@ export default function TripDetailPage() {
                       Pending Balance
                     </span>
                     <span className="font-semibold text-red-800">
-                      {formatCurrency(finalAmount) || 0}
+                      {formatCurrency(finalAmount + (trip?.totalFleetExpense || 0)) || 0}
                     </span>
                   </div>
 
@@ -1738,9 +1797,12 @@ export default function TripDetailPage() {
                       ) || 0;
                     const tripRate = Number(trip?.rate) || 0;
                     const commission = Number(trip?.commission) || 0;
-                    const pod = Number(trip?.pod) || 0;
+                    const totalClientArgestment = trip.clients?.reduce(
+                      (sum, c) => sum + (Number(c?.argestment) || 0),
+                      0
+                    ) || 0;
                     const profit =
-                      totalClientRevenue - tripRate + commission + podBalance;
+                      totalClientRevenue - tripRate + commission + podBalance - totalClientArgestment;
 
                     return (
                       <div className="flex justify-between md:col-span-2">
@@ -1993,8 +2055,10 @@ export default function TripDetailPage() {
                                         {expense.expenseFor}
                                       </Badge>
                                       <span className="text-sm text-gray-500">
-                                       {formatDate(expense.paidAt || expense.createdAt, "MMM dd, yyyy HH:mm")}
-
+                                        {formatDate(
+                                          expense.paidAt || expense.createdAt,
+                                          "MMM dd, yyyy HH:mm"
+                                        )}
                                       </span>
                                     </div>
                                     <div className="font-medium text-gray-900 mb-1">
@@ -2050,77 +2114,90 @@ export default function TripDetailPage() {
                           </p>
                         </div>
 
-                       {trip.selfAdvances && trip.selfAdvances.length > 0 ? (
-  <div className="space-y-3">
-    {[...trip.selfAdvances]  // clone array to avoid mutation
-      .sort((a, b) => new Date(b.paidAt || b.createdAt) - new Date(a.paidAt || a.createdAt)) // newest first
-      .map((advance, index) => (
-        <div
-          key={index}
-          className="flex justify-between items-start p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-start space-x-3">
-            <div className="text-2xl">💰</div>
-            <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-1">
-                <Badge className={getRecipientColor(advance.paymentFor)}>
-                  {getExpenseForIcon(advance.paymentFor)} {advance.paymentFor}
-                </Badge>
+                        {trip.selfAdvances && trip.selfAdvances.length > 0 ? (
+                          <div className="space-y-3">
+                            {[...trip.selfAdvances] // clone array to avoid mutation
+                              .sort(
+                                (a, b) =>
+                                  new Date(b.paidAt || b.createdAt) -
+                                  new Date(a.paidAt || a.createdAt)
+                              ) // newest first
+                              .map((advance, index) => (
+                                <div
+                                  key={index}
+                                  className="flex justify-between items-start p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
+                                >
+                                  <div className="flex items-start space-x-3">
+                                    <div className="text-2xl">💰</div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center space-x-2 mb-1">
+                                        <Badge
+                                          className={getRecipientColor(
+                                            advance.paymentFor
+                                          )}
+                                        >
+                                          {getExpenseForIcon(
+                                            advance.paymentFor
+                                          )}{" "}
+                                          {advance.paymentFor}
+                                        </Badge>
 
-                {/* ✅ Here paidAt date shown */}
-                <span className="text-sm text-gray-500">
-                  {formatDate(
-                    advance.paidAt || advance.createdAt,
-                    "MMM dd, yyyy HH:mm"
-                  )}
-                </span>
-              </div>
+                                        {/* ✅ Here paidAt date shown */}
+                                        <span className="text-sm text-gray-500">
+                                          {formatDate(
+                                            advance.paidAt || advance.createdAt,
+                                            "MMM dd, yyyy HH:mm"
+                                          )}
+                                        </span>
+                                      </div>
 
-              <div className="font-medium text-gray-900 mb-1">
-                {advance.reason}
-              </div>
-              <div className="text-sm text-gray-600 mb-1">
-                To: {advance.recipientName}
-              </div>
+                                      <div className="font-medium text-gray-900 mb-1">
+                                        {advance.reason}
+                                      </div>
+                                      <div className="text-sm text-gray-600 mb-1">
+                                        To: {advance.recipientName}
+                                      </div>
 
-              {advance.description && (
-                <div className="text-sm text-gray-600 mb-1">
-                  {advance.description}
-                </div>
-              )}
+                                      {advance.description && (
+                                        <div className="text-sm text-gray-600 mb-1">
+                                          {advance.description}
+                                        </div>
+                                      )}
 
-              {advance.referenceNumber && (
-                <div className="text-xs text-blue-600">
-                  Ref: {advance.referenceNumber}
-                </div>
-              )}
-            </div>
-          </div>
+                                      {advance.referenceNumber && (
+                                        <div className="text-xs text-blue-600">
+                                          Ref: {advance.referenceNumber}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
 
-          <div className="text-right">
-            <div className="text-lg font-bold text-purple-600">
-              {formatCurrency(advance.amount)}
-            </div>
-            <button
-              onClick={() => handleDeleteSelfAdvance(index)}
-              className="text-red-500 text-sm mt-2 hover:underline"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-    ))}
-  </div>
-) : (
-  <div className="text-center py-8 text-gray-500">
-    <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-    <p>No advance payments recorded yet</p>
-    <p className="text-sm">
-      Click "Add Advance" to start tracking your advance payments
-    </p>
-  </div>
-)}
-
+                                  <div className="text-right">
+                                    <div className="text-lg font-bold text-purple-600">
+                                      {formatCurrency(advance.amount)}
+                                    </div>
+                                    <button
+                                      onClick={() =>
+                                        handleDeleteSelfAdvance(index)
+                                      }
+                                      className="text-red-500 text-sm mt-2 hover:underline"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                            <p>No advance payments recorded yet</p>
+                            <p className="text-sm">
+                              Click "Add Advance" to start tracking your advance
+                              payments
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -2156,13 +2233,13 @@ export default function TripDetailPage() {
                       </Badge>
                     </div>
                     <div className="flex space-x-2">
-                      {/* <Button
+                      <Button
                         onClick={() => setFleetExpenseForm(!fleetExpenseForm)}
                         className="bg-red-600 hover:bg-red-700 shadow-md"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Expense
-                      </Button> */}
+                      </Button>
                       <Button
                         onClick={() => setFleetAdvanceForm(!fleetAdvanceForm)}
                         className="bg-green-600 hover:bg-green-700 shadow-md"
@@ -2199,7 +2276,7 @@ export default function TripDetailPage() {
                       </CardContent>
                     </Card>
 
-                    {/* <Card className="bg-gradient-to-r from-red-100 to-red-200 hover:shadow-md transition-shadow">
+                    <Card className="bg-gradient-to-r from-red-100 to-red-200 hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-2">
                           <Wallet className="h-5 w-5 text-red-600" />
@@ -2213,7 +2290,7 @@ export default function TripDetailPage() {
                           </div>
                         </div>
                       </CardContent>
-                    </Card> */}
+                    </Card>
 
                     <Card className="bg-gradient-to-r from-purple-100 to-purple-200 hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
@@ -2264,7 +2341,7 @@ export default function TripDetailPage() {
                                   : "text-orange-800"
                               }`}
                             >
-                              {formatCurrency(finalAmount)}
+                              {formatCurrency(finalAmount + (trip?.totalFleetExpense || 0))}
                             </div>
                           </div>
                         </div>
@@ -2288,8 +2365,8 @@ export default function TripDetailPage() {
 
                   {/* Tabs for Expenses and Advances */}
                   <Tabs defaultValue="advances" className="space-y-4">
-                    <TabsList className="grid w-full grid-cols-1">
-                      {/* <TabsTrigger
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger
                         value="expenses"
                         className="flex items-center space-x-2"
                       >
@@ -2297,7 +2374,7 @@ export default function TripDetailPage() {
                         <span>
                           Expenses ({trip.fleetExpenses?.length || 0})
                         </span>
-                      </TabsTrigger> */}
+                      </TabsTrigger>
                       <TabsTrigger
                         value="advances"
                         className="flex items-center space-x-2"
@@ -2308,6 +2385,94 @@ export default function TripDetailPage() {
                         </span>
                       </TabsTrigger>
                     </TabsList>
+
+                    <TabsContent value="expenses">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center border-b pb-2">
+                          <h4 className="font-medium text-gray-700">
+                            Expense Details
+                          </h4>
+                          <p className="font-semibold text-red-600">
+                            Total: {formatCurrency(totalFleetExpenses)}
+                          </p>
+                        </div>
+
+                        {trip.fleetExpenses && trip.fleetExpenses.length > 0 ? (
+                          <div className="space-y-3">
+                            {trip.fleetExpenses.map((expense, index) => (
+                              <div
+                                key={index}
+                                className="flex justify-between items-start p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
+                              >
+                                <div className="flex items-start space-x-3">
+                                  <div className="text-2xl">
+                                    {getCategoryIcon(expense.category)}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <Badge
+                                        className={getCategoryColor(
+                                          expense.category
+                                        )}
+                                      >
+                                        {expense.category.replace("_", " ")}
+                                      </Badge>
+                                      <Badge
+                                        className={getRecipientColor(
+                                          expense.reason
+                                        )}
+                                      >
+                                        {getExpenseForIcon(expense.reason)}{" "}
+                                        {expense.reason}
+                                      </Badge>
+                                      <span className="text-sm text-gray-500">
+                                        {formatDate(
+                                          expense.createdAt,
+                                          "MMM dd, yyyy HH:mm"
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div className="font-medium text-gray-900 mb-1">
+                                      {expense.reason}
+                                    </div>
+                                    {expense.description && (
+                                      <div className="text-sm text-gray-600 mb-1">
+                                        {expense.description}
+                                      </div>
+                                    )}
+                                    {expense.receiptNumber && (
+                                      <div className="text-xs text-blue-600">
+                                        Receipt: {expense.receiptNumber}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-bold text-red-600">
+                                    {formatCurrency(expense.amount)}
+                                  </div>
+                                  <button
+                                   onClick={() => handleDeleteFleetExpenses(expense._id)}
+
+                                    className="text-red-500 text-sm mt-2 hover:underline"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <Receipt className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                            <p>No expenses recorded yet</p>
+                            <p className="text-sm">
+                              Click "Add Expense" to start tracking your costs
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
 
                     <TabsContent value="advances">
                       <div className="space-y-3">
@@ -2459,13 +2624,22 @@ export default function TripDetailPage() {
                                   )}
                                 </span>
                               </div>
+                              {clientData.argestment > 0 && (
+                                <div className="text-sm">
+                                  Argestment:{" "}
+                                  <span className="text-orange-600 font-semibold">
+                                    {formatCurrency(clientData.argestment ?? 0)}
+                                  </span>
+                                </div>
+                              )}
                               <div className="text-sm">
-                                Profite client rate - truck cost:{" "}
+                                Profite (Rate - Truck Cost - Argestment):{" "}
                                 <span className="text-green-600 font-bold">
                                   {formatCurrency(
                                     Math.abs(
-                                      clientData.truckHireCost -
-                                        clientData.totalRate
+                                      clientData.totalRate -
+                                        clientData.truckHireCost -
+                                        (clientData.argestment || 0)
                                     )
                                   )}
                                 </span>

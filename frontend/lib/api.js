@@ -157,6 +157,9 @@ export const tripsApi = {
   addFleetAdvance: (id, data) => apiPost(`/trips/${id}/fleet-advance`, data), // 👈 singular
   deleteFleetAdvance: (id, data) =>
     apiPost(`/trips/${id}/del-fleet-advance`, data), // 👈 singular
+  deleteFleetExpense: (tripId, expenseId) =>
+  apiPost(`/trips/${tripId}/del-fleet-expense/${expenseId}`),
+
   addFleetExpense: (id, data) => apiPost(`/trips/${id}/fleet-expense`, data), // 👈 singular
 
   // ✅ Add self expense and advance

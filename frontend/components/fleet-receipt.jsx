@@ -14,9 +14,10 @@ export const FleetReceipt = forwardRef(
     const totalFleetAdvances =
       trip.fleetAdvances?.reduce((sum, advance) => sum + advance.amount, 0) ||
       0;
-    const totalPaid = totalFleetExpenses + totalFleetAdvances;
+    const totalPaid =  totalFleetAdvances;
     const commission = trip.commission || 0;
-    const podBalance = totalClientAmount - totalPaid - trip?.podBalance - commission;
+    const totalFreightWithExpenses = totalClientAmount + totalFleetExpenses;
+    const podBalance = totalFreightWithExpenses - totalPaid - trip?.podBalance - commission;
 
     // Combine all transactions
     const allTransactions = [
@@ -143,17 +144,32 @@ export const FleetReceipt = forwardRef(
               </tr>
             ))}
 
+            {/* Fleet Expenses Row */}
+            {totalFleetExpenses > 0 && (
+              <tr>
+                <td className="border border-black p-2 font-semibold bg-gray-100 print:bg-gray-200">
+                  Fleet Expenses
+                </td>
+                <td className="border border-black p-2 text-right">
+                  {formatCurrency(totalFleetExpenses)}
+                </td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+              </tr>
+            )}
+
             {/* Total Row */}
             <tr className="font-bold">
               <td className="border border-black p-2 font-semibold bg-gray-100 print:bg-gray-200">
                 Total Freight
               </td>
               <td className="border border-black p-2 text-right">
-                {formatCurrency(totalClientAmount)}
+                {formatCurrency(totalFreightWithExpenses)}
               </td>
               <td className="border border-black p-2"></td>
               <td className="border border-black p-2 font-semibold bg-gray-100 print:bg-gray-200">
-                
+                Balance
               </td>
               <td className="border border-black p-2 text-right text-lg print:text-base">
                 {formatCurrency(podBalance)}
@@ -227,20 +243,30 @@ export const FleetReceipt = forwardRef(
             <h4 className="font-bold mb-2 print:mb-1">Summary</h4>
             <div className="space-y-1 text-sm print:text-xs">
               <div className="flex justify-between">
-                <span>Total Freight:</span>
+                <span>Base Freight:</span>
                 <span>{formatCurrency(totalClientAmount)}</span>
+              </div>
+              {totalFleetExpenses > 0 && (
+                <div className="flex justify-between">
+                  <span>Fleet Expenses:</span>
+                  <span>+ {formatCurrency(totalFleetExpenses)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-semibold">
+                <span>Total Freight:</span>
+                <span>{formatCurrency(totalFreightWithExpenses)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Commission:</span>
-                <span>{formatCurrency(commission)}</span>
+                <span>- {formatCurrency(commission)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Total Paid:</span>
-                <span>{formatCurrency(totalPaid)}</span>
+                <span>- {formatCurrency(totalPaid)}</span>
               </div>
               <div className="flex justify-between">
                 <span>POD Balance:</span>
-                <span>{formatCurrency(trip.podBalance || 0)}</span>
+                <span>- {formatCurrency(trip.podBalance || 0)}</span>
               </div>
               <hr className="my-1" />
               <div className="flex justify-between font-bold">

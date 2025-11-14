@@ -66,6 +66,7 @@ router.post(
 router.post("/:tripId/fleet-advance",  tripController.addFleetAdvance);
 router.post("/:tripId/del-fleet-advance",  tripController.deleteFleetAdvance);
 router.post("/:tripId/fleet-expense",  tripController.addFleetExpense);
+router.post("/:tripId/del-fleet-expense/:expenseId", tripController.deleteFleetExpense);
 
 router.post("/:tripId/self-expense", tripController.addSelfExpense);
 router.post("/:tripId/del-self-expense", tripController.deleteSelfExpense);

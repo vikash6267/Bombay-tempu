@@ -1576,42 +1576,43 @@ const trip = await Trip.findById(tripId)
   }
 };
 
-const addFleetExpense = async (req, res) => {
+
+// =============================
+// ADD FLEET EXPENSE
+// =============================
+ const addFleetExpense = async (req, res) => {
   const { tripId } = req.params;
   const { amount, reason, category, description, receiptNumber, date } = req.body;
 
   try {
-const trip = await Trip.findById(tripId)
-  .populate({
-    path: "vehicleOwner.ownerId", // ✅ Vehicle Owner ke andar ownerId
-    select: "name email phone", // jo fields chahiye
-  });
-      if (!trip) return res.status(404).json({ message: "Trip not found" });
+    const trip = await Trip.findById(tripId).populate({
+      path: "vehicleOwner.ownerId",
+      select: "name email phone",
+    });
+
+    if (!trip) return res.status(404).json({ success: false, message: "Trip not found" });
 
     const newExpense = {
+      _id: new mongoose.Types.ObjectId(),
       amount,
       reason,
       category,
       description,
       receiptNumber,
-      date: new Date(),
+      date: date ? new Date(date) : new Date(),
     };
 
+    // Trip update
     trip.fleetExpenses.push(newExpense);
-    trip.totalFleetExpense += amount;
-
-    // Save to trip
+    trip.totalFleetExpense += Number(amount);
     await trip.save();
 
-    // Also update fleet owner's user record
-    if (
-      trip.vehicleOwner &&
-      trip.vehicleOwner.ownershipType === "fleet_owner" &&
-      trip.vehicleOwner.ownerId
-    ) {
+    // Fleet owner update
+    if (trip.vehicleOwner?.ownershipType === "fleet_owner" && trip.vehicleOwner.ownerId) {
       await User.findByIdAndUpdate(trip.vehicleOwner.ownerId, {
         $push: {
           fleetExpenses: {
+            expenseId: newExpense._id,
             trip: trip._id,
             ...newExpense,
           },
@@ -1619,34 +1620,89 @@ const trip = await Trip.findById(tripId)
       });
     }
 
-    // Log activity
+    // Activity log (FULL EXPENSE DETAILS)
     await logActivity({
       user: req.user?._id,
-      action: 'expense',
-      category: 'financial',
-      description: `Fleet (${trip?.vehicleOwner?.ownerId?.name}) expense of ₹${amount} added to trip ${trip.tripNumber}`,
+      action: "expense_added",
+      category: "financial",
+      description: `Fleet (${trip?.vehicleOwner?.ownerId?.name}) added expense of ₹${amount} to trip ${trip.tripNumber}`,
       details: {
+        expense: newExpense, // 👈 Full expense object
         amount,
         reason,
         category,
         description,
         receiptNumber,
-        tripNumber: trip.tripNumber,
+        date: newExpense.date,
         totalFleetExpense: trip.totalFleetExpense,
-        fleetOwnerId: trip.vehicleOwner?.ownerId
       },
       relatedTrip: trip._id,
-      severity: 'medium',
-      date: date ? new Date(date) : new Date(),
-      req
+      severity: "medium",
+      date: newExpense.date, // 👈 Activity date = expense date
+      req,
     });
 
-    res.status(200).json({ success: true, trip });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({ success: false, message: err.message });
+    return res.status(200).json({ success: true, message: "Expense Added", trip });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+ const deleteFleetExpense = async (req, res) => {
+  const { tripId, expenseId } = req.params;
+
+  try {
+    const trip = await Trip.findById(tripId).populate({
+      path: "vehicleOwner.ownerId",
+      select: "name email phone",
+    });
+
+    if (!trip)
+      return res.status(404).json({ success: false, message: "Trip not found" });
+
+    const expense = trip.fleetExpenses.id(expenseId);
+    if (!expense)
+      return res.status(404).json({ success: false, message: "Expense not found" });
+
+    const amountToSubtract = Number(expense.amount);
+
+    // Remove expense from Trip
+    trip.fleetExpenses.pull(expenseId);
+    trip.totalFleetExpense -= amountToSubtract;
+    await trip.save();
+
+    // Remove from Fleet Owner
+    if (
+      trip.vehicleOwner?.ownershipType === "fleet_owner" &&
+      trip.vehicleOwner.ownerId
+    ) {
+      await User.updateOne(
+        { _id: trip.vehicleOwner.ownerId },
+        { $pull: { fleetExpenses: { expenseId } } }
+      );
+    }
+
+    // ❌ NO ACTIVITY LOG CREATED
+    // Removed logActivity block completely
+
+    return res.status(200).json({
+      success: true,
+      message: "Expense deleted successfully",
+      trip,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+
 
 // Add Self Expense
 const addSelfExpense = async (req, res) => {
@@ -1732,7 +1788,7 @@ const deleteSelfExpense = async (req, res) => {
   const { expenseIndex } = req.body;
 
   try {
-    const trip = await Trip.findById(tripIdeq.params.id)
+    const trip = await Trip.findById(tripId)
   .populate({
     path: "driver", // ✅ Driver details
     select: "name email phone",
@@ -2927,5 +2983,6 @@ module.exports = {
   clientUpdatePodStatus,
   uploadPodDocumentForClient,
   getPodStatusReport,
-  getFleetOwnerStatement
+  getFleetOwnerStatement,
+  deleteFleetExpense
 };

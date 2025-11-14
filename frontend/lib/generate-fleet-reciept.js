@@ -21,7 +21,7 @@ export async function generateFleetReceiptPdf(
 
   // --- Calculations ---
   const totalClientAmount =
-    trip.clients?.reduce((sum, client) => sum + (client.totalRate || 0), 0) ||
+    trip.rate || trip.clients?.reduce((sum, client) => sum + (client.totalRate || 0), 0) ||
     0;
 
   const totalFleetExpenses =
@@ -40,17 +40,18 @@ export async function generateFleetReceiptPdf(
     ...(trip.fleetExpenses || []).map((exp) => ({
       date: exp.date,
       reference: exp.reference,
-      description: `Expense for ${exp.type}${
+      description: `Expense for ${exp.reason}${
         exp.notes ? ` (${exp.notes})` : ""
       }`,
       amount: exp.amount,
     })),
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const totalPaid = totalFleetExpenses + totalFleetAdvances;
+  const totalPaid =  totalFleetAdvances;
   const commission = trip.commission || 0;
+  const totalFreightWithExpenses = totalClientAmount + totalFleetExpenses;
   const podBalance =
-    totalClientAmount - totalPaid - (trip.podBalance || 0) - commission;
+    totalFreightWithExpenses - totalPaid - (trip.podBalance || 0) - commission;
 
   // --- Header ---
   doc.setFontSize(9);
@@ -134,7 +135,7 @@ export async function generateFleetReceiptPdf(
   const clientBody =
     trip.clients?.map((clientData, index) => [
       "Freight",
-      `${Number(clientData.totalRate || 0).toFixed(2)}`,
+      `${Number(clientData.truckHireCost || 0).toFixed(2)}`,
       clientData.client?.name || "N/A",
       index === 0 ? "Commission" : "",
       index === 0 ? `${Number(commission).toFixed(2)}` : "",
@@ -182,13 +183,48 @@ export async function generateFleetReceiptPdf(
 
   y = doc.lastAutoTable.finalY;
 
+  // Fleet Expenses Row (if exists)
+  if (totalFleetExpenses > 0) {
+    const fleetExpenseRowData = [
+      [
+        "Fleet Expenses",
+        `${Number(totalFleetExpenses).toFixed(2)}`,
+        "",
+        "",
+        "",
+      ],
+    ];
+
+    autoTable(doc, {
+      startY: y,
+      body: fleetExpenseRowData,
+      theme: "grid",
+      styles: {
+        fontSize: 9,
+        cellPadding: 2,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+        fontStyle: "bold",
+      },
+      columnStyles: {
+        0: { fillColor: [240, 240, 240], cellWidth: 30 },
+        1: { halign: "right", cellWidth: 25 },
+        2: { cellWidth: 50 },
+        3: { cellWidth: 35 },
+        4: { cellWidth: 25 },
+      },
+    });
+
+    y = doc.lastAutoTable.finalY;
+  }
+
   // Total Row for Client & Freight Details
   const totalRowData = [
     [
       "Total Freight",
-      `${Number(totalClientAmount).toFixed(2)}`,
+      `${Number(totalFreightWithExpenses).toFixed(2)}`,
       "",
-      "Net Balance",
+      "Balance",
       `${Number(podBalance).toFixed(2)}`,
     ],
   ];
@@ -303,11 +339,19 @@ export async function generateFleetReceiptPdf(
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   const summaryItems = [
-    `Total Freight: ${Number(totalClientAmount).toFixed(2)}`,
-    `Commission: ${Number(commission).toFixed(2)}`,
-    `Total Paid: ${Number(totalPaid).toFixed(2)}`,
-    `POD Balance: ${Number(trip.podBalance || 0).toFixed(2)}`,
+    `Base Freight: ${Number(totalClientAmount).toFixed(2)}`,
   ];
+
+  if (totalFleetExpenses > 0) {
+    summaryItems.push(`Fleet Expenses: + ${Number(totalFleetExpenses).toFixed(2)}`);
+  }
+
+  summaryItems.push(
+    `Total Freight: ${Number(totalFreightWithExpenses).toFixed(2)}`,
+    `Commission: - ${Number(commission).toFixed(2)}`,
+    `Total Paid: - ${Number(totalPaid).toFixed(2)}`,
+    `POD Balance: - ${Number(trip.podBalance || 0).toFixed(2)}`
+  );
 
   summaryItems.forEach((item) => {
     doc.text(item, leftColumnX, y);
