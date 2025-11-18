@@ -24,7 +24,6 @@ import {
   ChevronRight,
   RefreshCw,
 } from "lucide-react";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { logsApi } from "@/lib/api";
@@ -52,9 +51,11 @@ export default function LogsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
+  const [actionFilter, setActionFilter] = useState("");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   const { data: logsData, isLoading, error, refetch } = useQuery({
-    queryKey: ["logs", currentPage, searchTerm, dateRange],
+    queryKey: ["logs", currentPage, searchTerm, dateRange, actionFilter, sortOrder],
     queryFn: () =>
       logsApi.getLogs({
         page: currentPage,
@@ -62,12 +63,26 @@ export default function LogsPage() {
         search: searchTerm,
         startDate: dateRange.from,
         endDate: dateRange.to,
+        action: actionFilter,
+        sort: sortOrder === "desc" ? "-createdAt" : "createdAt",
       }),
     keepPreviousData: true,
   });
 
   const logs = logsData?.data?.logs || [];
-  const totalPages = Math.ceil((logsData?.data?.results || 0) / ITEMS_PER_PAGE);
+  const total = logsData?.data?.total || 0;
+  const results = logsData?.data?.results || 0;
+  const totalPages = logsData?.data?.totalPages || Math.ceil(total / ITEMS_PER_PAGE) || 0;
+  
+  console.log('📊 Pagination Debug:', { 
+    total, 
+    results,
+    totalPages, 
+    currentPage, 
+    logsLength: logs.length,
+    shouldShowPagination: !isLoading && totalPages > 1,
+    rawData: logsData?.data 
+  });
 
   // calculate closing balances
   let runningBalance = 0;
@@ -102,7 +117,7 @@ export default function LogsPage() {
                 Trip Ledger Summary
               </h1>
               <p className="text-gray-600">
-                Advance, Expenses & Closing Balances
+                Advance, Expenses & Closing Balances ({total} records)
               </p>
             </div>
           </div>
@@ -111,6 +126,126 @@ export default function LogsPage() {
             Refresh
           </Button>
         </div>
+
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Filter className="h-5 w-5 mr-2" />
+              Filters
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Search */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Search</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Trip number, description..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              {/* Action Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Action Type</label>
+                <select
+                  value={actionFilter}
+                  onChange={(e) => {
+                    setActionFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Actions</option>
+                  <option value="advance">Advance</option>
+                  <option value="expense">Expense</option>
+                  <option value="payment">Payment</option>
+                  <option value="create">Create</option>
+                  <option value="update">Update</option>
+                  <option value="delete">Delete</option>
+                </select>
+              </div>
+
+              {/* Sort Order */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sort By Date</label>
+                <select
+                  value={sortOrder}
+                  onChange={(e) => {
+                    setSortOrder(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="desc">Newest First</option>
+                  <option value="asc">Oldest First</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Date Range Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              {/* Start Date */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Start Date</label>
+                <Input
+                  type="date"
+                  value={dateRange.from ? new Date(dateRange.from).toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    setDateRange(prev => ({
+                      ...prev,
+                      from: e.target.value ? new Date(e.target.value) : undefined
+                    }));
+                    setCurrentPage(1);
+                  }}
+                  className="w-full"
+                />
+              </div>
+
+              {/* End Date */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">End Date</label>
+                <Input
+                  type="date"
+                  value={dateRange.to ? new Date(dateRange.to).toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    setDateRange(prev => ({
+                      ...prev,
+                      to: e.target.value ? new Date(e.target.value) : undefined
+                    }));
+                    setCurrentPage(1);
+                  }}
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            {/* Clear Filters */}
+            <div className="mt-4 flex justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchTerm("");
+                  setDateRange({ from: undefined, to: undefined });
+                  setActionFilter("");
+                  setSortOrder("desc");
+                  setCurrentPage(1);
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Table */}
         <Card>
@@ -174,6 +309,84 @@ export default function LogsPage() {
                   ))}
                 </TableBody>
               </Table>
+            )}
+
+            {/* Pagination - Always show if data exists */}
+            {!isLoading && logs.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t gap-4">
+                <div className="text-sm text-gray-600">
+                  {totalPages > 1 ? (
+                    <>Page {currentPage} of {totalPages} | Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
+                    {Math.min(currentPage * ITEMS_PER_PAGE, total)} of {total} records</>
+                  ) : (
+                    <>Showing {logs.length} of {total} records</>
+                  )}
+                </div>
+                {totalPages > 1 && (
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                    >
+                      First
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className="min-w-[40px]"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Last
+                    </Button>
+                  </div>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>

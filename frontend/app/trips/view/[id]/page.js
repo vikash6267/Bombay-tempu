@@ -1387,23 +1387,53 @@ const handleDeleteFleetExpenses = async (expenseId) => {
   const handlePODStepUpload = async (file, stepKey) => {
     try {
       const formData = new FormData();
-      formData.append("file", file); // 👈 👈 Important: Field name should be "file"
-      formData.append("stepKey", stepKey); // 👈 Optional field agar extra data bhejna ho
-      console.log(file);
+      formData.append("file", file);
+      formData.append("stepKey", stepKey);
+      
       const res = await axios.post(
-        `${API_BASE_URL}/trips/${params.id}/podDocument`, // 👈 Trip ID ke hisab se URL
+        `${API_BASE_URL}/trips/${params.id}/podDocument`,
         formData,
         {
           headers: {
-            "Content-Type": "multipart/form-data", // 👈 VERY IMPORTANT
+            "Content-Type": "multipart/form-data",
             Authorization: token ? `Bearer ${token}` : "",
           },
         }
       );
 
       console.log("Upload success:", res.data);
+      
+      // Refresh trip data to show uploaded document
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+      toast.success("Document uploaded successfully!");
+      
     } catch (error) {
       console.error("Upload failed:", error);
+      toast.error("Failed to upload document");
+      throw error;
+    }
+  };
+
+  const handlePODStepDelete = async (stepKey) => {
+    try {
+      const res = await axios.delete(
+        `${API_BASE_URL}/trips/${params.id}/podDocument`,
+        {
+          data: { stepKey },
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        }
+      );
+
+      console.log("Delete success:", res.data);
+      
+      // Refresh trip data
+      queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+      
+    } catch (error) {
+      console.error("Delete failed:", error);
+      throw error;
     }
   };
 
@@ -3206,7 +3236,9 @@ const handleDeleteFleetExpenses = async (expenseId) => {
                             onUpload={(file) =>
                               handlePODStepUpload(file, step.key)
                             }
+                            onDelete={() => handlePODStepDelete(step.key)}
                             existingDocument={
+                              trip.podManage?.documents?.find(doc => doc.stepKey === step.key)?.url ||
                               trip.podManage?.stepDocuments?.[step.key]
                             }
                           />

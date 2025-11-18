@@ -88,6 +88,11 @@ router.post(
   tripController.uploadPodDocument
 );
 
+router.delete(
+  "/:tripId/podDocument",
+  tripController.deletePodDocument
+);
+
 router.post("/:tripId/client/podDocument", upload.single("file"), tripController.uploadPodDocumentForClient);
 
 

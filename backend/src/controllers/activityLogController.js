@@ -74,6 +74,9 @@ const getAllActivityLogs = catchAsync(async (req, res, next) => {
   // Pagination calculation
   const skip = (Number(page) - 1) * Number(limit);
 
+  // Sort order
+  const sortOrder = req.query.sort || "-createdAt";
+
   // Query with pagination
   const [logs, total] = await Promise.all([
     ActivityLog.find(filter)
@@ -81,7 +84,7 @@ const getAllActivityLogs = catchAsync(async (req, res, next) => {
       .populate("relatedTrip", "tripNumber")
       .populate("relatedUser", "name email")
       .populate("relatedVehicle", "registrationNumber")
-      .sort({ createdAt: -1 })
+      .sort(sortOrder)
       .skip(skip)
       .limit(Number(limit)),
     ActivityLog.countDocuments(filter),

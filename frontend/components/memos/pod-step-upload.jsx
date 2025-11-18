@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Upload, X, FileText, ImageIcon } from "lucide-react"
 import { toast } from "react-hot-toast"
 
-export function PODStepUpload({ stepName, onUpload, existingDocument }) {
+export function PODStepUpload({ stepName, onUpload, onDelete, existingDocument }) {
   const [uploadedFile, setUploadedFile] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleFileUpload = async event => {
     const file = event.target.files?.[0]
@@ -31,8 +32,26 @@ export function PODStepUpload({ stepName, onUpload, existingDocument }) {
     }
   }
 
-  const removeFile = () => {
-    setUploadedFile(null)
+  const removeFile = async () => {
+    if (existingDocument && onDelete) {
+      // Delete from server
+      if (!window.confirm('Are you sure you want to delete this document?')) {
+        return;
+      }
+      
+      setIsDeleting(true);
+      try {
+        await onDelete();
+        toast.success('Document deleted successfully');
+      } catch (error) {
+        toast.error('Failed to delete document');
+      } finally {
+        setIsDeleting(false);
+      }
+    } else {
+      // Just remove from local state
+      setUploadedFile(null);
+    }
   }
 
   const getFileIcon = fileName => {
@@ -90,21 +109,32 @@ export function PODStepUpload({ stepName, onUpload, existingDocument }) {
                 <FileText className="h-4 w-4" />
               )}
               <span className="text-sm text-indigo-800">
-                {uploadedFile ? uploadedFile.name : "Existing document"}
+                {uploadedFile ? uploadedFile.name : "Document uploaded"}
               </span>
             </div>
             <div className="flex items-center space-x-2">
               {existingDocument && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => window.open(existingDocument, "_blank")}
-                  className="text-indigo-600 hover:text-indigo-800"
-                >
-                  View
-                </Button>
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(existingDocument, "_blank")}
+                    className="text-indigo-600 hover:text-indigo-800"
+                  >
+                    View
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={removeFile}
+                    className="text-red-600 hover:text-red-800"
+                    title="Delete document"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </>
               )}
-              {uploadedFile && (
+              {uploadedFile && !existingDocument && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -118,11 +148,11 @@ export function PODStepUpload({ stepName, onUpload, existingDocument }) {
           </div>
         )}
 
-        {isUploading && (
+        {(isUploading || isDeleting) && (
           <div className="mt-2 text-center">
             <div className="inline-flex items-center text-sm text-indigo-600">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 mr-2"></div>
-              Uploading...
+              {isUploading ? 'Uploading...' : 'Deleting...'}
             </div>
           </div>
         )}

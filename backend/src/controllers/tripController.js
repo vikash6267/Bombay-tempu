@@ -2305,11 +2305,10 @@ const uploadPodDocumentForClient = async (req, res) => {
 const uploadPodDocument = async (req, res) => {
   try {
     const { tripId } = req.params;
+    const { stepKey } = req.body;
 
-    console.log(req.body);
-    console.log(req.files);
-    console.log(req.file);
-    // console.log(req.file)
+    console.log('Upload POD Document:', { tripId, stepKey, file: req.file?.originalname });
+
     const trip = await Trip.findById(tripId);
     if (!trip) {
       return res.status(404).json({ error: "Trip not found" });
@@ -2321,11 +2320,56 @@ const uploadPodDocument = async (req, res) => {
 
     // Upload file to Cloudinary
     const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: `trips/${tripId}/pod`,
+      folder: `trips/${tripId}/pod/${stepKey || 'general'}`,
       resource_type: "auto",
     });
 
-    // Update trip document
+    console.log('Cloudinary upload success:', result.secure_url);
+
+    // Delete file from local server after successful upload
+    const fs = require('fs');
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+      console.log('Local file deleted:', req.file.path);
+    }
+
+    // Initialize documents array if not exists
+    if (!trip.podManage.documents) {
+      trip.podManage.documents = [];
+    }
+
+    // Check if document for this step already exists
+    const existingDocIndex = trip.podManage.documents.findIndex(
+      doc => doc.stepKey === stepKey
+    );
+
+    const documentData = {
+      url: result.secure_url,
+      fileType: result.format || "unknown",
+      uploadedAt: new Date(),
+      stepKey: stepKey || 'general',
+      cloudinaryPublicId: result.public_id, // Store for deletion
+    };
+
+    if (existingDocIndex >= 0) {
+      // Delete old image from Cloudinary if exists
+      const oldDoc = trip.podManage.documents[existingDocIndex];
+      if (oldDoc.cloudinaryPublicId) {
+        try {
+          await cloudinary.uploader.destroy(oldDoc.cloudinaryPublicId);
+          console.log('Old Cloudinary image deleted:', oldDoc.cloudinaryPublicId);
+        } catch (err) {
+          console.error('Failed to delete old Cloudinary image:', err);
+        }
+      }
+      // Update existing document
+      trip.podManage.documents[existingDocIndex] = documentData;
+    } else {
+      // Add new document
+      trip.podManage.documents.push(documentData);
+    }
+
+    // Also update the main document field for backward compatibility
     trip.podManage.document = {
       url: result.secure_url,
       fileType: result.format || "unknown",
@@ -2336,12 +2380,81 @@ const uploadPodDocument = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "POD document uploaded successfully",
-      document: trip.podManage.document,
+      message: "POD document uploaded successfully to Cloudinary",
+      document: documentData,
+      trip: trip,
     });
   } catch (error) {
     console.error("Error uploading POD document:", error);
-    res.status(500).json({ error: "Failed to upload POD document" });
+    
+    // Clean up local file if upload failed
+    if (req.file && req.file.path) {
+      const fs = require('fs');
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+    }
+    
+    res.status(500).json({ 
+      error: "Failed to upload POD document",
+      message: error.message 
+    });
+  }
+};
+
+// Delete POD Document
+const deletePodDocument = async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { stepKey } = req.body;
+
+    console.log('Delete POD Document:', { tripId, stepKey });
+
+    const trip = await Trip.findById(tripId);
+    if (!trip) {
+      return res.status(404).json({ error: "Trip not found" });
+    }
+
+    if (!trip.podManage.documents || trip.podManage.documents.length === 0) {
+      return res.status(404).json({ error: "No documents found" });
+    }
+
+    // Find document by stepKey
+    const docIndex = trip.podManage.documents.findIndex(
+      doc => doc.stepKey === stepKey
+    );
+
+    if (docIndex === -1) {
+      return res.status(404).json({ error: "Document not found for this step" });
+    }
+
+    const document = trip.podManage.documents[docIndex];
+
+    // Delete from Cloudinary
+    if (document.cloudinaryPublicId) {
+      try {
+        await cloudinary.uploader.destroy(document.cloudinaryPublicId);
+        console.log('Cloudinary image deleted:', document.cloudinaryPublicId);
+      } catch (err) {
+        console.error('Failed to delete from Cloudinary:', err);
+      }
+    }
+
+    // Remove from array
+    trip.podManage.documents.splice(docIndex, 1);
+    await trip.save();
+
+    res.status(200).json({
+      success: true,
+      message: "POD document deleted successfully",
+      trip: trip,
+    });
+  } catch (error) {
+    console.error("Error deleting POD document:", error);
+    res.status(500).json({ 
+      error: "Failed to delete POD document",
+      message: error.message 
+    });
   }
 };
 
@@ -2972,6 +3085,7 @@ module.exports = {
   updatePodDetails,
   updatePodStatus,
   uploadPodDocument,
+  deletePodDocument,
   getDashboardData,
   deleteFleetAdvance,
   deleteSelfExpense,
