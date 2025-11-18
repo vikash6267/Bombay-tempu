@@ -31,31 +31,36 @@ console.log(existingCalculation,"existingCalculation")
   const [editModeAdvances, setEditModeAdvances] = useState(0)
   const [serviceKm, setServiceKm] = useState(0)
 
-  useEffect(() => {
-    if (editMode && existingCalculation) {
-      setOldKM(existingCalculation.oldKM || 0)
-      setNewKM(existingCalculation.newKM || 0)
-      setPerKMRate(existingCalculation.perKMRate || 19.5)
-      setPichla(existingCalculation.pichla || 0)
-      setIsCalculated(true)
-      setIsEditing(false)
+useEffect(() => {
+  if (editMode && existingCalculation) {
+    setOldKM(existingCalculation.oldKM || 0);
+    setNewKM(existingCalculation.newKM || 0);
+    setPerKMRate(existingCalculation.perKMRate || 19.5);
+    setPichla(existingCalculation.pichla || 0);
 
-      setEditModeExpenses(existingCalculation.totalExpenses || 0)
-      setEditModeAdvances(existingCalculation.totalAdvances || 0)
-      setOriginalTrips(trips) // Store original trips for display
-    } else {
-      // Reset for new calculation
-      setOldKM(0)
-      setNewKM(0)
-      setPerKMRate(19.5)
-      setPichla(0)
-      setIsCalculated(false)
-      setIsEditing(false)
-      setOriginalTrips([])
-      setEditModeExpenses(0)
-      setEditModeAdvances(0)
-    }
-  }, [editMode, existingCalculation, open, trips])
+    setIsCalculated(true);
+    setIsEditing(false);
+
+    setEditModeExpenses(existingCalculation.totalExpenses || 0);
+    setEditModeAdvances(existingCalculation.totalAdvances || 0);
+
+    // ❗ Correct fix: trips should come from existingCalculation.originalTripData
+    setOriginalTrips(existingCalculation.originalTripData || []);
+
+  } else {
+    // Reset for new calculation
+    setOldKM(0);
+    setNewKM(0);
+    setPerKMRate(19.5);
+    setPichla(0);
+    setIsCalculated(false);
+    setIsEditing(false);
+
+    setOriginalTrips([]); // reset
+    setEditModeExpenses(0);
+    setEditModeAdvances(0);
+  }
+}, [editMode, existingCalculation, open, trips]);
 
   const totalExpenses =
     editMode && existingCalculation
@@ -83,45 +88,58 @@ console.log(existingCalculation,"existingCalculation")
   }
 
   const handleSaveCalculation = async () => {
-    if (!isCalculated) {
-      alert("Please calculate first before saving")
-      return
-    }
-
-    const calculationData = {
-      driverId: driver?.id,
-      tripIds: trips.map((trip) => trip.tripId || trip.id),
-      oldKM,
-      newKM,
-      perKMRate,
-      pichla,
-      totalKM,
-      kmValue,
-      totalExpenses,
-      totalAdvances,
-      total,
-      due,
-      nextSeriveKM:serviceKm,
-      createdAt: editMode ? existingCalculation?.createdAt : new Date(),
-      originalTripData: editMode ? existingCalculation?.originalTripData : trips,
-    }
-
-    try {
-      let res
-      if (editMode && existingCalculation) {
-        res = await driverCalculationsApi.update(existingCalculation._id, calculationData)
-        alert("Calculation updated successfully!")
-      } else {
-        res = await driverCalculationsApi.create(calculationData)
-        alert("Calculation saved successfully!")
-      }
-
-      onCalculationComplete(res)
-    } catch (error) {
-      console.error(error)
-      alert("Error saving calculation")
-    }
+  if (!isCalculated) {
+    alert("Please calculate first before saving")
+    return
   }
+
+  // Trip IDs: Edit mode → originalTrips, New mode → trips props
+  const tripIdsToSend = editMode
+    ? originalTrips.map(trip => trip.tripId || trip._id || trip.id)
+    : trips.map(trip => trip.tripId || trip._id || trip.id)
+
+  // Expenses & Advances: Edit mode → editMode values, New mode → calculated totals
+  const expensesToSend = editMode ? editModeExpenses : totalExpenses
+  const advancesToSend = editMode ? editModeAdvances : totalAdvances
+
+  const calculationData = {
+    driverId: driver?.id,
+    tripIds: tripIdsToSend,
+    oldKM,
+    newKM,
+    perKMRate,
+    pichla,
+    totalKM,
+    kmValue,
+    totalExpenses: expensesToSend,
+    totalAdvances: advancesToSend,
+    total,
+    due,
+    nextSeriveKM: serviceKm,
+    createdAt: editMode ? existingCalculation?.createdAt : new Date(),
+    // Store originalTrips only in edit mode, else store current trips
+    originalTripData: editMode ? originalTrips : trips,
+  }
+
+  console.log("FINAL PAYLOAD:", calculationData)
+
+  try {
+    let res
+    if (editMode && existingCalculation) {
+      res = await driverCalculationsApi.update(existingCalculation._id, calculationData)
+      alert("Calculation updated successfully!")
+    } else {
+      res = await driverCalculationsApi.create(calculationData)
+      alert("Calculation saved successfully!")
+    }
+
+    onCalculationComplete(res)
+  } catch (error) {
+    console.error(error)
+    alert("Error saving calculation")
+  }
+}
+
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing)

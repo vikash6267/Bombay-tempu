@@ -2501,7 +2501,6 @@ const getDriverSelfSummary = async (req, res) => {
 
     for (const trip of trips) {
       const selfAdvances = (trip.selfAdvances || [])
-        .filter((adv) => adv.paymentFor?.toLowerCase() === "driver")
         .map((adv) => ({
           amount: adv.amount,
           reason: adv.reason,

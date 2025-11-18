@@ -5,35 +5,47 @@ const Trip = require("../models/Trip");
 // Create Driver Calculation
 exports.createDriverCalculation = async (req, res) => {
   try {
-    const calculation = new DriverCalculation(req.body);
+    const {
+      originalTripData = [],
+      newKM,
+      nextSeriveKM,
+    } = req.body;
 
-    // Save calculation first
-    await calculation.save();
+    // 👉 Save EVERYTHING including originalTripData (schema supports it)
+    const calculation = await DriverCalculation.create(req.body);
 
-    // Loop through original trips to update vehicles
-    if (req.body.originalTripData && req.body.originalTripData.length > 0) {
-      for (const tripItem of req.body.originalTripData) {
+    // 👉 Update vehicle KM based on originalTripData
+    if (Array.isArray(originalTripData) && originalTripData.length > 0) {
+      for (const tripItem of originalTripData) {
+        if (!tripItem.tripId) continue;
+
+        // Get trip with vehicle
         const trip = await Trip.findById(tripItem.tripId).populate("vehicle");
-        if (trip && trip.vehicle) {
-          const vehicle = await Vehicle.findById(trip.vehicle._id);
+        if (!trip || !trip.vehicle) continue;
 
-          // Update currentKilometers
-          vehicle.currentKilometers = req.body.newKM;
+        const vehicle = await Vehicle.findById(trip.vehicle._id);
+        if (!vehicle) continue;
 
-          // Update nextServiceAtKm
-          vehicle.nextServiceAtKm = req.body.nextSeriveKM;
+        // Update KMs
+        if (newKM !== undefined) vehicle.currentKilometers = newKM;
+        if (nextSeriveKM !== undefined) vehicle.nextServiceAtKm = nextSeriveKM;
 
-          await vehicle.save();
-        }
+        await vehicle.save();
       }
     }
 
-    res.status(201).json({ success: true, data: calculation });
+    return res.status(201).json({
+      success: true,
+      message: "Driver calculation created successfully",
+      data: calculation,
+    });
+
   } catch (err) {
     console.error("Error creating driver calculation:", err);
-    res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 // Get All Driver Calculations
 exports.getAllDriverCalculations = async (req, res) => {
