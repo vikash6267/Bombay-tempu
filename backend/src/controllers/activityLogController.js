@@ -34,7 +34,7 @@ const createActivityLog = catchAsync(async (req, res, next) => {
 // Get all activity logs with filtering and pagination
 const getAllActivityLogs = catchAsync(async (req, res, next) => {
   let filter = {};
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 20 } = req.query;
   console.log(req.query);
 
   // Role-based access control

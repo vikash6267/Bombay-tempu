@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { logsApi } from "@/lib/api";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 20;
 
 const actionColors = {
   advance: "bg-indigo-100 text-indigo-800",
@@ -44,18 +44,35 @@ const actionColors = {
 function formatDate(dateString) {
   if (!dateString) return "N/A";
   const date = new Date(dateString);
-  return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
+  return `${String(date.getDate()).padStart(2, "0")}/${String(
+    date.getMonth() + 1
+  ).padStart(2, "0")}/${date.getFullYear()}`;
 }
 
 export default function LogsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
+  const [dateRange, setDateRange] = useState({
+    from: undefined,
+    to: undefined,
+  });
   const [actionFilter, setActionFilter] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
 
-  const { data: logsData, isLoading, error, refetch } = useQuery({
-    queryKey: ["logs", currentPage, searchTerm, dateRange, actionFilter, sortOrder],
+  const {
+    data: logsData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: [
+      "logs",
+      currentPage,
+      searchTerm,
+      dateRange,
+      actionFilter,
+      sortOrder,
+    ],
     queryFn: () =>
       logsApi.getLogs({
         page: currentPage,
@@ -70,18 +87,19 @@ export default function LogsPage() {
   });
 
   const logs = logsData?.data?.logs || [];
-  const total = logsData?.data?.total || 0;
-  const results = logsData?.data?.results || 0;
-  const totalPages = logsData?.data?.totalPages || Math.ceil(total / ITEMS_PER_PAGE) || 0;
-  
-  console.log('📊 Pagination Debug:', { 
-    total, 
+  const total = logsData?.total || 0;
+  const results = logsData?.results || 0;
+  const totalPages =
+    logsData?.totalPages || Math.ceil(total / ITEMS_PER_PAGE) || 0;
+
+  console.log("📊 Pagination Debug:", {
+    total,
     results,
-    totalPages, 
-    currentPage, 
+    totalPages,
+    currentPage,
     logsLength: logs.length,
     shouldShowPagination: !isLoading && totalPages > 1,
-    rawData: logsData?.data 
+    rawData: logsData?.data,
   });
 
   // calculate closing balances
@@ -199,11 +217,17 @@ export default function LogsPage() {
                 <label className="text-sm font-medium">Start Date</label>
                 <Input
                   type="date"
-                  value={dateRange.from ? new Date(dateRange.from).toISOString().split('T')[0] : ''}
+                  value={
+                    dateRange.from
+                      ? new Date(dateRange.from).toISOString().split("T")[0]
+                      : ""
+                  }
                   onChange={(e) => {
-                    setDateRange(prev => ({
+                    setDateRange((prev) => ({
                       ...prev,
-                      from: e.target.value ? new Date(e.target.value) : undefined
+                      from: e.target.value
+                        ? new Date(e.target.value)
+                        : undefined,
                     }));
                     setCurrentPage(1);
                   }}
@@ -216,11 +240,15 @@ export default function LogsPage() {
                 <label className="text-sm font-medium">End Date</label>
                 <Input
                   type="date"
-                  value={dateRange.to ? new Date(dateRange.to).toISOString().split('T')[0] : ''}
+                  value={
+                    dateRange.to
+                      ? new Date(dateRange.to).toISOString().split("T")[0]
+                      : ""
+                  }
                   onChange={(e) => {
-                    setDateRange(prev => ({
+                    setDateRange((prev) => ({
                       ...prev,
-                      to: e.target.value ? new Date(e.target.value) : undefined
+                      to: e.target.value ? new Date(e.target.value) : undefined,
                     }));
                     setCurrentPage(1);
                   }}
@@ -281,25 +309,38 @@ export default function LogsPage() {
                   {processedLogs.map((log) => (
                     <TableRow key={log._id}>
                       <TableCell>{formatDate(log.createdAt)}</TableCell>
-                      <TableCell>{log.relatedTrip?.tripNumber || "-"}</TableCell>
-                      <TableCell className="truncate max-w-xs">
-                        {log.details?.reason || log.description || "-"}
+                      <TableCell>
+                        {log.relatedTrip?.tripNumber ||
+                          log.details?.tripNumber ||
+                          "-"}
                       </TableCell>
+                      <TableCell className="truncate max-w-xs">
+                        {log.details?.reason ||
+                          log.details?.notes ||
+                          log.description ||
+                          "-"}
+                      </TableCell>
+
                       <TableCell>
                         <Badge
                           className={cn(
                             "capitalize",
-                            actionColors[log.action] || "bg-gray-100 text-gray-800"
+                            actionColors[log.action] ||
+                              "bg-gray-100 text-gray-800"
                           )}
                         >
                           {log.action}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {log.withdraw > 0 ? `₹${log.withdraw.toLocaleString()}` : "-"}
+                        {log.withdraw > 0
+                          ? `₹${log.withdraw.toLocaleString()}`
+                          : "-"}
                       </TableCell>
                       <TableCell className="text-right">
-                        {log.deposit > 0 ? `₹${log.deposit.toLocaleString()}` : "-"}
+                        {log.deposit > 0
+                          ? `₹${log.deposit.toLocaleString()}`
+                          : "-"}
                       </TableCell>
                       <TableCell>{log.user?.name || "System"}</TableCell>
                       {/* <TableCell className="text-right font-semibold">
@@ -316,10 +357,16 @@ export default function LogsPage() {
               <div className="flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t gap-4">
                 <div className="text-sm text-gray-600">
                   {totalPages > 1 ? (
-                    <>Page {currentPage} of {totalPages} | Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-                    {Math.min(currentPage * ITEMS_PER_PAGE, total)} of {total} records</>
+                    <>
+                      Page {currentPage} of {totalPages} | Showing{" "}
+                      {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
+                      {Math.min(currentPage * ITEMS_PER_PAGE, total)} of {total}{" "}
+                      records
+                    </>
                   ) : (
-                    <>Showing {logs.length} of {total} records</>
+                    <>
+                      Showing {logs.length} of {total} records
+                    </>
                   )}
                 </div>
                 {totalPages > 1 && (
@@ -332,50 +379,60 @@ export default function LogsPage() {
                     >
                       First
                     </Button>
+
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(prev - 1, 1))
+                      }
                       disabled={currentPage === 1}
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    
-                    <div className="flex items-center space-x-1">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      
-                        return (
-                          <Button
-                            key={pageNum}
-                            variant={currentPage === pageNum ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(pageNum)}
-                            className="min-w-[40px]"
-                          >
-                            {pageNum}
-                          </Button>
-                        );
-                      })}
+
+                    {/* Pagination Numbers */}
+                    <div className="flex space-x-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((page) => {
+                          // show only window: currentPage ± 2
+                          return (
+                            page === 1 ||
+                            page === totalPages ||
+                            (page >= currentPage - 2 && page <= currentPage + 2)
+                          );
+                        })
+                        .map((page, idx, arr) => (
+                          <>
+                            {idx > 0 && arr[idx] - arr[idx - 1] > 1 && (
+                              <span className="px-2">...</span>
+                            )}
+
+                            <Button
+                              key={page}
+                              size="sm"
+                              variant={
+                                currentPage === page ? "default" : "outline"
+                              }
+                              onClick={() => setCurrentPage(page)}
+                            >
+                              {page}
+                            </Button>
+                          </>
+                        ))}
                     </div>
 
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                      }
                       disabled={currentPage === totalPages}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
+
                     <Button
                       variant="outline"
                       size="sm"
