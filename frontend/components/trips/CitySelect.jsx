@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Search, MapPin } from "lucide-react";
 import {
   Command,
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import api from "@/lib/api";
 import { useDispatch, useSelector } from "react-redux";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { getCitiesSuccess } from "@/lib/slices/citySlice";
 
 export function CitySelect({
@@ -37,6 +37,35 @@ export function CitySelect({
 
   const { cities } = useSelector((state) => state.city);
   const dispatch = useDispatch();
+
+  // Fetch cities using React Query
+  const { data: citiesData, isLoading, isError, error: queryError } = useQuery({
+    queryKey: ["cities"],
+    queryFn: () => api.get("/cities/all"),
+  });
+
+  // Debug: Check API response
+  console.log("=== CITY SELECT DEBUG ===");
+  console.log("1. citiesData:", citiesData);
+  console.log("2. isLoading:", isLoading);
+  console.log("3. isError:", isError);
+  console.log("4. queryError:", queryError);
+
+  // Update Redux when cities data changes
+  useEffect(() => {
+    console.log("5. useEffect triggered, citiesData:", citiesData);
+    if (citiesData?.data?.data?.cities) {
+      console.log("6. Cities fetched:", citiesData.data.data.cities.length);
+      console.log("7. Dispatching to Redux...");
+      dispatch(getCitiesSuccess(citiesData.data.data.cities));
+    } else {
+      console.log("6. No cities in response, path:", citiesData?.data);
+    }
+  }, [citiesData, dispatch]);
+
+  // Debug: Check Redux state
+  console.log("8. Redux cities state:", cities);
+  console.log("========================");
 
   // Mutation to add city
   const mutation = useMutation({
@@ -86,6 +115,7 @@ export function CitySelect({
   // Safe filteredCities, default to empty array if cities is not array
   const filteredCities = useMemo(() => {
     const cityList = Array.isArray(cities) ? cities : [];
+    console.log("Filtered Cities Count:", cityList.length);
     if (!search) return cityList.slice(0, 50);
     return cityList
       .filter(

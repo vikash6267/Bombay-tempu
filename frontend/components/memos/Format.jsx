@@ -117,7 +117,7 @@ console.log(data)
         {/* Collection memo bar */}
         <div className="mt-2 text-[11pt] leading-[13pt]">
           <div className="flex items-center justify-between pr-3">
-            <span>Collection No : {data.collectionNo || "01"}</span>
+            <span>Collection No : {data.collectionNumber || data.collectionNo || "01"}</span>
             <span className="font-bold">COLLECTION MEMO</span>
             <span>Date {data.date || <u>{"          "}</u>}</span>
           </div>
@@ -144,7 +144,7 @@ console.log(data)
           <p>
             Lorry No{" "}
             <span className="inline-block min-w-[220px] border-b border-black align-baseline pb-[6px]">
-              {data.lorryNo || ""}
+              {data.lorryNumber || data.lorryNo || ""}
             </span>{" "}
             For The Collection Of Your Goods To Be Despatched From{" "}
             <span className="inline-block min-w-[160px] border-b border-black align-baseline pb-[6px]">
@@ -170,7 +170,7 @@ console.log(data)
             <span>
               Fright{" "}
               <span className="inline-block min-w-[140px] border-b border-black align-baseline pb-[6px]">
-                {data.fright || ""}
+                {data.freight || data.fright || ""}
               </span>
             </span>
           </p>
@@ -188,7 +188,7 @@ console.log(data)
             <span>
               Adcance{" "}
               <span className="inline-block min-w-[140px] border-b border-black align-baseline pb-[6px]">
-                {data.adcance || ""}
+                {data.advance || data.adcance || ""}
               </span>
             </span>
           </p>
@@ -206,7 +206,7 @@ console.log(data)
             <span>
               Blance{" "}
               <span className="inline-block min-w-[140px] border-b border-black align-baseline pb-[6px]">
-                {data.blance || ""}
+                {data.balance || data.blance || ""}
               </span>
             </span>
           </p>

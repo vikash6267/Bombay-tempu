@@ -104,4 +104,8 @@ router.patch("/argestment/:clientId/pay", tripController.payClientAdjustment);
 router.get("/pod-status/statement", tripController.getPodStatusReport);
 router.post("/fleet/statement", tripController.getFleetOwnerStatement);
 
+// Collection and Balance Memos
+router.post("/:tripId/clients/:clientId/collection-memo", tripController.addCollectionMemo);
+router.post("/:tripId/clients/:clientId/balance-memo", tripController.addBalanceMemo);
+
 module.exports = router;

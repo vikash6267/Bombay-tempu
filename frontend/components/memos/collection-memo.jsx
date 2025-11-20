@@ -46,7 +46,8 @@ export function CollectionMemoDialog({
   onOpenChange,
   clientData,
   tripData,
-  onSubmit
+  onSubmit,
+  editData = null
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
@@ -73,7 +74,24 @@ export function CollectionMemoDialog({
   })
 
   useEffect(() => {
-    if (clientData || tripData) {
+    if (editData) {
+      // If editing, populate with existing data
+      form.reset({
+        collectionNumber: editData.collectionNumber || "01",
+        date: editData.date || todayStr,
+        msName: editData.msName || "",
+        lorryNumber: editData.lorryNumber || "",
+        from: editData.from || "",
+        to: editData.to || "",
+        rate: editData.rate || "",
+        freight: editData.freight || 0,
+        advance: editData.advance || 0,
+        balance: editData.balance || 0,
+        weight: editData.weight || "",
+        guarantee: editData.guarantee || ""
+      })
+    } else if (clientData || tripData) {
+      // If creating new, populate with client/trip data
       const totalRate = Number(clientData?.totalRate || 0)
       const paid = Number(clientData?.paidAmount || 0)
       const bal = Math.max(totalRate - paid, 0)
@@ -96,7 +114,7 @@ export function CollectionMemoDialog({
         guarantee: ""
       })
     }
-  }, [clientData, tripData, form, todayStr])
+  }, [clientData, tripData, editData, form, todayStr])
 
   const handleSubmit = async data => {
     if (!onSubmit) {
@@ -126,13 +144,16 @@ export function CollectionMemoDialog({
     }
   }
 
+  // Watch form values for real-time preview update
+  const formValues = form.watch()
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
 
            <div className="rounded border bg-white p-2">
-        <CollectionMemo ref={memoRef} data={form.getValues()} />
+        <CollectionMemo ref={memoRef} data={formValues} />
 
         <Button
         onClick={() => memoRef.current?.download("collection-memo.pdf")}

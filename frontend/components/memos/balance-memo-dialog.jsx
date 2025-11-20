@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -28,12 +28,17 @@ import { formatCurrency, formatDate } from "@/lib/utils"
 import { generateBalanceMemoPDF } from "./pdf-generetors"
 
 const balanceMemoSchema = z.object({
-  billNumber: z.string().min(1, "Bill number is required"),
-  totalAmount: z.number().min(0, "Total amount must be positive"),
-  advanceGiven: z.number().min(0, "Advance given must be positive"),
-  expensesAdded: z.number().min(0, "Expenses added must be positive"),
-  balanceAmount: z.number(),
-  remarks: z.string().optional()
+  customerName: z.string().min(1, "Customer name is required"),
+  invoiceNumber: z.string().min(1, "Invoice number is required"),
+  vehicleNumber: z.string().min(1, "Vehicle number is required"),
+  from: z.string().min(1, "From location is required"),
+  to: z.string().min(1, "To location is required"),
+  freight: z.number().min(0, "Freight must be positive"),
+  advance: z.number().min(0, "Advance must be positive"),
+  detention: z.number().min(0, "Detention must be positive"),
+  unloadingCharge: z.number().min(0, "Unloading charge must be positive"),
+  totalPayableAmount: z.number().min(0, "Total payable amount must be positive"),
+  remark: z.string().optional()
 })
 
 export function BalanceMemoDialog({
@@ -41,11 +46,13 @@ export function BalanceMemoDialog({
   onOpenChange,
   clientData,
   tripData,
-  onSubmit
+  onSubmit,
+  editData = null
 }) {
   const [uploadedFile, setUploadedFile] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-
+console.log(tripData,"tripdata")
+console.log(clientData,"clientData")
   const totalRate = clientData?.totalRate || 0
   const paidAmount = clientData?.paidAmount || 0
   const totalExpense = clientData?.totalExpense || 0
@@ -53,17 +60,72 @@ export function BalanceMemoDialog({
 
   const form = useForm({
     resolver: zodResolver(balanceMemoSchema),
-    defaultValues: {
-      billNumber: `BILL-${Date.now()
-        .toString()
-        .slice(-6)}`,
-      totalAmount: totalRate,
-      advanceGiven: paidAmount,
-      expensesAdded: totalExpense,
-      balanceAmount: balanceDue,
-      remarks: ""
+    defaultValues: editData ? {
+      customerName: editData.customerName || "",
+      invoiceNumber: editData.invoiceNumber || "",
+      vehicleNumber: editData.vehicleNumber || "",
+      from: editData.from || "",
+      to: editData.to || "",
+      freight: editData.freight || 0,
+      advance: editData.advance || 0,
+      detention: editData.detention || 0,
+      unloadingCharge: editData.unloadingCharge || 0,
+      totalPayableAmount: editData.totalPayableAmount || 0,
+      remark: editData.remark || ""
+    } : {
+      customerName: clientData?.client?.name || "",
+      invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+      vehicleNumber: tripData?.vehicle?.registrationNumber || "",
+      from: clientData?.origin?.city || "",
+      to: clientData?.destination?.city || "",
+      freight: totalRate || 0,
+      advance: paidAmount || 0,
+      detention: 0,
+      unloadingCharge: totalExpense || 0,
+      totalPayableAmount: balanceDue || 0,
+      remark: ""
     }
   })
+
+  // Reset form when clientData or tripData changes
+  useEffect(() => {
+    if (editData) {
+      // If editing, populate with existing data
+      form.reset({
+        customerName: editData.customerName || "",
+        invoiceNumber: editData.invoiceNumber || "",
+        vehicleNumber: editData.vehicleNumber || "",
+        from: editData.from || "",
+        to: editData.to || "",
+        freight: editData.freight || 0,
+        advance: editData.advance || 0,
+        detention: editData.detention || 0,
+        unloadingCharge: editData.unloadingCharge || 0,
+        totalPayableAmount: editData.totalPayableAmount || 0,
+        remark: editData.remark || ""
+      })
+    } else if (clientData && tripData) {
+      // If creating new, populate with client/trip data
+      const totalRate = clientData?.totalRate || 0
+      const paidAmount = clientData?.paidAmount || 0
+      const totalExpense = clientData?.totalExpense || 0
+      const balanceDue = totalRate - paidAmount + totalExpense
+
+      form.reset({
+        customerName: clientData?.client?.name || "",
+        invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+        vehicleNumber: tripData?.vehicle?.registrationNumber || "",
+        from: clientData?.origin?.city || "",
+        to: clientData?.destination?.city || "",
+        freight: totalRate || 0,
+        advance: paidAmount || 0,
+        detention: 0,
+        unloadingCharge: totalExpense || 0,
+        totalPayableAmount: balanceDue || 0,
+        remark: ""
+      })
+    }
+  }, [clientData, tripData, editData, form])
 
   const handleFileUpload = event => {
     const file = event.target.files?.[0]
@@ -77,12 +139,15 @@ export function BalanceMemoDialog({
     }
   }
 
-  const calculateBalance = () => {
-    const total = form.getValues("totalAmount")
-    const advance = form.getValues("advanceGiven")
-    const expenses = form.getValues("expensesAdded")
-    const balance = total - advance + expenses
-    form.setValue("balanceAmount", balance)
+  const calculateTotalPayable = () => {
+    const freight = form.getValues("freight") || 0
+    const advance = form.getValues("advance") || 0
+    const detention = form.getValues("detention") || 0
+    const unloadingCharge = form.getValues("unloadingCharge") || 0
+    
+    // Total Payable = Freight - Advance + Detention + Unloading Charge
+    const totalPayable = freight - advance + detention + unloadingCharge
+    form.setValue("totalPayableAmount", totalPayable)
   }
 
   const handleSubmit = async data => {
@@ -107,6 +172,9 @@ export function BalanceMemoDialog({
 
   const downloadPDF = () => {
     const formData = form.getValues()
+
+    console.log(formData)
+    
     const doc = generateBalanceMemoPDF(formData, clientData, tripData)
     doc.save(
       `Balance_Memo_${formData.billNumber}_${formatDate(
@@ -134,74 +202,62 @@ export function BalanceMemoDialog({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-4"
           >
+            {/* Customer Name and Invoice Number */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="customerName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Customer Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter customer name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="invoiceNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Invoice Number *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter invoice number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Vehicle Number */}
             <FormField
               control={form.control}
-              name="billNumber"
+              name="vehicleNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Bill Number *</FormLabel>
+                  <FormLabel>Vehicle Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter bill number" {...field} />
+                    <Input placeholder="Enter vehicle number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* Current Balance Summary */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-800 mb-3">
-                Current Balance Summary
-              </h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600">Total Rate:</span>
-                  <span className="font-semibold ml-2">
-                    {formatCurrency(totalRate)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Advance Paid:</span>
-                  <span className="font-semibold ml-2 text-blue-600">
-                    {formatCurrency(paidAmount)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Expenses Added:</span>
-                  <span className="font-semibold ml-2 text-red-600">
-                    {formatCurrency(totalExpense)}
-                  </span>
-                </div>
-                <div className="col-span-2 border-t pt-2">
-                  <span className="text-gray-600">Balance Due:</span>
-                  <span
-                    className={`font-bold ml-2 text-lg ${
-                      balanceDue >= 0 ? "text-orange-600" : "text-green-600"
-                    }`}
-                  >
-                    {formatCurrency(balanceDue)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
+            {/* From and To */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="totalAmount"
+                name="from"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Total Amount (₹) *</FormLabel>
+                    <FormLabel>From *</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        onChange={e => {
-                          field.onChange(Number(e.target.value))
-                          calculateBalance()
-                        }}
-                      />
+                      <Input placeholder="Origin city" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -210,20 +266,12 @@ export function BalanceMemoDialog({
 
               <FormField
                 control={form.control}
-                name="advanceGiven"
+                name="to"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Advance Given (₹) *</FormLabel>
+                    <FormLabel>To *</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                        onChange={e => {
-                          field.onChange(Number(e.target.value))
-                          calculateBalance()
-                        }}
-                      />
+                      <Input placeholder="Destination city" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -231,13 +279,14 @@ export function BalanceMemoDialog({
               />
             </div>
 
+            {/* Freight and Advance */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="expensesAdded"
+                name="freight"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Expenses Added (₹) *</FormLabel>
+                    <FormLabel>Freight (₹) *</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -245,7 +294,7 @@ export function BalanceMemoDialog({
                         {...field}
                         onChange={e => {
                           field.onChange(Number(e.target.value))
-                          calculateBalance()
+                          calculateTotalPayable()
                         }}
                       />
                     </FormControl>
@@ -256,16 +305,19 @@ export function BalanceMemoDialog({
 
               <FormField
                 control={form.control}
-                name="balanceAmount"
+                name="advance"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Balance Amount (₹)</FormLabel>
+                    <FormLabel>Advance (₹) *</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
+                        placeholder="0"
                         {...field}
-                        readOnly
-                        className="bg-gray-50 font-semibold"
+                        onChange={e => {
+                          field.onChange(Number(e.target.value))
+                          calculateTotalPayable()
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -273,16 +325,83 @@ export function BalanceMemoDialog({
                 )}
               />
             </div>
+
+            {/* Detention and Unloading Charge */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="detention"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Detention (₹) *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        {...field}
+                        onChange={e => {
+                          field.onChange(Number(e.target.value))
+                          calculateTotalPayable()
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="unloadingCharge"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unloading Charge (₹) *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        {...field}
+                        onChange={e => {
+                          field.onChange(Number(e.target.value))
+                          calculateTotalPayable()
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Total Payable Amount (Read-only, Auto-calculated) */}
+            <FormField
+              control={form.control}
+              name="totalPayableAmount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Total Payable Amount (₹)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      {...field}
+                      readOnly
+                      className="bg-green-50 font-bold text-lg text-green-700"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
-              name="remarks"
+              name="remark"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Remarks</FormLabel>
+                  <FormLabel>Remark / Dication Charge</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Enter any additional remarks"
+                      placeholder="e.g., Dication Charge ₹1000 / Per Day"
                       {...field}
                     />
                   </FormControl>

@@ -801,9 +801,9 @@ const addAdvancePayment = catchAsync(async (req, res, next) => {
   }
 
   const newPaidAmount = client.paidAmount + amount;
-  if (newPaidAmount > client.totalRate) {
-    return next(new AppError("Advance exceeds total rate for this client", 400));
-  }
+  // if (newPaidAmount > client.totalRate) {
+  //   return next(new AppError("Advance exceeds total rate for this client", 400));
+  // }
 
   const advanceData = {
     amount,
@@ -3057,7 +3057,149 @@ const getFleetOwnerStatement = async (req, res) => {
   }
 };
 
+// Add Collection Memo
+const addCollectionMemo = catchAsync(async (req, res, next) => {
+  const { tripId, clientId } = req.params;
+  
+  // Parse the collectionMemo JSON if it's sent as FormData
+  let memoData = req.body;
+  if (req.body.collectionMemo) {
+    memoData = JSON.parse(req.body.collectionMemo);
+  }
 
+  const {
+    collectionNumber,
+    date,
+    msName,
+    lorryNumber,
+    from,
+    to,
+    rate,
+    freight,
+    advance,
+    balance,
+    weight,
+    guarantee,
+    paymentMode,
+    remarks
+  } = memoData;
+
+  const trip = await Trip.findById(tripId);
+  if (!trip) {
+    return next(new AppError("Trip not found", 404));
+  }
+
+  // Generate memo number
+  const memoCount = trip.collectionMemos.length + 1;
+  const memoNumber = `CM${String(memoCount).padStart(6, "0")}`;
+
+  const collectionMemo = {
+    memoNumber,
+    collectionNumber,
+    date,
+    clientId,
+    msName,
+    lorryNumber,
+    from,
+    to,
+    rate,
+    freight,
+    advance,
+    balance,
+    weight,
+    guarantee,
+    paymentMode: paymentMode || "cash",
+    remarks,
+    createdBy: req.user.id,
+    createdAt: new Date(),
+  };
+
+  trip.collectionMemos.push(collectionMemo);
+  await trip.save();
+
+  res.status(201).json({
+    status: "success",
+    message: "Collection memo created successfully",
+    data: {
+      memo: collectionMemo,
+    },
+  });
+});
+
+// Add Balance Memo
+const addBalanceMemo = catchAsync(async (req, res, next) => {
+  const { tripId, clientId } = req.params;
+  
+  // Parse the balanceMemo JSON if it's sent as FormData
+  let memoData = req.body;
+  if (req.body.balanceMemo) {
+    memoData = JSON.parse(req.body.balanceMemo);
+  }
+
+  const {
+    customerName,
+    invoiceNumber,
+    vehicleNumber,
+    from,
+    to,
+    freight,
+    advance,
+    detention,
+    unloadingCharge,
+    totalPayableAmount,
+    remark
+  } = memoData;
+
+  const trip = await Trip.findById(tripId);
+  if (!trip) {
+    return next(new AppError("Trip not found", 404));
+  }
+
+  // Generate memo number
+  const memoCount = trip.balanceMemos.length + 1;
+  const memoNumber = `BM${String(memoCount).padStart(6, "0")}`;
+
+  // Handle document upload if present
+  let documentUrl = null;
+  if (req.file) {
+    // Upload to cloudinary or your storage
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "balance-memos",
+      resource_type: "auto",
+    });
+    documentUrl = result.secure_url;
+  }
+
+  const balanceMemo = {
+    memoNumber,
+    customerName,
+    invoiceNumber,
+    vehicleNumber,
+    from,
+    to,
+    freight,
+    advance,
+    detention,
+    unloadingCharge,
+    totalPayableAmount,
+    remark,
+    clientId,
+    document: documentUrl,
+    createdBy: req.user.id,
+    createdAt: new Date(),
+  };
+
+  trip.balanceMemos.push(balanceMemo);
+  await trip.save();
+
+  res.status(201).json({
+    status: "success",
+    message: "Balance memo created successfully",
+    data: {
+      memo: balanceMemo,
+    },
+  });
+});
 
 
 module.exports = {
@@ -3097,5 +3239,7 @@ module.exports = {
   uploadPodDocumentForClient,
   getPodStatusReport,
   getFleetOwnerStatement,
-  deleteFleetExpense
+  deleteFleetExpense,
+  addCollectionMemo,
+  addBalanceMemo
 };

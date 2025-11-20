@@ -607,6 +607,58 @@ const tripSchema = new mongoose.Schema(
         },
       },
     ],
+
+    // Collection Memos
+    collectionMemos: [
+      {
+        memoNumber: String,
+        collectionNumber: String,
+        date: String,
+        clientId: { type: mongoose.Schema.ObjectId, ref: "User" },
+        msName: String,
+        lorryNumber: String,
+        from: String,
+        to: String,
+        rate: String,
+        freight: Number,
+        advance: Number,
+        balance: Number,
+        weight: String,
+        guarantee: String,
+        paymentMode: {
+          type: String,
+          enum: ["cash", "cheque", "online", "upi", "bank_transfer"],
+          default: "cash",
+        },
+        remarks: String,
+        createdBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: Date,
+      },
+    ],
+
+    // Balance Memos
+    balanceMemos: [
+      {
+        memoNumber: String,
+        customerName: String,
+        invoiceNumber: String,
+        vehicleNumber: String,
+        from: String,
+        to: String,
+        freight: Number,
+        advance: Number,
+        detention: Number,
+        unloadingCharge: Number,
+        totalPayableAmount: Number,
+        remark: String,
+        clientId: { type: mongoose.Schema.ObjectId, ref: "User" },
+        document: String, // URL to uploaded document
+        createdBy: { type: mongoose.Schema.ObjectId, ref: "User" },
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: Date,
+      },
+    ],
   },
   {
     timestamps: true,

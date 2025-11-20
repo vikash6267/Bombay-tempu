@@ -186,6 +186,10 @@ export const tripsApi = {
 
   // Payment numbers for fixed dropdown
   getPaymentNumbers: () => apiGet("/trips/payment-numbers"),
+
+  // Collection and Balance Memos
+  addCollectionMemo: (tripId, clientId, data) => apiPost(`/trips/${tripId}/clients/${clientId}/collection-memo`, data),
+  addBalanceMemo: (tripId, clientId, data) => apiPost(`/trips/${tripId}/clients/${clientId}/balance-memo`, data),
 };
 
 // Payments API
@@ -288,3 +292,19 @@ export const driverCalculationsApi = {
 };
 
 export default api;
+
+
+// Memos API
+export const memosApi = {
+  // Collection Memos
+  createCollectionMemo: (tripId, data) => apiPost(`/memos/${tripId}/collection-memos`, data),
+  getAllCollectionMemos: (tripId) => apiGet(`/memos/${tripId}/collection-memos`),
+  updateCollectionMemo: (tripId, memoId, data) => apiPut(`/memos/${tripId}/collection-memos/${memoId}`, data),
+  deleteCollectionMemo: (tripId, memoId) => apiDelete(`/memos/${tripId}/collection-memos/${memoId}`),
+
+  // Balance Memos
+  createBalanceMemo: (tripId, data) => apiPost(`/memos/${tripId}/balance-memos`, data),
+  getAllBalanceMemos: (tripId) => apiGet(`/memos/${tripId}/balance-memos`),
+  updateBalanceMemo: (tripId, memoId, data) => apiPut(`/memos/${tripId}/balance-memos/${memoId}`, data),
+  deleteBalanceMemo: (tripId, memoId) => apiDelete(`/memos/${tripId}/balance-memos/${memoId}`),
+};

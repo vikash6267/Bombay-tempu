@@ -88,6 +88,7 @@ import { CollectionMemoDialog } from "@/components/memos/collection-memo";
 import { BalanceMemoDialog } from "@/components/memos/balance-memo-dialog";
 import { ClientStatementGenerator } from "@/components/memos/client-statment";
 import { PODStepUpload } from "@/components/memos/pod-step-upload";
+import { generateCollectionMemoPDF, generateBalanceMemoPDF } from "@/components/memos/pdf-generetors";
 import axios from "axios";
 import { EnhancedAddEditTripDialog } from "components/trips/enhanced-edit-trip-dialog";
 import PodStatusCard from "../ClientPod";
@@ -910,6 +911,8 @@ export default function TripDetailPage() {
     useState(false);
   const [showBalanceMemoDialog, setShowBalanceMemoDialog] = useState(false);
   const [selectedClientForMemo, setSelectedClientForMemo] = useState(null);
+  const [editingCollectionMemo, setEditingCollectionMemo] = useState(null);
+  const [editingBalanceMemo, setEditingBalanceMemo] = useState(null);
   const [showEditDialog, setShowEditDialog] = useState(false); // New state for edit dialog
 
   // ADVANCE
@@ -1287,6 +1290,45 @@ const handleDeleteFleetExpenses = async (expenseId) => {
     }
   };
 
+  // Download Collection Memo as PDF
+  const handleDownloadCollectionMemo = (memo) => {
+    try {
+      const doc = generateCollectionMemoPDF(memo);
+      const safeDate = (memo.date || "").replace(/[/\\:?*"<>|]/g, "-");
+      doc.save(`Collection_Memo_${memo.memoNumber}_${safeDate}.pdf`);
+      toast.success("PDF downloaded successfully");
+    } catch (error) {
+      console.error("Download failed:", error);
+      toast.error("Failed to download PDF");
+    }
+  };
+
+  // Download Balance Memo as PDF
+  const handleDownloadBalanceMemo = (memo) => {
+    try {
+      const doc = generateBalanceMemoPDF(memo);
+      doc.save(`Balance_Memo_${memo.memoNumber}.pdf`);
+      toast.success("PDF downloaded successfully");
+    } catch (error) {
+      console.error("Download failed:", error);
+      toast.error("Failed to download PDF");
+    }
+  };
+
+  // Edit Collection Memo
+  const handleEditCollectionMemo = (memo, clientData) => {
+    setEditingCollectionMemo(memo);
+    setSelectedClientForMemo(clientData);
+    setShowCollectionMemoDialog(true);
+  };
+
+  // Edit Balance Memo
+  const handleEditBalanceMemo = (memo, clientData) => {
+    setEditingBalanceMemo(memo);
+    setSelectedClientForMemo(clientData);
+    setShowBalanceMemoDialog(true);
+  };
+
   const steps = [
     { key: "started", label: "Trip Started", icon: "🚛", color: "blue" },
     { key: "complete", label: "Trip Completed", icon: "✅", color: "green" },
@@ -1381,11 +1423,11 @@ const handleDeleteFleetExpenses = async (expenseId) => {
 
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
-  const token = localStorage?.getItem("token");
 
   // POD Step Document Upload Handler
   const handlePODStepUpload = async (file, stepKey) => {
     try {
+      const token = localStorage?.getItem("token");
       const formData = new FormData();
       formData.append("file", file);
       formData.append("stepKey", stepKey);
@@ -1416,6 +1458,7 @@ const handleDeleteFleetExpenses = async (expenseId) => {
 
   const handlePODStepDelete = async (stepKey) => {
     try {
+      const token = localStorage?.getItem("token");
       const res = await axios.delete(
         `${API_BASE_URL}/trips/${params.id}/podDocument`,
         {
@@ -1505,7 +1548,7 @@ const handleDeleteFleetExpenses = async (expenseId) => {
   const podBalance = trip.podBalance || 0;
 
   const finalAmount =
-    tripRate - totalGivenToFleetOwner - podBalance - commission;
+    tripRate - totalGivenToFleetOwner - podBalance - commission + totalFleetExpenses;
 
   const getCategoryColor = (category) => {
     const colors = {
@@ -3480,6 +3523,184 @@ const handleDeleteFleetExpenses = async (expenseId) => {
           </Card>
         )}
 
+        {/* Collection & Balance Memos Section */}
+        {(trip.collectionMemos?.length > 0 || trip.balanceMemos?.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            {/* Collection Memos */}
+            {trip.collectionMemos?.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center text-blue-600">
+                    <Memo className="h-5 w-5 mr-2" />
+                    Collection Memos ({trip.collectionMemos.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {trip.collectionMemos.map((memo, index) => (
+                      <div
+                        key={index}
+                        className="p-4 bg-blue-50 rounded-lg border border-blue-200 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <div className="font-semibold text-blue-900 text-lg">
+                              {memo.memoNumber}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Collection No: {memo.collectionNumber}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-2"
+                              onClick={() => handleDownloadCollectionMemo(memo)}
+                              title="Download PDF"
+                            >
+                              <Download className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-2"
+                              onClick={() => {
+                                const client = trip.clients.find(c => c.client._id === memo.clientId);
+                                handleEditCollectionMemo(memo, client);
+                              }}
+                              title="Edit Memo"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Badge className="bg-blue-100 text-blue-800">
+                              {memo.paymentMode || "cash"}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-700 space-y-1.5 border-t pt-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div><span className="text-gray-500">M/s:</span> <span className="font-medium">{memo.msName}</span></div>
+                            <div><span className="text-gray-500">Date:</span> {memo.date}</div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div><span className="text-gray-500">Lorry:</span> {memo.lorryNumber}</div>
+                            <div><span className="text-gray-500">Weight:</span> {memo.weight}</div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div><span className="text-gray-500">From:</span> {memo.from}</div>
+                            <div><span className="text-gray-500">To:</span> {memo.to}</div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t">
+                            <div><span className="text-gray-500">Freight:</span> <span className="font-semibold">{formatCurrency(memo.freight)}</span></div>
+                            <div><span className="text-gray-500">Advance:</span> <span className="font-semibold">{formatCurrency(memo.advance)}</span></div>
+                            <div><span className="text-gray-500">Balance:</span> <span className="font-semibold text-blue-700">{formatCurrency(memo.balance)}</span></div>
+                          </div>
+                          {memo.guarantee && (
+                            <div className="text-xs mt-2"><span className="text-gray-500">Guarantee:</span> {memo.guarantee}</div>
+                          )}
+                          {memo.remarks && (
+                            <div className="text-xs italic text-gray-600 mt-2">"{memo.remarks}"</div>
+                          )}
+                          <div className="text-xs text-gray-400 mt-2 pt-2 border-t">
+                            Created: {formatDate(memo.createdAt, "MMM dd, yyyy HH:mm")}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Balance Memos */}
+            {trip.balanceMemos?.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center text-green-600">
+                    <ReceiptText className="h-5 w-5 mr-2" />
+                    Balance Memos ({trip.balanceMemos.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {trip.balanceMemos.map((memo, index) => (
+                      <div
+                        key={index}
+                        className="p-4 bg-green-50 rounded-lg border border-green-200 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <div className="font-semibold text-green-900 text-lg">
+                              {memo.memoNumber}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Bill No: {memo.billNumber}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-2"
+                              onClick={() => handleDownloadBalanceMemo(memo)}
+                              title="Download PDF"
+                            >
+                              <Download className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-2"
+                              onClick={() => {
+                                const client = trip.clients.find(c => c.client._id === memo.clientId);
+                                handleEditBalanceMemo(memo, client);
+                              }}
+                              title="Edit Memo"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Badge className="bg-orange-100 text-orange-800">
+                              Due
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-700 space-y-1.5 border-t pt-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div><span className="text-gray-500">Total Amount:</span> <span className="font-semibold">{formatCurrency(memo.totalAmount)}</span></div>
+                            <div><span className="text-gray-500">Advance Given:</span> {formatCurrency(memo.advanceGiven)}</div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div><span className="text-gray-500">Expenses Added:</span> {formatCurrency(memo.expensesAdded)}</div>
+                            <div><span className="text-gray-500">Balance:</span> <span className="font-semibold text-green-700">{formatCurrency(memo.balanceAmount)}</span></div>
+                          </div>
+                          {memo.dueDate && (
+                            <div className="mt-2"><span className="text-gray-500">Due Date:</span> {formatDate(memo.dueDate, "MMM dd, yyyy")}</div>
+                          )}
+                          {memo.remarks && (
+                            <div className="text-xs italic text-gray-600 mt-2">"{memo.remarks}"</div>
+                          )}
+                          {memo.document && (
+                            <div className="mt-2">
+                              <a href={memo.document} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                                <FileText className="h-3 w-3" />
+                                View Document
+                              </a>
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-400 mt-2 pt-2 border-t">
+                            Created: {formatDate(memo.createdAt, "MMM dd, yyyy HH:mm")}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
         {/* POD Upload Dialog */}
         <PODDetailsDialog
           show={showPODDialog}
@@ -3500,19 +3721,33 @@ const handleDeleteFleetExpenses = async (expenseId) => {
         {/* Collection Memo Dialog */}
         <CollectionMemoDialog
           open={showCollectionMemoDialog}
-          onOpenChange={setShowCollectionMemoDialog}
+          onOpenChange={(open) => {
+            setShowCollectionMemoDialog(open);
+            if (!open) {
+              setEditingCollectionMemo(null);
+              setSelectedClientForMemo(null);
+            }
+          }}
           clientData={selectedClientForMemo}
           tripData={trip}
           onSubmit={handleCollectionMemoSubmit}
+          editData={editingCollectionMemo}
         />
 
         {/* Balance Memo Dialog */}
         <BalanceMemoDialog
           open={showBalanceMemoDialog}
-          onOpenChange={setShowBalanceMemoDialog}
+          onOpenChange={(open) => {
+            setShowBalanceMemoDialog(open);
+            if (!open) {
+              setEditingBalanceMemo(null);
+              setSelectedClientForMemo(null);
+            }
+          }}
           clientData={selectedClientForMemo}
           tripData={trip}
           onSubmit={handleBalanceMemoSubmit}
+          editData={editingBalanceMemo}
         />
       </div>
 
