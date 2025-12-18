@@ -103,23 +103,30 @@ export default function LogsPage() {
   });
 
   // calculate closing balances
-  let runningBalance = 0;
-  const processedLogs = logs.map((log) => {
-    let deposit = 0;
-    let withdraw = 0;
+// calculate closing balances
+let runningBalance = 0;
+const processedLogs = logs.map((log) => {
+  let deposit = 0;
+  let withdraw = 0;
+  let deletedAmount = 0;
 
-    if (log.action === "advance") deposit = log.details?.amount || 0;
-    if (log.action === "expense") withdraw = log.details?.amount || 0;
+  if (log.action === "advance") deposit = log.details?.amount || 0;
+  if (log.action === "expense") withdraw = log.details?.amount || 0;
+  if (log.action === "advance_deleted" || log.action === "expense_deleted") {
+    deletedAmount = log.details?.amount || 0;
+  }
 
-    runningBalance = runningBalance + deposit - withdraw;
+  runningBalance = runningBalance + deposit - withdraw - deletedAmount;
 
-    return {
-      ...log,
-      deposit,
-      withdraw,
-      closingBalance: runningBalance,
-    };
-  });
+  return {
+    ...log,
+    deposit,
+    withdraw,
+    deletedAmount,
+    closingBalance: runningBalance,
+  };
+});
+
 
   return (
     <DashboardLayout>
@@ -173,25 +180,29 @@ export default function LogsPage() {
               </div>
 
               {/* Action Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Action Type</label>
-                <select
-                  value={actionFilter}
-                  onChange={(e) => {
-                    setActionFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">All Actions</option>
-                  <option value="advance">Advance</option>
-                  <option value="expense">Expense</option>
-                  <option value="payment">Payment</option>
-                  <option value="create">Create</option>
-                  <option value="update">Update</option>
-                  <option value="delete">Delete</option>
-                </select>
-              </div>
+            {/* Action Filter */}
+<div className="space-y-2">
+  <label className="text-sm font-medium">Action Type</label>
+  <select
+    value={actionFilter}
+    onChange={(e) => {
+      setActionFilter(e.target.value);
+      setCurrentPage(1);
+    }}
+    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+  >
+    <option value="">All Actions</option>
+    <option value="advance">Advance</option>
+    <option value="expense">Expense</option>
+    <option value="advance_deleted">Advance Deleted</option>
+    <option value="expense_deleted">Expense Deleted</option>
+    <option value="payment">Payment</option>
+    <option value="create">Create</option>
+    <option value="update">Update</option>
+    <option value="delete">Delete</option>
+  </select>
+</div>
+
 
               {/* Sort Order */}
               <div className="space-y-2">
@@ -301,52 +312,40 @@ export default function LogsPage() {
                     <TableHead>Action</TableHead>
                     <TableHead className="text-right">Withdrawal Amt</TableHead>
                     <TableHead className="text-right">Credit Amt</TableHead>
+                    <TableHead className="text-right">Deleted Amt</TableHead>
+
                     <TableHead>User Name</TableHead>
                     {/* <TableHead className="text-right">Closing Balance</TableHead> */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {processedLogs.map((log) => (
-                    <TableRow key={log._id}>
-                      <TableCell>{formatDate(log.createdAt)}</TableCell>
-                      <TableCell>
-                        {log.relatedTrip?.tripNumber ||
-                          log.details?.tripNumber ||
-                          "-"}
-                      </TableCell>
-                      <TableCell className="truncate max-w-xs">
-                        {log.details?.reason ||
-                          log.details?.notes ||
-                          log.description ||
-                          "-"}
-                      </TableCell>
+                  <TableRow key={log._id}>
+  <TableCell>{formatDate(log.createdAt)}</TableCell>
+  <TableCell>{log.relatedTrip?.tripNumber || log.details?.tripNumber || "-"}</TableCell>
+  <TableCell className="truncate max-w-xs">
+    {log.details?.reason || log.details?.notes || log.description || "-"}
+  </TableCell>
 
-                      <TableCell>
-                        <Badge
-                          className={cn(
-                            "capitalize",
-                            actionColors[log.action] ||
-                              "bg-gray-100 text-gray-800"
-                          )}
-                        >
-                          {log.action}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {log.withdraw > 0
-                          ? `₹${log.withdraw.toLocaleString()}`
-                          : "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {log.deposit > 0
-                          ? `₹${log.deposit.toLocaleString()}`
-                          : "-"}
-                      </TableCell>
-                      <TableCell>{log.user?.name || "System"}</TableCell>
-                      {/* <TableCell className="text-right font-semibold">
-                        ₹{log.closingBalance.toLocaleString()}
-                      </TableCell> */}
-                    </TableRow>
+  <TableCell>
+    <Badge className={cn("capitalize", actionColors[log.action] || "bg-gray-100 text-gray-800")}>
+      {log.action}
+    </Badge>
+  </TableCell>
+
+  <TableCell className="text-right">
+    {log.withdraw > 0 ? `₹${log.withdraw.toLocaleString()}` : "-"}
+  </TableCell>
+  <TableCell className="text-right">
+    {log.deposit > 0 ? `₹${log.deposit.toLocaleString()}` : "-"}
+  </TableCell>
+  <TableCell className="text-right">
+    {log.deletedAmount > 0 ? `₹${log.deletedAmount.toLocaleString()}` : "-"}
+  </TableCell>
+
+  <TableCell>{log.user?.name || "System"}</TableCell>
+</TableRow>
+
                   ))}
                 </TableBody>
               </Table>

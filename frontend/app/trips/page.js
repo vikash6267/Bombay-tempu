@@ -156,24 +156,41 @@ const fetchAllTripsForExport = async () => {
         const client = clientEntry.client || clientEntry.CLIENT;
 
         const formattedDate = clientEntry.loadDate
-          ? new Date(clientEntry.loadDate).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-            })
+          ? new Date(clientEntry.loadDate).toLocaleDateString("en-IN")
           : "";
 
+        // Calculate totals
+        const clientAdvancePaid = clientEntry.paidAmount || 0;
+        const clientBalance = clientEntry.dueAmount || 0;
+        const clientFright = clientEntry.rate || 0;
+        
+        // Truck calculations
+        const truckPaidAdvance = trip.totalFleetAdvance || 0;
+        const truckBalance = (trip.vehicleOwnerAmount || 0) - truckPaidAdvance;
+        
+        // POD status
+        const podStatus = clientEntry.podManage?.status || trip.podManage?.status || "pending";
+        const podSubmitDate = clientEntry.podManage?.date || trip.podManage?.date || "";
+        const podRemark = podStatus === "pod_submitted" || podStatus === "settled" ? "Submitted" : "Pending";
+
         csvData.push({
-          TripNumber: trip.tripNumber,
-          VehicleNumber: trip.vehicle?.registrationNumber || "",
-          ClientName: client?.name || client?.NAME || "",
-          From: clientEntry.origin?.city || clientEntry.ORIGIN || "",
-          To: clientEntry.destination?.city || clientEntry.DESTINATION || "",
-          Rate: clientEntry.rate || 0,
           Date: formattedDate,
-          Paid: clientEntry.paidAmount || 0,
-          Pending: clientEntry.dueAmount || 0,
-          ExpensesClient: clientEntry.totalExpense || 0,
+          VehicleNo: trip.vehicle?.registrationNumber || "",
+          From: clientEntry.origin?.city || "",
+          To: clientEntry.destination?.city || "",
+          ClientFright: clientFright,
+          ApnaFright: trip.commission || 0,
+          TruckHireCost: trip.vehicleOwnerAmount || 0,
+          Adjustments: clientEntry.argestment || 0,
+          ClientAdvancePaid: clientAdvancePaid,
+          ClientBalance: clientBalance,
+          TruckPaidAdvance: truckPaidAdvance,
+          TruckBalance: truckBalance,
+          TruckBalancePaidDate: trip.podDetails?.date ? new Date(trip.podDetails.date).toLocaleDateString("en-IN") : "",
+          BalanceRemark: trip.podDetails?.notes || "",
+          PodSubmit: podRemark,
+          PodSubmitDate: podSubmitDate ? new Date(podSubmitDate).toLocaleDateString("en-IN") : "",
+          PodRemark: podRemark,
         });
       });
     });
@@ -182,28 +199,42 @@ const fetchAllTripsForExport = async () => {
     const wb = XLSX.utils.book_new();
     const wsData = [
       [
-        "TRIP NUMBER",
-        "VEHICLE NUMBER",
-        "CLIENT NAME",
-        "FROM",
-        "TO",
-        "RATE",
-        "DATE",
-        "PAID",
-        "PENDING",
-        "EXPENSES CLIENT",
+        "Date",
+        "Gaadi No",
+        "From",
+        "To",
+        "Client Fright",
+        "Apna Fright",
+        "Truck Hire Cost",
+        "Adjustments",
+        "Client Advance Paid",
+        "Client Balance",
+        "Truck Paid Advance",
+        "Truck Balance",
+        "Truck Balance Paid Date",
+        "Balance Remark",
+        "POD Submit",
+        "POD Submit Date",
+        "POD Remark",
       ],
       ...csvData.map((r) => [
-        r.TripNumber,
-        r.VehicleNumber,
-        r.ClientName,
+        r.Date,
+        r.VehicleNo,
         r.From,
         r.To,
-        r.Rate,
-        r.Date,
-        r.Paid,
-        r.Pending,
-        r.ExpensesClient,
+        r.ClientFright,
+        r.ApnaFright,
+        r.TruckHireCost,
+        r.Adjustments,
+        r.ClientAdvancePaid,
+        r.ClientBalance,
+        r.TruckPaidAdvance,
+        r.TruckBalance,
+        r.TruckBalancePaidDate,
+        r.BalanceRemark,
+        r.PodSubmit,
+        r.PodSubmitDate,
+        r.PodRemark,
       ]),
     ];
 
@@ -211,8 +242,8 @@ const fetchAllTripsForExport = async () => {
 
     // Style header
     const headerStyle = {
-      font: { bold: true, color: { rgb: "000000" }, sz: 12 },
-      fill: { patternType: "solid", fgColor: { rgb: "FFFF00" } },
+      font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+      fill: { patternType: "solid", fgColor: { rgb: "4472C4" } },
       alignment: { horizontal: "center", vertical: "center" },
       border: {
         top: { style: "thin", color: { rgb: "000000" } },
@@ -229,15 +260,23 @@ const fetchAllTripsForExport = async () => {
     }
 
     ws["!cols"] = [
-      { width: 15 },
-      { width: 18 },
-      { width: 20 },
-      { width: 15 },
-      { width: 15 },
-      { width: 12 },
-      { width: 12 },
-      { width: 12 },
-      { width: 15 },
+      { width: 12 },  // Date
+      { width: 15 },  // Gaadi No
+      { width: 12 },  // From
+      { width: 12 },  // To
+      { width: 14 },  // Client Fright
+      { width: 12 },  // Apna Fright
+      { width: 15 },  // Truck Hire Cost
+      { width: 12 },  // Adjustments
+      { width: 16 },  // Client Advance Paid
+      { width: 14 },  // Client Balance
+      { width: 16 },  // Truck Paid Advance
+      { width: 14 },  // Truck Balance
+      { width: 18 },  // Truck Balance Paid Date
+      { width: 15 },  // Balance Remark
+      { width: 12 },  // POD Submit
+      { width: 15 },  // POD Submit Date
+      { width: 12 },  // POD Remark
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, "Trips Data");

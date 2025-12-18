@@ -287,7 +287,7 @@ const getClientTripBalances = catchAsync(async (req, res, next) => {
       const percentagePaid = totalRate ? (paidAmount / totalRate) * 100 : 0;
       const seventyPercentOfTotal = (totalRate * 70) / 100;
       const remainingToReach70 = Math.max(seventyPercentOfTotal - paidAmount, 0);
-const remainingAfterSeventy = Math.max(totalRate - paidAmount, 0);
+      const remainingAfterSeventy = Math.max(totalRate - paidAmount, 0);
 
       return {
         tripId: trip._id,

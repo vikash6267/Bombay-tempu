@@ -58,6 +58,34 @@ console.log(clientData,"clientData")
   const totalExpense = clientData?.totalExpense || 0
   const balanceDue = totalRate - paidAmount + totalExpense
 
+
+  const typeOptions = [
+  { value: "driver_bhatta", label: "Fuel" },
+  { value: "loading_charges", label: "Loading Charges" },
+  { value: "unloading_charges", label: "Unloading Charges" },
+  { value: "toll", label: "Toll" },
+  { value: "halting_charges", label: "Halting Charges" },
+  { value: "weight_charges", label: "Weight Charges" },
+  { value: "union_charges", label: "Union Charges" },
+  { value: "add_new", label: "➕ Other (Add New)" },
+];
+const typeLabelMap = Object.fromEntries(
+  typeOptions.map(opt => [opt.value, opt.label])
+)
+
+
+  const expenseRemark = clientData?.expenses?.length
+  ? clientData.expenses
+      .map(exp => {
+        const label = typeLabelMap[exp.type] || exp.type
+        const amountPart = `(${exp.amount}/-)`
+        const descPart = exp.description ? ` - ${exp.description}` : ""
+        return `${label} ${amountPart}${descPart}`
+      })
+      .join(", ")
+  : ""
+
+
   const form = useForm({
     resolver: zodResolver(balanceMemoSchema),
     defaultValues: editData ? {
@@ -83,7 +111,7 @@ console.log(clientData,"clientData")
       detention: 0,
       unloadingCharge: totalExpense || 0,
       totalPayableAmount: balanceDue || 0,
-      remark: ""
+      remark: expenseRemark || ""
     }
   })
 
@@ -101,6 +129,7 @@ console.log(clientData,"clientData")
         advance: editData.advance || 0,
         detention: editData.detention || 0,
         unloadingCharge: editData.unloadingCharge || 0,
+        detention: editData.unloadingCharge || 0,
         totalPayableAmount: editData.totalPayableAmount || 0,
         remark: editData.remark || ""
       })
@@ -119,10 +148,10 @@ console.log(clientData,"clientData")
         to: clientData?.destination?.city || "",
         freight: totalRate || 0,
         advance: paidAmount || 0,
-        detention: 0,
+        detention: totalExpense ||0,
         unloadingCharge: totalExpense || 0,
         totalPayableAmount: balanceDue || 0,
-        remark: ""
+        remark: expenseRemark || ""
       })
     }
   }, [clientData, tripData, editData, form])

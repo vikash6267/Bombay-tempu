@@ -41,7 +41,7 @@ export function StatementTable({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [clientInfo, setClientInfo] = useState(initialClientInfo);
- 
+ console.log(initialClientInfo)
   const handleClientUpdate = async (updatedClient) => {
     try {
       // Fetch updated client from API

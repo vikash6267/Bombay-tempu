@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -1079,7 +1079,7 @@ export default function TripDetailPage() {
     try {
       const res = await tripsApi.deleteAdvance(params.id, {
         clientIndex,
-        advanceIndex,
+        advanceId: advanceIndex,
       });
 
       queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
@@ -1100,7 +1100,7 @@ export default function TripDetailPage() {
     try {
       const res = await tripsApi.deleteExpense(params.id, {
         clientIndex,
-        expenseIndex,
+        expenseId:expenseIndex,
       });
 
       queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
@@ -1484,6 +1484,20 @@ const handleDeleteFleetExpenses = async (expenseId) => {
     setShowDeleteDialog(true);
   };
 
+   const searchParams = useSearchParams(); // query params
+
+  // const tripId = params.id; // path se id
+  const clientId = searchParams.get('clientId'); // query string se clientId
+
+ console.log(clientId)
+
+
+ const filteredClients = trip?.clients?.filter(
+  (clientData) => clientData.client._id === clientId
+);
+
+
+  console.log(filteredClients,"filteredClients")
   if (isLoading || !trip) {
     return (
       <DashboardLayout>
@@ -1511,6 +1525,547 @@ const handleDeleteFleetExpenses = async (expenseId) => {
             Back to Trips
           </Button>
         </div>
+      </DashboardLayout>
+    );
+  }
+
+
+
+
+   if (clientId) {
+    return (
+      <DashboardLayout>
+      
+
+       <Card className="shadow-lg">
+              <CardHeader>
+                <div className="flex flex-row justify-between items-center">
+                  <div>
+                    <CardTitle className="flex items-center text-xl">
+                      <Users className="h-5 w-5 mr-2" />
+                      Clients & Load Details
+                    </CardTitle>
+                    <CardDescription>
+                      Individual client details and their respective loads
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Tabs
+                  defaultValue={filteredClients[0]?._id || "default"}
+                  className="space-y-4"
+                >
+                  <TabsList
+                    className="grid w-full"
+                    style={{
+                      gridTemplateColumns: `repeat(${
+                        trip.clients?.length || 1
+                      }, minmax(0, 1fr))`,
+                    }}
+                  >
+                    {filteredClients.map((clientData, index) => (
+                      <TabsTrigger
+                        key={clientData._id}
+                        value={clientData._id}
+                        className="text-sm"
+                      >
+                        {clientData.client?.name || "Unknown Client"}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                  {filteredClients.map((clientData, index) => (
+                    <TabsContent key={clientData._id} value={clientData._id}>
+                      <div className="border rounded-lg p-6 bg-gradient-to-r from-gray-50 to-white">
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center space-x-4">
+                            <Avatar className="w-12 h-12">
+                              <AvatarImage
+                                src={
+                                  clientData.client.profileImage ||
+                                  "/placeholder.svg" ||
+                                  "/placeholder.svg"
+                                }
+                              />
+                              <AvatarFallback className="bg-blue-100 text-blue-800 text-lg">
+                                {clientData.client.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                                  .toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-semibold text-lg">
+                                {clientData.client.name}
+                              </div>
+                              {/* <div className="text-sm text-muted-foreground flex items-center">
+                                <Mail className="h-3 w-3 mr-1" />
+                                {clientData.client.email}
+                              </div> */}
+                            </div>
+                          </div>
+                          <div className="flex flex-row items-center gap-3 text-lg font-medium">
+                            <div className="px-3 py-1 bg-blue-100 text-blue-800 rounded-lg">
+                              {clientData.origin.city}
+                            </div>
+                            <div className="text-gray-400">→</div>
+                            <div className="px-3 py-1 bg-green-100 text-green-800 rounded-lg">
+                              {clientData.destination.city}
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <div className="space-y-2 font-medium">
+                              <div className="text-lg">
+                                Total Rate:{" "}
+                                <span className="text-green-600 font-bold">
+                                  {formatCurrency(clientData.totalRate ?? 0)}
+                                </span>
+                              </div>
+                              <div className="text-sm">
+                                Total Truck Hire Cost:{" "}
+                                <span className="text-green-600 font-bold">
+                                  {formatCurrency(
+                                    clientData.truckHireCost ?? 0
+                                  )}
+                                </span>
+                              </div>
+                              {clientData.argestment > 0 && (
+                                <div className="text-sm">
+                                  Argestment:{" "}
+                                  <span className="text-orange-600 font-semibold">
+                                    {formatCurrency(clientData.argestment ?? 0)}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="text-sm">
+                                Profite (Rate - Truck Cost - Argestment):{" "}
+                                <span className="text-green-600 font-bold">
+                                  {formatCurrency(
+                                    Math.abs(
+                                      clientData.totalRate -
+                                        clientData.truckHireCost -
+                                        (clientData.argestment || 0)
+                                    )
+                                  )}
+                                </span>
+                              </div>
+                              <div className="text-sm">
+                                Paid:{" "}
+                                <span className="text-blue-600 font-semibold">
+                                  {formatCurrency(clientData.paidAmount ?? 0)}
+                                </span>
+                              </div>
+                              <div className="text-sm">
+                                Expenses:{" "}
+                                <span className="text-red-600 font-semibold">
+                                  {formatCurrency(clientData.totalExpense ?? 0)}
+                                </span>
+                              </div>
+                              <div className="text-lg border-t pt-2">
+                                <span className="text-gray-600">Due: </span>
+                                <span className="text-orange-600 font-bold">
+                                  {formatCurrency(
+                                    (clientData.totalRate ?? 0) -
+                                      (clientData.paidAmount ?? 0) +
+                                      (clientData.totalExpense ?? 0)
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+
+                            <Badge
+                              variant={
+                                clientData.invoiceGenerated
+                                  ? "default"
+                                  : "secondary"
+                              }
+                              className="mt-2"
+                            >
+                              {clientData.invoiceGenerated
+                                ? "✅ Invoice Generated"
+                                : "⏳ Pending Invoice"}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                          <div className="p-3 bg-white rounded-lg shadow-sm">
+                            <div className="text-sm text-muted-foreground flex items-center mb-1">
+                              <Package className="h-3 w-3 mr-1" />
+                              Load Description
+                            </div>
+                            <div className="font-medium">
+                              {clientData.loadDetails.description}
+                            </div>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg shadow-sm">
+                            <div className="text-sm text-muted-foreground mb-1">
+                              Weight & Quantity
+                            </div>
+                            <div className="font-medium">
+                              {clientData.loadDetails.weight} tons •{" "}
+                              {clientData.loadDetails.quantity} units
+                            </div>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg shadow-sm">
+                            <div className="text-sm text-muted-foreground mb-1">
+                              Type & Packaging
+                            </div>
+                            <div className="font-medium">
+                              {clientData.loadDetails.loadType} •{" "}
+                              {clientData.loadDetails.packagingType}
+                            </div>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg shadow-sm">
+                            <div className="text-sm text-muted-foreground mb-1">
+                              Status
+                            </div>
+                            <div className="flex flex-col">
+                              <Badge className="font-medium mb-1">
+                                {clientData.status}
+                              </Badge>
+                              <span className="text-sm text-gray-600">
+                                {clientData.loadDate
+                                  ? format(
+                                      new Date(clientData.loadDate),
+                                      "MM/dd/yyyy"
+                                    )
+                                  : ""}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {clientData.loadDetails.specialInstructions && (
+                          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div className="text-sm text-yellow-800 font-medium mb-1">
+                              Special Instructions
+                            </div>
+                            <div className="text-sm text-yellow-700">
+                              {clientData.loadDetails.specialInstructions}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Payments Section */}
+                      <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex justify-between items-center border-b border-green-200 pb-3 mb-4">
+                          <h4 className="font-semibold text-green-800 flex items-center">
+                            <TrendingUp className="h-4 w-4 mr-2" />
+                            Payments Received
+                          </h4>
+                          <p className="font-bold text-green-700 text-lg">
+                            {formatCurrency(
+                              clientData.advances?.reduce(
+                                (sum, item) => sum + item.amount,
+                                0
+                              ) || 0
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="space-y-2 mb-4">
+                          {clientData.advances?.map((item, advanceIndex) => (
+                            <div
+                              key={advanceIndex}
+                              className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    Payment #{advanceIndex + 1}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {formatDate(
+                                      item.paidAt,
+                                      "MMM dd, yyyy HH:mm"
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center space-x-2">
+                                <p className="font-semibold text-green-600">
+                                  {formatCurrency(item.amount)}
+                                </p>
+
+                                {/* 🗑 Delete Button */}
+                                <button
+                                  onClick={() =>
+                                    handleDeleteAdvance(
+                                      params.id,
+                                      index,
+                                       item._id 
+                                    )
+                                  }
+                                  className="text-red-500 hover:text-red-700 text-xs cursor pointer"
+                                  title="Delete Advance"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          className="w-full border-green-300 text-green-700 hover:bg-green-100"
+                          onClick={() => setAdvancePay((prev) => !prev)}
+                        >
+                          <PlusCircle className="w-4 h-4 mr-2" />
+                          {advancePay ? "Cancel" : "Add Payment"}
+                        </Button>
+                        <APaymentForm
+                          handleSubmit={handleASubmit}
+                          open={advancePay}
+                          index={index}
+                        />
+                      </div>
+
+                      {/* Expenses Section */}
+                      <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                        <div className="flex justify-between items-center border-b border-red-200 pb-3 mb-4">
+                          <h4 className="font-semibold text-red-800 flex items-center">
+                            <Wallet className="h-4 w-4 mr-2" />
+                            Client Expenses
+                          </h4>
+                          <p className="font-bold text-red-700 text-lg">
+                            {formatCurrency(
+                              clientData.expenses?.reduce(
+                                (sum, item) => sum + item.amount,
+                                0
+                              ) || 0
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="space-y-2 mb-4">
+                          {clientData.expenses?.map((item, expenseIndex) => (
+                            <div
+                              key={expenseIndex}
+                              className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    Expense #{expenseIndex + 1}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {formatDate(
+                                      item.paidAt,
+                                      "MMM dd, yyyy HH:mm"
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center space-x-2">
+                                <p className="font-semibold text-red-600">
+                                  {formatCurrency(item.amount)}
+                                </p>
+
+                                {/* 🗑 Delete Button */}
+                                <button
+                                  onClick={() =>
+                                    handleDeleteExpense(
+                                      params.id,
+                                      index,
+                                      item._id
+                                    )
+                                  }
+                                  className="text-red-500 hover:text-red-700 text-xs cursor-pointer"
+                                  title="Delete Expense"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          className="w-full border-red-300 text-red-700 hover:bg-red-100"
+                          onClick={() => setExpensesPay((prev) => !prev)}
+                        >
+                          <PlusCircle className="w-4 h-4 mr-2" />
+                          {expensesPay ? "Cancel" : "Add Expense"}
+                        </Button>
+                        <EPaymentForm
+                          handleSubmit={handleESubmit}
+                          open={expensesPay}
+                          index={index}
+                        />
+                      </div>
+
+                      {/* Memo Management Section */}
+                      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Collection Memo Section */}
+                        <Card className="border-blue-200 bg-blue-50">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-blue-800 text-lg flex items-center">
+                                <Memo className="h-5 w-5 mr-2" />
+                                Collection Memos
+                              </CardTitle>
+                              <Button
+                                onClick={() => {
+                                  setSelectedClientForMemo(clientData);
+                                  setShowCollectionMemoDialog(true);
+                                }}
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700"
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Create
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            {clientData.collectionMemos &&
+                            clientData.collectionMemos.length > 0 ? (
+                              <div className="space-y-2">
+                                {clientData.collectionMemos.map(
+                                  (memo, memoIndex) => (
+                                    <div
+                                      key={memoIndex}
+                                      className="p-3 bg-white rounded-lg border shadow-sm"
+                                    >
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <div className="font-medium text-blue-800">
+                                            #{memo.collectionNumber}
+                                          </div>
+                                          <div className="text-sm text-gray-600">
+                                            Freight:{" "}
+                                            {formatCurrency(memo.freight)}
+                                          </div>
+                                          <div className="text-sm text-gray-600">
+                                            Balance:{" "}
+                                            {formatCurrency(memo.balance)}
+                                          </div>
+                                        </div>
+                                        {memo.documentUrl && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() =>
+                                              window.open(
+                                                memo.documentUrl,
+                                                "_blank"
+                                              )
+                                            }
+                                          >
+                                            <FileText className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4 text-gray-500">
+                                <Memo className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm">
+                                  No collection memos yet
+                                </p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+
+                        {/* Balance Memo Section */}
+                        <Card className="border-green-200 bg-green-50">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-green-800 text-lg flex items-center">
+                                <ReceiptText className="h-5 w-5 mr-2" />
+                                Balance Memos
+                              </CardTitle>
+                              <Button
+                                onClick={() => {
+                                  setSelectedClientForMemo(clientData);
+                                  setShowBalanceMemoDialog(true);
+                                }}
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Create
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            {clientData.balanceMemos &&
+                            clientData.balanceMemos.length > 0 ? (
+                              <div className="space-y-2">
+                                {clientData.balanceMemos.map(
+                                  (memo, memoIndex) => (
+                                    <div
+                                      key={memoIndex}
+                                      className="p-3 bg-white rounded-lg border shadow-sm"
+                                    >
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <div className="font-medium text-green-800">
+                                            Bill #{memo.billNumber}
+                                          </div>
+                                          <div className="text-sm text-gray-600">
+                                            Total:{" "}
+                                            {formatCurrency(memo.totalAmount)}
+                                          </div>
+                                          <div className="text-sm text-gray-600">
+                                            Balance:{" "}
+                                            {formatCurrency(memo.balanceAmount)}
+                                          </div>
+                                        </div>
+                                        {memo.documentUrl && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() =>
+                                              window.open(
+                                                memo.documentUrl,
+                                                "_blank"
+                                              )
+                                            }
+                                          >
+                                            <FileText className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4 text-gray-500">
+                                <ReceiptText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm">No balance memos yet</p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* Client Statement Generator */}
+                      <ClientStatementGenerator
+                        clientData={clientData}
+                        tripData={trip}
+                      />
+                      <PodStatusCard trip={trip} clientData={clientData} />
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </CardContent>
+            </Card>
       </DashboardLayout>
     );
   }
@@ -1592,6 +2147,10 @@ const handleDeleteFleetExpenses = async (expenseId) => {
   const getExpenseForIcon = (expenseFor) => {
     return expenseFor === "driver" ? "👨‍💼" : "🚛";
   };
+
+
+
+
 
   return (
     <DashboardLayout>
@@ -2865,7 +3424,7 @@ const handleDeleteFleetExpenses = async (expenseId) => {
                                     handleDeleteAdvance(
                                       params.id,
                                       index,
-                                      advanceIndex
+                                       item._id 
                                     )
                                   }
                                   className="text-red-500 hover:text-red-700 text-xs cursor pointer"
@@ -2942,7 +3501,7 @@ const handleDeleteFleetExpenses = async (expenseId) => {
                                     handleDeleteExpense(
                                       params.id,
                                       index,
-                                      expenseIndex
+                                      item._id
                                     )
                                   }
                                   className="text-red-500 hover:text-red-700 text-xs cursor-pointer"
@@ -3552,7 +4111,7 @@ const handleDeleteFleetExpenses = async (expenseId) => {
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <Button
+                            {/* <Button
                               size="sm"
                               variant="outline"
                               className="h-8 px-2"
@@ -3560,7 +4119,7 @@ const handleDeleteFleetExpenses = async (expenseId) => {
                               title="Download PDF"
                             >
                               <Download className="h-3 w-3" />
-                            </Button>
+                            </Button> */}
                             <Button
                               size="sm"
                               variant="outline"
@@ -3624,76 +4183,116 @@ const handleDeleteFleetExpenses = async (expenseId) => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {trip.balanceMemos.map((memo, index) => (
-                      <div
-                        key={index}
-                        className="p-4 bg-green-50 rounded-lg border border-green-200 hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <div className="font-semibold text-green-900 text-lg">
-                              {memo.memoNumber}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Bill No: {memo.billNumber}
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 px-2"
-                              onClick={() => handleDownloadBalanceMemo(memo)}
-                              title="Download PDF"
-                            >
-                              <Download className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 px-2"
-                              onClick={() => {
-                                const client = trip.clients.find(c => c.client._id === memo.clientId);
-                                handleEditBalanceMemo(memo, client);
-                              }}
-                              title="Edit Memo"
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Badge className="bg-orange-100 text-orange-800">
-                              Due
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="text-sm text-gray-700 space-y-1.5 border-t pt-2">
-                          <div className="grid grid-cols-2 gap-2">
-                            <div><span className="text-gray-500">Total Amount:</span> <span className="font-semibold">{formatCurrency(memo.totalAmount)}</span></div>
-                            <div><span className="text-gray-500">Advance Given:</span> {formatCurrency(memo.advanceGiven)}</div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div><span className="text-gray-500">Expenses Added:</span> {formatCurrency(memo.expensesAdded)}</div>
-                            <div><span className="text-gray-500">Balance:</span> <span className="font-semibold text-green-700">{formatCurrency(memo.balanceAmount)}</span></div>
-                          </div>
-                          {memo.dueDate && (
-                            <div className="mt-2"><span className="text-gray-500">Due Date:</span> {formatDate(memo.dueDate, "MMM dd, yyyy")}</div>
-                          )}
-                          {memo.remarks && (
-                            <div className="text-xs italic text-gray-600 mt-2">"{memo.remarks}"</div>
-                          )}
-                          {memo.document && (
-                            <div className="mt-2">
-                              <a href={memo.document} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
-                                <FileText className="h-3 w-3" />
-                                View Document
-                              </a>
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-400 mt-2 pt-2 border-t">
-                            Created: {formatDate(memo.createdAt, "MMM dd, yyyy HH:mm")}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                {trip.balanceMemos.map((memo, index) => {
+  const totalAmount =
+    memo.totalAmount ?? memo.freight ?? 0
+
+  const advance =
+    memo.advanceGiven ?? memo.advance ?? 0
+
+  const expenses =
+    memo.expensesAdded ??
+    (memo.detention || 0) + (memo.unloadingCharge || 0)
+
+  const balance =
+    memo.balanceAmount ?? memo.totalPayableAmount ?? 0
+
+  const remarks =
+    memo.remarks || memo.remark || ""
+
+  const billNo =
+    memo.billNumber || memo.invoiceNumber || "—"
+
+  return (
+    <div
+      key={memo._id || index}
+      className="p-4 bg-green-50 rounded-lg border border-green-200 hover:shadow-md transition-shadow"
+    >
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <div className="font-semibold text-green-900 text-lg">
+            {memo.memoNumber}
+          </div>
+          <div className="text-xs text-gray-500">
+            Bill No: {billNo}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-2"
+            onClick={() => handleDownloadBalanceMemo(memo)}
+          >
+            <Download className="h-3 w-3" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-2"
+            onClick={() => {
+              const client = trip.clients.find(
+                c => c._id === memo.clientId
+              )
+              handleEditBalanceMemo(memo, client)
+            }}
+          >
+            <Edit className="h-3 w-3" />
+          </Button>
+          <Badge className="bg-orange-100 text-orange-800">
+            Due
+          </Badge>
+        </div>
+      </div>
+
+      <div className="text-sm text-gray-700 space-y-1.5 border-t pt-2">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className="text-gray-500">Total Amount:</span>{" "}
+            <span className="font-semibold">
+              {formatCurrency(totalAmount)}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-500">Advance:</span>{" "}
+            {formatCurrency(advance)}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className="text-gray-500">Expenses:</span>{" "}
+            {formatCurrency(expenses)}
+          </div>
+          <div>
+            <span className="text-gray-500">Balance:</span>{" "}
+            <span className="font-semibold text-green-700">
+              {formatCurrency(balance)}
+            </span>
+          </div>
+        </div>
+
+        {memo.dueDate && (
+          <div className="mt-2">
+            <span className="text-gray-500">Due Date:</span>{" "}
+            {formatDate(memo.dueDate, "MMM dd, yyyy")}
+          </div>
+        )}
+
+        {remarks && (
+          <div className="text-xs italic text-gray-600 mt-2">
+            "{remarks}"
+          </div>
+        )}
+
+        <div className="text-xs text-gray-400 mt-2 pt-2 border-t">
+          Created: {formatDate(memo.createdAt, "MMM dd, yyyy HH:mm")}
+        </div>
+      </div>
+    </div>
+  )
+})}
+
                   </div>
                 </CardContent>
               </Card>

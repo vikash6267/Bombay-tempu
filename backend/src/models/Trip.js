@@ -29,7 +29,7 @@ const tripSchema = new mongoose.Schema(
       unique: true,
       required: true,
     },
-  vehicle: {
+    vehicle: {
       type: mongoose.Schema.ObjectId,
       ref: "Vehicle",
       required: [true, "Vehicle is required"],
@@ -130,7 +130,7 @@ const tripSchema = new mongoose.Schema(
           state: { type: String, required: true },
           pincode: {
             type: String,
-          default:"123456"
+            default: "123456",
           },
           coordinates: {
             latitude: Number,
@@ -139,6 +139,11 @@ const tripSchema = new mongoose.Schema(
         },
         advances: [
           {
+            _id: {
+              type: mongoose.Schema.Types.ObjectId,
+              default: () => new mongoose.Types.ObjectId(),
+            },
+
             amount: { type: Number, required: true, min: 0 },
             paidBy: {
               type: String,
@@ -166,6 +171,11 @@ const tripSchema = new mongoose.Schema(
         ],
         expenses: [
           {
+            _id: {
+              type: mongoose.Schema.Types.ObjectId,
+              default: () => new mongoose.Types.ObjectId(),
+            },
+
             type: { type: String, required: true },
             amount: { type: Number, required: true, min: 0 },
             description: String,
@@ -273,7 +283,7 @@ const tripSchema = new mongoose.Schema(
     selfAdvances: [selfAdvanceSchema],
 
     // Vehicle and driver assignment
-  
+
     driver: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
@@ -805,33 +815,50 @@ tripSchema.pre("save", function (next) {
   next();
 });
 
-// Instance method to add advance payment
-tripSchema.methods.addAdvance = function (advanceData, index) {
+
+tripSchema.methods.addAdvance = async function (advanceData, index) {
   if (!this.clients[index]) throw new Error("Client not found");
 
   const client = this.clients[index];
-  client.paidAmount += advanceData.amount;
-  client.dueAmount = client.totalRate - client.paidAmount;
+
+  // Ensure advance has its own _id (master)
+  if (!advanceData._id) advanceData._id = new mongoose.Types.ObjectId();
+
+  client.paidAmount = (client.paidAmount || 0) + Number(advanceData.amount || 0);
+  client.dueAmount = (client.totalRate || 0) - client.paidAmount;
+
+  // normalize key name
+  advanceData.paymentMethod = advanceData.paymentMethod || advanceData.pymentMathod || "cash";
+
+  client.advances = client.advances || [];
   client.advances.push(advanceData);
 
-  return this.save();
+  const saved = await this.save();
+
+  // return saved trip and added advance
+  const added = saved.clients[index].advances.id(advanceData._id);
+  return { trip: saved, addedAdvance: added };
 };
 
-tripSchema.methods.addExpense = function (expenseData, index) {
+tripSchema.methods.addExpense = async function (expenseData, index) {
   if (!this.clients[index]) throw new Error("Client not found");
 
   const client = this.clients[index];
 
-  // Ensure expenses array exists
-  if (!client.expenses) {
-    client.expenses = [];
-  }
+  if (!expenseData._id) expenseData._id = new mongoose.Types.ObjectId();
+  client.expenses = client.expenses || [];
 
   client.expenses.push(expenseData);
-  client.dueAmount += expenseData.amount;
 
-  return this.save(); // Save the updated trip (including client.dueAmount)
+  client.totalExpense = (client.totalExpense || 0) + Number(expenseData.amount || 0);
+  client.dueAmount = (client.dueAmount || 0) + Number(expenseData.amount || 0);
+
+  const saved = await this.save();
+  const added = saved.clients[index].expenses.id(expenseData._id);
+  return { trip: saved, addedExpense: added };
 };
+
+
 
 // Instance method to update status
 tripSchema.methods.updateStatus = function (newStatus, updatedBy) {

@@ -182,6 +182,9 @@ const userSchema = new mongoose.Schema(
 
     advanceRecords: [
       {
+       _id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+
+      refId: mongoose.Schema.Types.ObjectId, // Trip Advance ID
         amount: Number,
         paidTo: String,
         purpose: String,
@@ -198,6 +201,9 @@ const userSchema = new mongoose.Schema(
     ],
     expenseRecords: [
       {
+        _id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+
+      refId: mongoose.Schema.Types.ObjectId, // Trip Advance ID
         type: { type: String },
         amount: Number,
         description: String,

@@ -200,10 +200,16 @@ export default function ClientsPage() {
     }
   };
 
-  const handleTripClick = (tripId) => {
-    router.push(`/trips/view/${tripId}`);
-    setIsModalOpen(false);
-  };
+const handleTripClick = (tripId) => {
+  if (!selectedClient?._id) {
+    console.error("Client not selected");
+    return;
+  }
+
+  router.push(`/trips/view/${tripId}?clientId=${selectedClient._id}`);
+  setIsModalOpen(false);
+};
+
 
   const clearFilters = () => {
     setDateFrom(null);

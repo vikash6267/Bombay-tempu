@@ -11,6 +11,7 @@ const mongoose = require("mongoose");
 const Expense = require("../models/Expenses"); // ✅ Import your Expense model
 const ActivityLog = require("../models/ActivityLog"); // ✅ Import your Expense model
 const { logActivity } = require("../middleware/activityLogger");
+const DeleteLog = require("../models/DeleteLogs");
 
 const { isValidObjectId } = mongoose;
 
@@ -780,14 +781,16 @@ const addPaidAmount = catchAsync(async (req, res, next) => {
 
 const addAdvancePayment = catchAsync(async (req, res, next) => {
   const { amount, paidTo, purpose, notes, index, pymentMathod, paidAt } = req.body;
+  const tripId = req.params.id;
 
-  console.log(req.body);
+  if (!amount || Number(amount) <= 0) {
+    return next(new AppError("Advance amount must be positive", 400));
+  }
 
-  const trip = await Trip.findById(req.params.id)
-    .populate({
-      path: "clients.client",
-      select: "name email phone",
-    });
+  const trip = await Trip.findById(tripId).populate({
+    path: "clients.client",
+    select: "name email phone",
+  });
 
   if (!trip || !trip.clients[index]) {
     return next(new AppError("Trip or client not found", 404));
@@ -795,310 +798,320 @@ const addAdvancePayment = catchAsync(async (req, res, next) => {
 
   const client = trip.clients[index];
 
-  // Validation
-  if (amount <= 0) {
-    return next(new AppError("Advance amount must be positive", 400));
-  }
-
-  const newPaidAmount = client.paidAmount + amount;
-  // if (newPaidAmount > client.totalRate) {
-  //   return next(new AppError("Advance exceeds total rate for this client", 400));
-  // }
-
+  // 1️⃣ Prepare advance object
   const advanceData = {
-    amount,
+    _id: new mongoose.Types.ObjectId(),
+    amount: Number(amount),
     paidBy: "client",
     paidTo,
     purpose: purpose || "general",
     notes,
-    paymentMethod: pymentMathod || "cash", // ✅ keep same key everywhere
-    paidAt: paidAt ? new Date(paidAt) : new Date(), // ✅ ensure valid date
+    paymentMethod: pymentMathod || "cash",
+    paidAt: paidAt ? new Date(paidAt) : new Date(),
   };
 
-  // Add advance to trip
-  const tripDetails = await trip.addAdvance(advanceData, index);
+  // 2️⃣ Add to trip using schema method
+  client.advances.push(advanceData);
+  client.paidAmount = (client.paidAmount || 0) + advanceData.amount;
+  client.dueAmount = (client.totalRate || 0) - client.paidAmount;
+  trip.markModified(`clients.${index}`);
+  await trip.save();
 
-  // Log activity
-  await logActivity({
-    user: req.user._id,
-    action: "advance",
-    category: "financial",
-    description: `Client (${client?.client?.name}) advance payment added: ₹${amount} for trip ${trip.tripNumber}`,
-    details: {
-      amount,
-      paidTo,
-      purpose,
-      notes,
-      paymentMethod: pymentMathod,
-      clientIndex: index,
-      tripNumber: trip.tripNumber,
-      clientName: client.client?.name || "Unknown",
-    },
-    relatedTrip: trip._id,
-    relatedUser: client.client,
-    date: paidAt ? new Date(paidAt) : new Date(), // ✅ consistent logging date
-    req,
-  });
+  // 3️⃣ Add to user's advanceRecords
+  const userId = client.client?._id || client.client;
+  if (userId) {
+    await User.updateOne(
+      { _id: userId },
+      {
+        $push: {
+          advanceRecords: {
+            refId: advanceData._id,
+            amount: advanceData.amount,
+            paidTo: advanceData.paidTo,
+            purpose: advanceData.purpose,
+            notes: advanceData.notes,
+            tripId: trip._id,
+            date: advanceData.paidAt,
+          },
+        },
+      }
+    );
+  }
 
-  // Update user record
-  const user = await User.findById(client.client);
-  if (user) {
-    user.advanceRecords.push({
-      amount,
-      paidTo,
-      purpose,
-      notes,
-      tripId: trip._id,
-      paidAt: paidAt ? new Date(paidAt) : new Date(), // ✅ added to user record too
+  // 4️⃣ Log activity safely
+  try {
+    await logActivity({
+      user: req.user?._id,
+      action: "advance",
+      category: "financial",
+      description: `Advance added ₹${amount} for client ${client?.client?.name || userId} on trip ${trip.tripNumber}`,
+      details: {
+        advanceId: advanceData._id,
+        amount: advanceData.amount,
+        paidTo: advanceData.paidTo,
+        purpose: advanceData.purpose,
+        clientIndex: index,
+        tripNumber: trip.tripNumber,
+        clientName: client.client?.name || "Unknown",
+      },
+      relatedTrip: trip._id,
+      relatedUser: client.client,
+      date: advanceData.paidAt,
+      req,
     });
-    await user.save();
+  } catch (err) {
+    console.error("Activity log failed:", err.message);
   }
 
   res.status(200).json({
     status: "success",
     message: "Advance payment added successfully",
-    data: {
-      trip,
-    },
+    data: { trip, addedAdvance: advanceData },
   });
 });
 
 
-
-
-
-
+// ---------- DELETE ADVANCE (by ref id) ----------
 const deleteAdvancePayment = catchAsync(async (req, res, next) => {
-  const { id } = req.params; // tripId
-  const { clientIndex, advanceIndex } = req.body;
+  const tripId = req.params.id;
+  const { clientIndex, advanceId } = req.body;
 
-  const trip = await Trip.findById(id);
+  if (!advanceId) return next(new AppError("advanceId is required", 400));
+
+  // 1️⃣ Fetch trip
+  const trip = await Trip.findById(tripId);
   if (!trip || !trip.clients?.[clientIndex]) {
     return next(new AppError("Trip or client not found", 404));
   }
 
   const client = trip.clients[clientIndex];
-  const advance = client.advances?.[advanceIndex];
 
-  if (!advance) {
+  // 2️⃣ Find the target advance
+  const target = client.advances.find(a => a._id.toString() === advanceId);
+  if (!target) {
     return next(new AppError("Advance payment not found", 404));
   }
 
-  const { amount, paidTo, purpose, notes } = advance;
+  const { amount, paidTo, purpose, notes } = target;
+  const userId = client.client || client.clientId;
 
-  // Subtract amount from paidAmount
-  client.paidAmount = (client.paidAmount || 0) - amount;
+  // 3️⃣ Update trip totals
+  client.paidAmount = (client.paidAmount || 0) - Number(amount || 0);
+  if (client.paidAmount < 0) client.paidAmount = 0;
+  client.dueAmount = (client.totalRate || 0) - client.paidAmount;
 
-  // Remove from client advances
-  client.advances.splice(advanceIndex, 1);
+  // 4️⃣ Remove advance from array safely
+  client.advances = client.advances.filter(a => a._id.toString() !== advanceId);
   trip.markModified(`clients.${clientIndex}`);
   await trip.save();
 
-  // Remove from user.advanceRecords
-  const user = await User.findById(client.client);
-  if (user) {
-    user.advanceRecords = user.advanceRecords.filter((record) => {
-      return !(
-        record.tripId?.toString() === trip._id.toString() &&
-        record.amount === amount &&
-        record.paidTo === paidTo &&
-        record.purpose === purpose &&
-        record.notes === notes
-      );
-    });
-    await user.save();
+  // 5️⃣ Remove reference from user's advanceRecords
+  if (userId) {
+    await User.updateOne(
+      { _id: userId },
+      { $pull: { advanceRecords: { refId: new mongoose.Types.ObjectId(advanceId) } } }
+    );
   }
 
-  // 🧹 Delete related ActivityLog
-  await ActivityLog.deleteOne({
-    relatedTrip: trip._id,
-    relatedUser: client.client,
-    action: "advance",
-    "details.amount": amount,
-    "details.paidTo": paidTo,
-    "details.purpose": purpose
+  // 6️⃣ Create DeleteLog (keep history)
+  await DeleteLog.create({
+    type: "advance",
+    refId: target._id,
+    tripId: trip._id,
+    userId,
+    amount,
+    purpose,
+    description: notes || "",
+    deletedBy: req.user?._id,
   });
 
+  // 7️⃣ Log activity for deletion
+  await logActivity({
+    user: req.user?._id,
+    action: "advance_deleted",
+    category: "financial",
+    description: `Advance deleted: ₹${amount} for client ${userId} on trip ${trip.tripNumber}`,
+    details: {
+      advanceId: target._id,
+      amount,
+      paidTo,
+      purpose,
+      notes,
+      clientIndex,
+      tripNumber: trip.tripNumber,
+    },
+    relatedTrip: trip._id,
+    relatedUser: userId,
+    date: new Date(),
+    req,
+  });
+
+  // 8️⃣ Send response
   res.status(200).json({
     status: "success",
-    message: "Advance payment and related logs deleted successfully",
+    message: "Advance deleted. DeleteLog and activity created.",
     data: { trip },
   });
 });
 
 
-// ================= addExpense =================
+
+// ---------- ADD EXPENSE ----------
 const addExpense = catchAsync(async (req, res, next) => {
   const { type, amount, description, paidBy, index, paidAt } = req.body;
+  const tripId = req.params.id;
 
-  console.log("➡️ Expense Request Body:", req.body);
-
-  try {
-    const trip = await Trip.findById(req.params.id).populate({
-      path: "clients.client",
-      select: "name email phone",
-    });
-
-    if (!trip || !trip.clients[index]) {
-      return next(new AppError("Trip or client not found", 404));
-    }
-
-    const expenseAmount = Number(amount);
-    if (!expenseAmount || expenseAmount <= 0) {
-      return next(new AppError("Expense amount must be positive", 400));
-    }
-
-    // Set defaults for type and description
-    const expenseType = type?.trim() || "General";
-    const expenseDesc = description?.trim() || "No description";
-
-    const client = trip.clients[index];
-    const oldExpense = client.totalExpense || 0;
-    const newExpense = oldExpense + expenseAmount;
-
-    console.log("📌 Old totalExpense:", oldExpense);
-    console.log("📌 Adding Expense Amount:", expenseAmount);
-    console.log("✅ Updated totalExpense:", newExpense);
-
-    client.totalExpense = newExpense;
-    client.dueAmount += expenseAmount;
-
-    const expenseData = {
-      type: expenseType,
-      amount: expenseAmount,
-      description: expenseDesc,
-      paidBy: paidBy || "driver",
-      paidAt: paidAt ? new Date(paidAt) : new Date(),
-    };
-
-    client.expenses.push(expenseData);
-    trip.markModified(`clients.${index}`);
-    await trip.save();
-    console.log("✅ Trip saved");
-
-    // 🧾 Log activity
-    await logActivity({
-      user: req.user._id,
-      action: "expense",
-      category: "financial",
-      description: `Client (${client?.client?.name}) expense added: ₹${expenseAmount.toFixed(
-        2
-      )} for trip ${trip.tripNumber}`,
-      details: {
-        type: expenseType,
-        amount: expenseAmount,
-        description: expenseDesc,
-        paidBy: paidBy || "driver",
-        clientIndex: index,
-        tripNumber: trip.tripNumber,
-        oldExpense,
-        newExpense,
-        clientName: client.client?.name || "Unknown",
-      },
-      relatedTrip: trip._id,
-      relatedUser: client.client,
-      date: paidAt ? new Date(paidAt) : new Date(),
-      req,
-    });
-
-    // 👤 Update user expense history
-    const userId = client.client || client.user;
-    if (userId) {
-      const user = await User.findById(userId);
-      if (user) {
-        user.expenseRecords.push({
-          type: expenseType,
-          amount: expenseAmount,
-          description: expenseDesc,
-          tripId: trip._id,
-          paidAt: paidAt ? new Date(paidAt) : new Date(),
-        });
-        await user.save();
-        console.log("✅ User expense record updated");
-      }
-    }
-
-    res.status(200).json({
-      status: "success",
-      message: "Expense added successfully",
-      data: { trip },
-    });
-  } catch (err) {
-    console.error("❌ Error in addExpense:", err);
-    res.status(500).json({
-      status: "error",
-      message: "Internal server error",
-      error: err.message,
-    });
+  const expenseAmount = Number(amount);
+  if (!expenseAmount || expenseAmount <= 0) {
+    return next(new AppError("Expense amount must be positive", 400));
   }
+
+  const trip = await Trip.findById(tripId).populate({
+    path: "clients.client",
+    select: "name email phone",
+  });
+
+  if (!trip || !trip.clients[index]) {
+    return next(new AppError("Trip or client not found", 404));
+  }
+
+  const client = trip.clients[index];
+
+  const expenseData = {
+    _id: new mongoose.Types.ObjectId(),
+    type: (type || "General").trim(),
+    amount: expenseAmount,
+    description: (description || "No description").trim(),
+    receipt: req.body.receipt || undefined,
+    paidBy: paidBy || "driver",
+    paidAt: paidAt ? new Date(paidAt) : new Date(),
+  };
+
+  const { trip: savedTrip, addedExpense } = await trip.addExpense(expenseData, index);
+
+  // Push only ref to user's expenseRecords
+  const userId = client.client?._id || client.client;
+  if (userId) {
+    await User.updateOne(
+      { _id: userId },
+      {
+        $push: {
+          expenseRecords: {
+            refId: addedExpense._id,
+            type: addedExpense.type,
+            amount: addedExpense.amount,
+            description: addedExpense.description,
+            tripId: savedTrip._id,
+            paidAt: addedExpense.paidAt,
+            paidBy: addedExpense.paidBy,
+          },
+        },
+      }
+    );
+  }
+
+  // Activity log
+  await logActivity({
+    user: req.user?._id,
+    action: "expense",
+    category: "financial",
+    description: `Expense added ₹${expenseAmount} for client ${client?.client?.name || userId} on trip ${trip.tripNumber}`,
+    details: {
+      expenseId: addedExpense._id,
+      amount: addedExpense.amount,
+      type: addedExpense.type,
+      description: addedExpense.description,
+      clientIndex: index,
+      tripNumber: trip.tripNumber,
+    },
+    relatedTrip: trip._id,
+    relatedUser: client.client,
+    date: addedExpense.paidAt,
+    req,
+  });
+
+  res.status(200).json({
+    status: "success",
+    message: "Expense added successfully",
+    data: { trip: savedTrip, addedExpense },
+  });
 });
 
-// ================= deleteExpense =================
+// ---------- DELETE EXPENSE (by ref id) ----------
 const deleteExpense = catchAsync(async (req, res, next) => {
-  const { id } = req.params; // tripId
-  const { clientIndex, expenseIndex } = req.body;
+  const tripId = req.params.id;
+  const { clientIndex, expenseId } = req.body;
 
-  const trip = await Trip.findById(id);
+  if (!expenseId) return next(new AppError("expenseId is required", 400));
+
+  const trip = await Trip.findById(tripId);
   if (!trip || !trip.clients?.[clientIndex]) {
     return next(new AppError("Trip or client not found", 404));
   }
 
   const client = trip.clients[clientIndex];
-  const expense = client.expenses?.[expenseIndex];
-  if (!expense) {
-    return next(new AppError("Expense not found", 404));
-  }
+  const target = client.expenses.find(e => e._id.toString() === expenseId);
+  if (!target) return next(new AppError("Expense not found", 404));
 
-  const { amount, type, description, paidBy } = expense;
+  const { amount, type, description, paidBy } = target;
+  const userId = client.client || client.clientId;
 
-  // Update totals
-  client.totalExpense = (client.totalExpense || 0) - amount;
-  client.dueAmount = (client.dueAmount || 0) - amount;
+  // 1️⃣ Update totals
+  client.totalExpense = Math.max(0, (client.totalExpense || 0) - Number(amount || 0));
+  client.dueAmount = Math.max(0, (client.dueAmount || 0) - Number(amount || 0));
 
-  // Remove expense from trip
-  client.expenses.splice(expenseIndex, 1);
+  // 2️⃣ Remove from expenses array
+  client.expenses = client.expenses.filter(e => e._id.toString() !== expenseId);
   trip.markModified(`clients.${clientIndex}`);
   await trip.save();
 
-  // Remove from user.expenseRecords
-  const userId = client.client?._id || client.user;
+  // 3️⃣ Remove from user's expenseRecords
   if (userId) {
-    const user = await User.findById(userId);
-    if (user) {
-      const before = user.expenseRecords.length;
-      user.expenseRecords = user.expenseRecords.filter(
-        r =>
-          !(r.tripId?.toString() === trip._id.toString() &&
-            Number(r.amount) === Number(amount) &&
-            r.type === type &&
-            r.description?.trim() === description?.trim())
-      );
-      await user.save();
-      console.log(`🗑️ Removed ${before - user.expenseRecords.length} expense record(s) from user`);
-    }
+    await User.updateOne(
+      { _id: userId },
+      { $pull: { expenseRecords: { refId: new mongoose.Types.ObjectId(expenseId) } } }
+    );
   }
 
-  // Delete ActivityLogs
-  const relatedUserId = client.client?._id || client.user;
- const deletedLogs = await ActivityLog.deleteMany({
-  relatedTrip: trip._id,
-  action: "expense",
-  "details.amount": Number(amount),
-  "details.type": type,
-  "details.description": { $regex: new RegExp(description?.trim(), "i") },
-  "details.paidBy": paidBy || "driver",
-  $or: [
-    { relatedUser: client.client?._id },
-    { "relatedUser._id": client.client?._id }
-  ]
-});
+  // 4️⃣ Create DeleteLog
+  await DeleteLog.create({
+    type: "expense",
+    refId: target._id,
+    tripId: trip._id,
+    userId,
+    amount,
+    description,
+    deletedBy: req.user?._id,
+  });
 
-
-  console.log(`🗑️ Deleted logs: ${deletedLogs.deletedCount || 0}`);
+  // 5️⃣ Log activity
+  try {
+    await logActivity({
+      user: req.user?._id,
+      action: "expense_deleted",
+      category: "financial",
+      description: `Expense deleted ₹${amount} for client ${userId} on trip ${trip.tripNumber}`,
+      details: {
+        expenseId: target._id,
+        amount,
+        type,
+        description,
+        paidBy,
+        clientIndex,
+        tripNumber: trip.tripNumber,
+      },
+      relatedTrip: trip._id,
+      relatedUser: userId,
+      date: new Date(),
+      req,
+    });
+  } catch (err) {
+    console.error("Expense deletion log failed:", err.message);
+  }
 
   res.status(200).json({
     status: "success",
-    message: "Expense and related logs deleted successfully",
+    message: "Expense deleted. DeleteLog and activity created.",
     data: { trip },
   });
 });

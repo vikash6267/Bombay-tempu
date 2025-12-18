@@ -153,7 +153,7 @@ export function CollectionMemoDialog({
         <DialogHeader>
 
            <div className="rounded border bg-white p-2">
-        <CollectionMemo ref={memoRef} data={formValues} />
+        <CollectionMemo ref={memoRef} data={formValues}   />
 
         <Button
         onClick={() => memoRef.current?.download("collection-memo.pdf")}
@@ -386,7 +386,7 @@ export function CollectionMemoDialog({
               >
                 Cancel
               </Button>
-              <Button
+              {/* <Button
                 type="button"
                 variant="outline"
                 onClick={downloadPDF}
@@ -395,7 +395,7 @@ export function CollectionMemoDialog({
               >
                 <Download className="h-4 w-4 mr-2" />
                 {isDownloading ? "Downloading..." : "Download PDF"}
-              </Button>
+              </Button> */}
               <Button
                 type="submit"
                 disabled={isSubmitting}

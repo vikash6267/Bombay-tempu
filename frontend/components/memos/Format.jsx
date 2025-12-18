@@ -102,7 +102,7 @@ console.log(data)
         {/* Services / Address */}
         <div className="mt-1 text-[11pt]">
           <p className="px-6 text-left font-bold">
-            Daily Sservice :{" "}
+            Daily Service :{" "}
             <i>Delhi,Haryana, Rajasthan, punjab, UP, UK &amp; All Over India</i>
           </p>
           <p className="text-center font-bold">

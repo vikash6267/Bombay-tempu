@@ -241,8 +241,8 @@ export const generateBalanceMemoPDF = (data) => {
   
   y += 6;
   doc.setFontSize(10);
-  doc.text(`CUSTOMERNAME:-${data.customerName || ""}`, margin + 2, y);
-  doc.text(`INVOICE NO :-${data.invoiceNumber || ""}`, pageWidth - margin - 55, y);
+  doc.text(`CUSTOMER NAME:- ${data.customerName || ""}`, margin + 2, y);
+  doc.text(`INVOICE NO :- ${data.invoiceNumber || ""}`, pageWidth - margin - 55, y);
 
   y += 2;
   doc.line(margin, y, pageWidth - margin, y);
@@ -295,7 +295,7 @@ export const generateBalanceMemoPDF = (data) => {
   if (data.remark) {
     doc.text(`Remark - ${data.remark}`, pageWidth / 2, y, { align: "center" });
   } else {
-    doc.text("Remark - Dication Charge ₹1000 / Per Day", pageWidth / 2, y, { align: "center" });
+    doc.text("Remark - Dication Charge 1000 / Per Day", pageWidth / 2, y, { align: "center" });
   }
 
   // Horizontal line before bank details

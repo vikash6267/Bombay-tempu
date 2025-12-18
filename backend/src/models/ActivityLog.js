@@ -27,6 +27,8 @@ const activityLogSchema = new mongoose.Schema(
         "expense",
         "status_change",
         "pod_update",
+        "advance_deleted",
+        "expense_deleted"
       ],
     },
     category: {

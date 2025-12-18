@@ -175,16 +175,13 @@ export default function ExpenseDashboard() {
 
   // Common expense types for the create form
   const [commonExpenseTypes, setCommonExpenseTypes] = useState([
-    "food",
-    "fuel",
-    "chai",
-    "transport",
-    "shopping",
-    "bills",
-    "entertainment",
-    "medical",
-    "education",
     "vehicle",
+    "office",
+    "staff-room",
+    "room",
+    "gopiram",
+    "mohit",
+    "bills",
     "other",
   ]);
 
