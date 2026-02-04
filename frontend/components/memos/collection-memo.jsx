@@ -58,7 +58,7 @@ export function CollectionMemoDialog({
   const form = useForm({
     resolver: zodResolver(collectionMemoSchema),
     defaultValues: {
-      collectionNumber: `01`, // Keep simple numeric like the template
+      collectionNumber: tripData?.tripNumber || `01`,
       date: todayStr,
       msName: "",
       lorryNumber: "",
@@ -97,7 +97,7 @@ export function CollectionMemoDialog({
       const bal = Math.max(totalRate - paid, 0)
 
       form.reset({
-        collectionNumber: `01`,
+        collectionNumber: tripData?.tripNumber || `01`,
         date: todayStr,
         msName: clientData?.client?.name || "",
         lorryNumber: tripData?.vehicle?.registrationNumber || "",

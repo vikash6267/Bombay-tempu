@@ -896,8 +896,8 @@ export default function TripDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showPODDialog, setShowPODDialog] = useState(false);
-  const [advancePay, setAdvancePay] = useState(false);
-  const [expensesPay, setExpensesPay] = useState(false);
+  const [selectedClientIdForPayment, setSelectedClientIdForPayment] = useState(null); // Track selected client for payment
+  const [selectedClientIdForExpense, setSelectedClientIdForExpense] = useState(null); // Track selected client for expense
   const [fleetExpenseForm, setFleetExpenseForm] = useState(false);
   const [fleetAdvanceForm, setFleetAdvanceForm] = useState(false);
   const [selfExpenseForm, setSelfExpenseForm] = useState(false);
@@ -1056,16 +1056,41 @@ export default function TripDetailPage() {
     form.reset();
   };
 
-  const handleASubmit = async (values, index) => {
-    const data = { ...values, index: index };
+  const handleASubmit = async (values, clientDataId) => {
+    // clientDataId is the _id of the client entry in trip.clients array
+    // Find the actual index in the original trip.clients array
+    const clientIndex = trip.clients.findIndex(c => {
+      // Compare both the client entry _id and nested client._id
+      return c._id?.toString() === clientDataId?.toString() || 
+             c.client?._id?.toString() === clientDataId?.toString();
+    });
+    
+    if (clientIndex === -1) {
+      console.error("❌ Client not found in trip.clients");
+      console.log("🔍 Looking for clientDataId:", clientDataId);
+      console.log("📋 Available trip.clients:", trip.clients.map((c, idx) => ({ 
+        index: idx,
+        entryId: c._id, 
+        clientId: c.client?._id, 
+        name: c.client?.name 
+      })));
+      toast.error("Client not found. Check console for details.");
+      return;
+    }
+    
+    console.log("✅ Found client at index:", clientIndex);
+    const data = { ...values, index: clientIndex };
+    
     try {
       const res = await tripsApi.addAdvance(params.id, data);
 
-      res && setAdvancePay(false);
-      toast.success("Payment added successfully");
-      queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+      if (res) {
+        setSelectedClientIdForPayment(null);
+        toast.success("Payment added successfully");
+        queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+      }
     } catch (error) {
-      console.log(error);
+      console.error("❌ API Error:", error);
       toast.error("Failed to add payment");
     }
   };
@@ -1112,17 +1137,34 @@ export default function TripDetailPage() {
     }
   };
 
-  const handleESubmit = async (values, index) => {
-    const data = { ...values, index: index };
+  const handleESubmit = async (values, clientDataId) => {
+    // clientDataId is the _id of the client entry in trip.clients array
+    const clientIndex = trip.clients.findIndex(c => {
+      return c._id?.toString() === clientDataId?.toString() || 
+             c.client?._id?.toString() === clientDataId?.toString();
+    });
+    
+    if (clientIndex === -1) {
+      console.error("❌ Client not found for expense");
+      console.log("🔍 Looking for clientDataId:", clientDataId);
+      toast.error("Client not found");
+      return;
+    }
+    
+    console.log("✅ Found client at index:", clientIndex);
+    const data = { ...values, index: clientIndex };
+    
     try {
       const res = await tripsApi.addExpense(params.id, data);
 
-      res && setExpensesPay(false);
-      toast.success("Expenses added successfully");
-      queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+      if (res) {
+        setSelectedClientIdForExpense(null);
+        toast.success("Expense added successfully");
+        queryClient.invalidateQueries({ queryKey: ["trip", params.id] });
+      }
     } catch (error) {
-      console.log(error);
-      toast.error("Failed to add expenses");
+      console.error("❌ API Error:", error);
+      toast.error("Failed to add expense");
     }
   };
 
@@ -1553,7 +1595,7 @@ const handleDeleteFleetExpenses = async (expenseId) => {
               </CardHeader>
               <CardContent>
                 <Tabs
-                  defaultValue={filteredClients[0]?._id || "default"}
+                  defaultValue={clientId || "default"}
                   className="space-y-4"
                 >
                   <TabsList
@@ -1815,15 +1857,15 @@ const handleDeleteFleetExpenses = async (expenseId) => {
                         <Button
                           variant="outline"
                           className="w-full border-green-300 text-green-700 hover:bg-green-100"
-                          onClick={() => setAdvancePay((prev) => !prev)}
+                          onClick={() => { if (selectedClientIdForPayment === clientData._id) { setSelectedClientIdForPayment(null); } else { setSelectedClientIdForPayment(clientData._id); } }}
                         >
                           <PlusCircle className="w-4 h-4 mr-2" />
-                          {advancePay ? "Cancel" : "Add Payment"}
+                          {selectedClientIdForPayment === clientData._id ? "Cancel" : "Add Payment"}
                         </Button>
                         <APaymentForm
                           handleSubmit={handleASubmit}
-                          open={advancePay}
-                          index={index}
+                          open={selectedClientIdForPayment === clientData._id}
+                          index={clientData._id}
                         />
                       </div>
 
@@ -1892,15 +1934,15 @@ const handleDeleteFleetExpenses = async (expenseId) => {
                         <Button
                           variant="outline"
                           className="w-full border-red-300 text-red-700 hover:bg-red-100"
-                          onClick={() => setExpensesPay((prev) => !prev)}
+                          onClick={() => { if (selectedClientIdForExpense === clientData._id) { setSelectedClientIdForExpense(null); } else { setSelectedClientIdForExpense(clientData._id); } }}
                         >
                           <PlusCircle className="w-4 h-4 mr-2" />
-                          {expensesPay ? "Cancel" : "Add Expense"}
+                          {selectedClientIdForExpense === clientData._id ? "Cancel" : "Add Expense"}
                         </Button>
                         <EPaymentForm
                           handleSubmit={handleESubmit}
-                          open={expensesPay}
-                          index={index}
+                          open={selectedClientIdForExpense === clientData._id}
+                          index={clientData._id}
                         />
                       </div>
 
@@ -3440,15 +3482,15 @@ const handleDeleteFleetExpenses = async (expenseId) => {
                         <Button
                           variant="outline"
                           className="w-full border-green-300 text-green-700 hover:bg-green-100"
-                          onClick={() => setAdvancePay((prev) => !prev)}
+                          onClick={() => { if (selectedClientIdForPayment === clientData._id) { setSelectedClientIdForPayment(null); } else { setSelectedClientIdForPayment(clientData._id); } }}
                         >
                           <PlusCircle className="w-4 h-4 mr-2" />
-                          {advancePay ? "Cancel" : "Add Payment"}
+                          {selectedClientIdForPayment === clientData._id ? "Cancel" : "Add Payment"}
                         </Button>
                         <APaymentForm
                           handleSubmit={handleASubmit}
-                          open={advancePay}
-                          index={index}
+                          open={selectedClientIdForPayment === clientData._id}
+                          index={clientData._id}
                         />
                       </div>
 
@@ -3517,15 +3559,15 @@ const handleDeleteFleetExpenses = async (expenseId) => {
                         <Button
                           variant="outline"
                           className="w-full border-red-300 text-red-700 hover:bg-red-100"
-                          onClick={() => setExpensesPay((prev) => !prev)}
+                          onClick={() => { if (selectedClientIdForExpense === clientData._id) { setSelectedClientIdForExpense(null); } else { setSelectedClientIdForExpense(clientData._id); } }}
                         >
                           <PlusCircle className="w-4 h-4 mr-2" />
-                          {expensesPay ? "Cancel" : "Add Expense"}
+                          {selectedClientIdForExpense === clientData._id ? "Cancel" : "Add Expense"}
                         </Button>
                         <EPaymentForm
                           handleSubmit={handleESubmit}
-                          open={expensesPay}
-                          index={index}
+                          open={selectedClientIdForExpense === clientData._id}
+                          index={clientData._id}
                         />
                       </div>
 

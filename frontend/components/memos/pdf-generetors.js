@@ -58,20 +58,28 @@ export function generateCollectionMemoPDF(data) {
   y += 5;
   drawLine();
 
-  // --- Services ---
+  // --- Daily Service ---
   y += 5;
   doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Daily Service : ", margin, y);
+  const dailyServiceLabelWidth = doc.getTextWidth("Daily Service : ");
+  doc.setFont("helvetica", "italic");
   doc.text(
-    "Daily Service: Delhi, Haryana, Rajasthan, Punjab, UP, UK & All Over India",
-    margin,
+    "Delhi, Haryana, Rajasthan, Punjab, UP, UK & All Over India",
+    margin + dailyServiceLabelWidth,
     y
   );
-  y += 5;
+  doc.setFont("helvetica", "normal");
+  y += 6;
+  
+  // --- Services ---
+  doc.text("Services : ", centerX - doc.getTextWidth("Services : 1109, 1110, 407, 20ft, 22ft Open & Container etc") / 2, y);
+  const servicesLabelWidth = doc.getTextWidth("Services : ");
   doc.text(
-    "Services: 1109, 1110, 407, 20ft, 22ft Open & Container etc.",
-    centerX,
-    y,
-    { align: "center" }
+    "1109, 1110, 407, 20ft, 22ft Open & Container etc",
+    centerX - doc.getTextWidth("Services : 1109, 1110, 407, 20ft, 22ft Open & Container etc") / 2 + servicesLabelWidth,
+    y
   );
   y += 5;
   drawLine();
@@ -211,6 +219,12 @@ export const generateBalanceMemoPDF = (data) => {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.text("Balance Memo", pageWidth / 2, y, { align: "center" });
+  
+  // Add date on the right side
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  const currentDate = new Date().toLocaleDateString("en-GB"); // dd/mm/yyyy format
+  doc.text(`Date: ${currentDate}`, pageWidth - margin - 2, y, { align: "right" });
 
   // --- COMPANY HEADER (Gray background) ---
   y += 8;

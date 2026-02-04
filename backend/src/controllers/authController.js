@@ -318,35 +318,78 @@ const getClientTripBalances = catchAsync(async (req, res, next) => {
   // ✅ Statement Entries (Advance and Expense merged)
   let statementEntries = [];
 
-  // Advances → Credit
+  // Advances → Credit (Filter out duplicates and validate against actual trip advances)
   if (client?.advanceRecords?.length) {
+    // Create a Set to track unique refIds to avoid duplicates
+    const seenRefIds = new Set();
+    
     client.advanceRecords.forEach((adv) => {
-      statementEntries.push({
-        date: adv.date,
-        reason: adv.purpose,
-        tripId: adv.tripId,
-        debit: 0,
-        credit: adv.amount,
-        type: "advance",
-        paidTo: adv.paidTo,
-        notes: adv.notes,
-      });
+      // Skip if we've already seen this refId (duplicate)
+      if (adv.refId && seenRefIds.has(adv.refId.toString())) {
+        return;
+      }
+      
+      // Verify this advance actually exists in the trip
+      const trip = trips.find(t => t._id.toString() === adv.tripId?.toString());
+      if (trip) {
+        // Check if this advance exists in any client's advances array
+        const advanceExists = trip.clients.some(client => 
+          client.advances?.some(a => a._id.toString() === adv.refId?.toString())
+        );
+        
+        // Only add if advance exists in trip
+        if (advanceExists) {
+          if (adv.refId) seenRefIds.add(adv.refId.toString());
+          
+          statementEntries.push({
+            date: adv.date,
+            reason: adv.purpose,
+            tripId: adv.tripId,
+            debit: 0,
+            credit: adv.amount,
+            type: "advance",
+            paidTo: adv.paidTo,
+            notes: adv.notes,
+          });
+        }
+      }
     });
   }
 
-  // Expenses → Debit
+  // Expenses → Debit (Filter out duplicates and validate against actual trip expenses)
   if (client?.expenseRecords?.length) {
+    const seenExpenseRefIds = new Set();
+    
     client.expenseRecords.forEach((exp) => {
-      statementEntries.push({
-        date: exp.paidAt,
-        reason: exp.type,
-        tripId: exp.tripId,
-        debit: exp.amount,
-        credit: 0,
-        type: "expense",
-        description: exp.description,
-        paidBy: exp.paidBy,
-      });
+      // Skip if we've already seen this refId (duplicate)
+      if (exp.refId && seenExpenseRefIds.has(exp.refId.toString())) {
+        return;
+      }
+      
+      // Verify this expense actually exists in the trip
+      const trip = trips.find(t => t._id.toString() === exp.tripId?.toString());
+      if (trip) {
+        // Check if this expense exists in any client's expenses array
+        const expenseExists = trip.clients.some(client => 
+          client.expenses?.some(e => e._id.toString() === exp.refId?.toString())
+        );
+        
+        // Only add if expense exists in trip
+        if (expenseExists) {
+          if (exp.refId) seenExpenseRefIds.add(exp.refId.toString());
+          
+          statementEntries.push({
+            date: exp.paidAt,
+            reason: exp.type,
+            tripId: exp.tripId,
+            debit: exp.amount,
+            credit: 0,
+            type: "expense",
+            description: exp.description,
+            paidBy: exp.paidBy,
+          });
+        }
+      }
     });
   }
 

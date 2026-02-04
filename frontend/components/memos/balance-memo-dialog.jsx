@@ -102,7 +102,7 @@ const typeLabelMap = Object.fromEntries(
       remark: editData.remark || ""
     } : {
       customerName: clientData?.client?.name || "",
-      invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+      invoiceNumber: tripData?.tripNumber || `INV-${Date.now().toString().slice(-6)}`,
       vehicleNumber: tripData?.vehicle?.registrationNumber || "",
       from: clientData?.origin?.city || "",
       to: clientData?.destination?.city || "",
@@ -142,7 +142,7 @@ const typeLabelMap = Object.fromEntries(
 
       form.reset({
         customerName: clientData?.client?.name || "",
-        invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+        invoiceNumber: tripData?.tripNumber || `INV-${Date.now().toString().slice(-6)}`,
         vehicleNumber: tripData?.vehicle?.registrationNumber || "",
         from: clientData?.origin?.city || "",
         to: clientData?.destination?.city || "",
@@ -206,7 +206,7 @@ const typeLabelMap = Object.fromEntries(
     
     const doc = generateBalanceMemoPDF(formData, clientData, tripData)
     doc.save(
-      `Balance_Memo_${formData.billNumber}_${formatDate(
+      `Balance_Memo_${formData.invoiceNumber || 'Unknown'}_${formatDate(
         new Date(),
         "dd-MM-yyyy"
       )}.pdf`

@@ -6,11 +6,10 @@ export async function generateDriverReceiptPdf(
   kmData = { oldKM: 0, newKM: 0, rate: 19.5, pichla: 0 },
   companyDetails = {
     name: "Bombay Uttranchal Tempo Service",
-    address:
-      "Building No. C13, Gala No.01, Parasnath Complex, Dapoda, Bhiwandi, Dist. Thane 421302. (MH).",
+    address: "Building No.C13, Gala No.01, Parasnath Complex, Dapoda,",
+    address2: "Dapoda, Bhiwandi, Dist. Thane 421302 (MH)",
     phone: "6375916182",
-    email: "butsbwd@gmail.com",
-    state: "Maharashtra"
+    ownerName: "Mohit Choudhary"
   }
 ) {
   const doc = new jsPDF({
@@ -20,244 +19,292 @@ export async function generateDriverReceiptPdf(
   })
 
   const pageWidth = doc.internal.pageSize.width
-  const pageHeight = doc.internal.pageSize.height
-  let y = 20
+  const margin = 15
+  const tableWidth = pageWidth - 2 * margin
+  const rightX = pageWidth - margin
+  const centerX = pageWidth / 2
+  let y = 18
 
-  // Main border around entire document
-  doc.setLineWidth(1)
-  doc.rect(10, 10, pageWidth - 20, pageHeight - 20)
-
+  // Calculate totals
   const totalAdvance = trips.reduce(
     (sum, trip) =>
-      sum +
-      (trip.selfAdvances?.reduce((advSum, a) => advSum + a.amount, 0) || 0),
+      sum + (trip.selfAdvances?.reduce((advSum, a) => advSum + a.amount, 0) || 0),
     0
   )
   const totalExpenses = trips.reduce(
     (sum, trip) =>
-      sum +
-      (trip.selfExpenses?.reduce((expSum, e) => expSum + e.amount, 0) || 0),
+      sum + (trip.selfExpenses?.reduce((expSum, e) => expSum + e.amount, 0) || 0),
     0
   )
-  const totalKM = kmData.newKM - kmData.oldKM
-  const kmValue = totalKM * kmData.rate
-  const totalEarnings = kmValue + totalExpenses + kmData.pichla
-  const finalAmount = totalEarnings - totalAdvance
-
-  // Company Header
-  doc.setFontSize(16)
-  doc.setFont("helvetica", "bold")
-  doc.text(companyDetails.name, pageWidth / 2, y, { align: "center" })
-  y += 8
-
-  // Company Details
-  doc.setFontSize(9)
-  doc.setFont("helvetica", "normal")
-  doc.text(`Address : ${companyDetails.address}`, 15, y)
-  y += 5
-  doc.text(`Phone No.: ${companyDetails.phone}`, 15, y)
-  y += 5
-  doc.text(`Email ID: ${companyDetails.email}`, 15, y)
-  y += 5
-  doc.text(`State: ${companyDetails.state}`, 15, y)
-
-  // BUTS Logo - Create oval background
-  doc.setFillColor(100, 149, 237) // Blue color
-  doc.ellipse(pageWidth - 25, y - 10, 15, 8, "F")
-  doc.setTextColor(255, 255, 255) // White text
-  doc.setFontSize(14)
-  doc.setFont("helvetica", "bold")
-  doc.text("BUTS", pageWidth - 25, y - 7, { align: "center" })
-  doc.setTextColor(0, 0, 0) // Reset to black
-
-  y += 15
-
-  doc.setLineWidth(0.5)
-  doc.rect(15, y, pageWidth - 30, 20)
-
-  doc.setFontSize(10)
-  doc.setFont("helvetica", "normal")
-doc.text(
-  `Trip Statement (${trips.map(t => t.tripNumber).join(", ")})`, 
-  20, 
-  y + 5
-)
-  doc.text(`Driver Name :-`, 20, y + 10)
-  doc.text(`${driver?.name || "N/A"}`, 55, y + 10)
-  doc.text(`Date :-`, 120, y + 10)
-  doc.text(`${new Date().toLocaleDateString("en-GB")}`, 140, y + 10)
-  doc.text(`Phone: ${driver?.phone || "N/A"}`, 20, y + 15)
-
-  y += 25
-
-  // Table Headers
-  const tableStartY = y
-  const leftTableX = 15
-  const rightTableX = pageWidth / 2 + 2
-  const tableWidth = (pageWidth - 34) / 2
-  const rowHeight = 6
-
-  // Left Table Header (Advances)
-  doc.setLineWidth(0.3)
-  doc.rect(leftTableX, y, tableWidth, rowHeight)
-  doc.setFontSize(9)
-  doc.setFont("helvetica", "bold")
-
-  // Header cells with vertical lines
-  doc.line(leftTableX + 15, y, leftTableX + 15, y + rowHeight) // Sr No
-  doc.line(leftTableX + 35, y, leftTableX + 35, y + rowHeight) // Date
-  doc.line(leftTableX + 55, y, leftTableX + 55, y + rowHeight) // Amount
-
-  doc.text("Sr No", leftTableX + 7, y + 4, { align: "center" })
-  doc.text("Date", leftTableX + 25, y + 4, { align: "center" })
-  doc.text("Amount", leftTableX + 45, y + 4, { align: "center" })
-  doc.text("Trip", leftTableX + 65, y + 4, { align: "center" })
-
-  // Right Table Header (Expenses)
-  doc.rect(rightTableX, y, tableWidth, rowHeight)
-  doc.line(rightTableX + 15, y, rightTableX + 15, y + rowHeight) // Sr No
-  doc.line(rightTableX + 35, y, rightTableX + 35, y + rowHeight) // Amount
-
-  doc.text("Sr No", rightTableX + 7, y + 4, { align: "center" })
-  doc.text("Amount", rightTableX + 25, y + 4, { align: "center" })
-  doc.text("Category", rightTableX + 55, y + 4, { align: "center" })
-
-  y += rowHeight
-
-  // Table Data
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(8)
 
   const allAdvances = trips.flatMap(
-    trip =>
-      trip.selfAdvances?.map(adv => ({
-        ...adv,
-        tripNumber: trip.tripNumber
-      })) || []
+    trip => trip.selfAdvances?.map(adv => ({ ...adv, tripNumber: trip.tripNumber })) || []
   )
-
   const allExpenses = trips.flatMap(
-    trip =>
-      trip.selfExpenses?.map(exp => ({
-        ...exp,
-        tripNumber: trip.tripNumber
-      })) || []
+    trip => trip.selfExpenses?.map(exp => ({ ...exp, tripNumber: trip.tripNumber })) || []
   )
 
-  // Left side data (Advances)
-  for (let i = 0; i < 10; i++) {
-    doc.rect(leftTableX, y, tableWidth, rowHeight)
-    doc.line(leftTableX + 15, y, leftTableX + 15, y + rowHeight)
-    doc.line(leftTableX + 35, y, leftTableX + 35, y + rowHeight)
-    doc.line(leftTableX + 55, y, leftTableX + 55, y + rowHeight)
+  const totalFreight = trips.reduce((sum, trip) => {
+    const clientRate = trip.clients?.[0]?.rate || trip.rate || 0
+    return sum + clientRate
+  }, 0)
 
-    if (i < allAdvances.length) {
-      const advance = allAdvances[i]
-      doc.text((i + 1).toString(), leftTableX + 7, y + 4, { align: "center" })
-      doc.text(
-        advance.paidAt?.slice(8, 10) +
-          "/" +
-          advance.paidAt?.slice(5, 7) +
-          "/" +
-          advance.paidAt?.slice(0, 4) || "",
-        leftTableX + 25,
-        y + 4,
-        { align: "center" }
-      )
-      doc.text(advance?.amount.toString(), leftTableX + 50, y + 4, {
-        align: "right"
-      })
-      doc.text(advance.tripNumber || "N/A", leftTableX + 65, y + 4, {
-        align: "center"
-      })
-    } else {
-      doc.text((i + 1).toString(), leftTableX + 7, y + 4, { align: "center" })
-    }
-    y += rowHeight
-  }
+  const commission = Math.round(totalFreight * 0.06)
+  const balancePOD = 0
+  const totalPaid = totalAdvance
+  const finalAmountToPay = totalFreight - totalExpenses - commission - balancePOD - totalPaid
 
-  // Reset y for right table
-  y = tableStartY + rowHeight
-
-  // Right side data (Expenses)
-  for (let i = 0; i < 10; i++) {
-    doc.rect(rightTableX, y, tableWidth, rowHeight)
-    doc.line(rightTableX + 15, y, rightTableX + 15, y + rowHeight)
-    doc.line(rightTableX + 35, y, rightTableX + 35, y + rowHeight)
-
-    if (i < allExpenses.length) {
-      const expense = allExpenses[i]
-      doc.text((i + 1).toString(), rightTableX + 7, y + 4, { align: "center" })
-      doc.text(expense.amount.toString(), rightTableX + 30, y + 4, {
-        align: "right"
-      })
-      doc.text(
-        expense.category || expense.reason || "",
-        rightTableX + 40,
-        y + 4
-      )
-    } else {
-      doc.text((i + 1).toString(), rightTableX + 7, y + 4, { align: "center" })
-    }
-    y += rowHeight
-  }
-
-  y = tableStartY + rowHeight + 10 * rowHeight
-
-  // Total rows
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(10)
-  doc.rect(leftTableX, y, tableWidth, 8)
-  doc.rect(rightTableX, y, tableWidth, 8)
-  doc.text("Total", leftTableX + 5, y + 5)
-  doc.text(totalAdvance.toString(), leftTableX + tableWidth - 5, y + 5, {
-    align: "right"
-  })
-  doc.text("Total", rightTableX + 5, y + 5)
-  doc.text(totalExpenses.toString(), rightTableX + tableWidth - 5, y + 5, {
-    align: "right"
-  })
-
-  y += 15
-
-  // KM Calculation Section
-  doc.setLineWidth(0.5)
-  doc.rect(15, y, pageWidth - 30, 50)
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(10)
-
-  // Left column
-  doc.text(`New KM :-`, 20, y + 8)
-  doc.text(kmData.newKM.toString(), 80, y + 8, { align: "right" })
-
-  doc.text(`Old KM`, 20, y + 15)
-  doc.text(kmData.oldKM.toString(), 80, y + 15, { align: "right" })
-
-  doc.text(`Total KM`, 20, y + 22)
-  doc.text(totalKM.toString(), 80, y + 22, { align: "right" })
-
-  doc.text(`KM ${kmData.rate}`, 20, y + 29)
-  doc.text(kmValue.toFixed(0), 80, y + 29, { align: "right" })
-
-  doc.text(`Kharcha`, 20, y + 36)
-  doc.text(totalExpenses.toString(), 80, y + 36, { align: "right" })
-
-  // Right column
-  doc.text(`Pichla`, 120, y + 8)
-  doc.text(kmData.pichla.toString(), 180, y + 8, { align: "right" })
-
-  doc.text(`Total`, 120, y + 15)
-  doc.text(totalEarnings.toFixed(0), 180, y + 15, { align: "right" })
-
-  doc.text(`Advance`, 120, y + 22)
-  doc.text(totalAdvance.toString(), 180, y + 22, { align: "right" })
-
+  // ========== TOP HORIZONTAL LINE ==========
   doc.setLineWidth(1)
-  doc.rect(115, y + 30, 70, 15)
+  doc.line(margin, y, rightX, y)
+  y += 8
+
+  // ========== OWNER NAME (LEFT) & MOB (RIGHT) ==========
+  doc.setFontSize(11)
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(12)
-  doc.text(`Multi-Trip`, 120, y + 40)
-  doc.text(finalAmount.toFixed(0), 180, y + 40, { align: "right" })
+  doc.text(companyDetails.ownerName, margin, y)
+  doc.text("MOB : " + companyDetails.phone, rightX, y, { align: "right" })
+
+  y += 10
+
+  // ========== COMPANY NAME (BIG, CENTER) ==========
+  doc.setFontSize(24)
+  doc.setFont("helvetica", "bold")
+  doc.text(companyDetails.name, centerX, y, { align: "center" })
+
+  y += 8
+
+  // ========== ADDRESS LINE 1 ==========
+  doc.setFontSize(10)
+  doc.setFont("helvetica", "bold")
+  doc.text(companyDetails.address, centerX, y, { align: "center" })
+  
+  y += 5
+  
+  // ========== ADDRESS LINE 2 ==========
+  doc.text(companyDetails.address2, centerX, y, { align: "center" })
+
+  y += 12
+
+  // ========== DRIVER HEADER (BLUE BAR) ==========
+  doc.setFillColor(100, 149, 237) // Cornflower blue like image
+  doc.rect(margin, y, tableWidth, 7, "F")
+  doc.setFontSize(11)
+  doc.setFont("helvetica", "bold")
+  doc.setTextColor(0, 100, 0) // Dark green text
+  doc.text("Driver", centerX, y + 5, { align: "center" })
+  doc.setTextColor(0, 0, 0)
+
+  y += 9
+
+  // ========== DRIVER DETAILS ROW ==========
+  doc.setFontSize(10)
+  doc.setFont("helvetica", "bold")
+  doc.text("Driver Name : ", margin, y)
+  doc.setFont("helvetica", "normal")
+  doc.text(driver?.name || "N/A", margin + 28, y)
+
+  doc.setFont("helvetica", "bold")
+  doc.text("Vehicle No : ", rightX - 55, y)
+  doc.setFont("helvetica", "normal")
+  doc.text(trips[0]?.vehicle?.registrationNumber || "N/A", rightX - 30, y)
+
+  y += 5
+
+  doc.setFont("helvetica", "bold")
+  doc.text("Mob No : ", margin, y)
+  doc.setFont("helvetica", "normal")
+  doc.text(driver?.phone || "N/A", margin + 18, y)
+
+  doc.setFont("helvetica", "bold")
+  doc.text("Trip No : ", rightX - 55, y)
+  doc.setFont("helvetica", "normal")
+  const tripNo = trips[0]?.tripNumber || "N/A"
+  doc.text(tripNo, rightX - 35, y)
+
+  y += 8
+
+  // ========== TRIPS TABLE ==========
+  const rowH = 6
+  
+  // Header row (blue)
+  doc.setFillColor(100, 149, 237)
+  doc.rect(margin, y, tableWidth, rowH, "F")
+  doc.setLineWidth(0.3)
+  doc.rect(margin, y, tableWidth, rowH)
+  
+  doc.setFontSize(9)
+  doc.setFont("helvetica", "bold")
+  doc.setTextColor(0, 0, 0)
+  
+  // Column positions
+  const c1 = margin + 2
+  const c2 = margin + 25
+  const c3 = margin + 80
+  const c4 = margin + 110
+  const c5 = margin + 145
+  
+  doc.text("Date", c1, y + 4)
+  doc.text("Client Name", c2, y + 4)
+  doc.text("Fight", c3, y + 4)
+  doc.text("From", c4, y + 4)
+  doc.text("To", c5, y + 4)
+  
+  y += rowH
+
+  // Data rows
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(9)
+  
+  for (let i = 0; i < 3; i++) {
+    doc.rect(margin, y, tableWidth, rowH)
+    const trip = trips[i]
+    if (trip) {
+      const dt = trip.scheduledDate ? new Date(trip.scheduledDate).toLocaleDateString("en-GB", {day:"numeric", month:"numeric", year:"2-digit"}) : ""
+      const client = trip.clients?.[0]?.client?.name || ""
+      const freight = trip.clients?.[0]?.rate || trip.rate || ""
+      const from = trip.origin?.city || trip.origin || ""
+      const to = trip.destination?.city || trip.destination || ""
+      
+      doc.text(dt, c1, y + 4)
+      doc.text(String(client).substring(0, 28), c2, y + 4)
+      doc.text(String(freight), c3, y + 4)
+      doc.text(String(from).substring(0, 15), c4, y + 4)
+      doc.text(String(to).substring(0, 15), c5, y + 4)
+    }
+    y += rowH
+  }
+
+  // Total row
+  doc.setFont("helvetica", "bold")
+  doc.text("Total", c3 - 15, y + 4)
+  doc.text(String(totalFreight), c3 + 10, y + 4)
+  y += rowH + 2
+
+  // ========== EXPANCES HEADER ==========
+  doc.setFillColor(100, 149, 237)
+  doc.rect(margin, y, tableWidth, rowH, "F")
+  doc.rect(margin, y, tableWidth, rowH)
+  doc.setFont("helvetica", "bold")
+  doc.text("Expances", centerX, y + 4, { align: "center" })
+  y += rowH
+
+  // Expense table header
+  doc.setFillColor(100, 149, 237)
+  doc.rect(margin, y, tableWidth, rowH, "F")
+  doc.rect(margin, y, tableWidth, rowH)
+  doc.text("Date", c1, y + 4)
+  doc.text("Expance Resions", c2 + 20, y + 4)
+  doc.text("Amount", c4, y + 4)
+  y += rowH
+
+  // Expense rows
+  doc.setFont("helvetica", "normal")
+  for (let i = 0; i < 2; i++) {
+    doc.rect(margin, y, tableWidth, rowH)
+    const exp = allExpenses[i]
+    if (exp) {
+      const dt = exp.paidAt ? new Date(exp.paidAt).toLocaleDateString("en-GB") : ""
+      doc.text(dt, c1, y + 4)
+      doc.text(String(exp.category || exp.reason || exp.type || "").substring(0, 25), c2 + 20, y + 4)
+      doc.text(String(exp.amount || 0), c4, y + 4)
+    }
+    y += rowH
+  }
+
+  // Expense total
+  doc.setFont("helvetica", "bold")
+  doc.text("Total", c4 - 20, y + 4)
+  doc.text(String(totalExpenses), c4 + 10, y + 4)
+  y += rowH + 2
+
+  // ========== TRANSACTION DETAILS HEADER ==========
+  doc.setFillColor(100, 149, 237)
+  doc.rect(margin, y, tableWidth, rowH, "F")
+  doc.rect(margin, y, tableWidth, rowH)
+  doc.setFont("helvetica", "bold")
+  doc.text("Transaction Details", centerX, y + 4, { align: "center" })
+  y += rowH
+
+  // Transaction table header
+  doc.setFillColor(100, 149, 237)
+  doc.rect(margin, y, tableWidth, rowH, "F")
+  doc.rect(margin, y, tableWidth, rowH)
+  
+  const t1 = margin + 5
+  const t2 = margin + 30
+  const t3 = margin + 65
+  const t4 = margin + 100
+  const t5 = margin + 145
+  
+  doc.text("Sr.No", t1, y + 4)
+  doc.text("Date", t2, y + 4)
+  doc.text("Method", t3, y + 4)
+  doc.text("Reference", t4, y + 4)
+  doc.text("Amount", t5, y + 4)
+  y += rowH
+
+  // Transaction rows
+  doc.setFont("helvetica", "normal")
+  for (let i = 0; i < 3; i++) {
+    doc.rect(margin, y, tableWidth, rowH)
+    const adv = allAdvances[i]
+    doc.text(String(i + 1) + ".", t1 + 3, y + 4)
+    if (adv) {
+      const dt = adv.paidAt ? new Date(adv.paidAt).toLocaleDateString("en-GB", {day:"numeric", month:"numeric", year:"2-digit"}) : ""
+      doc.text(dt, t2, y + 4)
+      doc.text(adv.paymentMethod || "Cash", t3, y + 4)
+      doc.text(String(adv.reason || adv.notes || "").substring(0, 18), t4, y + 4)
+      doc.text(String(adv.amount || 0), t5, y + 4)
+    }
+    y += rowH
+  }
+
+  // Transaction total
+  doc.setFont("helvetica", "bold")
+  doc.text("Total", t5 - 20, y + 4)
+  doc.text(String(totalAdvance), t5 + 10, y + 4)
+  y += rowH + 12
+
+  // ========== FINAL SUMMARY ==========
+  doc.setFontSize(11)
+  doc.setFont("helvetica", "bold")
+  doc.text("Final Summary", margin, y)
+  y += 7
+
+  doc.setFontSize(10)
+  const lx = margin
+  const vx = margin + 48
+
+  doc.setFont("helvetica", "normal")
+  doc.text("Total Fright / Expance", lx, y)
+  doc.text(String(totalFreight), vx, y)
+  y += 5
+
+  doc.text("Expance", lx, y)
+  doc.text(String(totalExpenses), vx, y)
+  y += 5
+
+  doc.text("Commission", lx, y)
+  doc.text(String(commission), vx, y)
+  y += 5
+
+  doc.text("Blance POD", lx, y)
+  doc.text(String(balancePOD), vx, y)
+  y += 5
+
+  doc.text("Total Paid", lx, y)
+  doc.text(String(totalPaid), vx, y)
+  y += 5
+
+  doc.setFont("helvetica", "bold")
+  doc.text("Final Amount", lx, y)
+  doc.text(String(finalAmountToPay), vx, y)
+
+  // Authorized Signature (right side)
+  doc.setFont("helvetica", "italic")
+  doc.setFontSize(10)
+  doc.text("Authorized Signature", rightX - 40, y - 5)
 
   return doc
 }

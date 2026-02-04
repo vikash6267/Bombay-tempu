@@ -78,7 +78,7 @@ console.log(data)
   // Layout mirrors the provided HTML’s wording and structure closely.
   return (
     <div ref={containerRef} className={className}>
-<section className="mx-auto w-full max-w-[794px] bg-white text-black border border-black p-3 box-border">
+<section style={{ backgroundColor: "#ffffff", color: "#000000", border: "1px solid #000000", padding: "12px", boxSizing: "border-box" }} className="mx-auto w-full max-w-[794px]">
         {/* Header row with names and phone numbers */}
         <div className="text-[11pt] leading-[13pt]">
           <div className="flex items-center justify-between px-1">
@@ -100,13 +100,12 @@ console.log(data)
         </p>
 
         {/* Services / Address */}
-        <div className="mt-1 text-[11pt]">
-          <p className="px-6 text-left font-bold">
-            Daily Service :{" "}
-            <i>Delhi,Haryana, Rajasthan, punjab, UP, UK &amp; All Over India</i>
+        <div className="mt-1 text-[10pt]">
+          <p className="px-2 text-left font-bold whitespace-nowrap">
+            Daily Service : <i style={{ color: "#15803d" }}>Delhi, Haryana, Rajasthan, Punjab, UP, UK &amp; All Over India</i>
           </p>
           <p className="text-center font-bold">
-            Services :<i>1109,1110,407,20ft,22ft Open &amp; Container etc</i>
+            Services : <i>1109, 1110, 407, 20ft, 22ft Open &amp; Container etc</i>
           </p>
           <p className="text-center font-bold">
             Add: <i>Building No. C13, Gala No.01, Parasnath Complex,</i>
@@ -116,9 +115,11 @@ console.log(data)
 
         {/* Collection memo bar */}
         <div className="mt-2 text-[11pt] leading-[13pt]">
-          <div className="flex items-center justify-between pr-3">
+          <div className="text-center font-bold mb-1">
+            COLLECTION MEMO
+          </div>
+          <div className="flex items-center justify-between px-3">
             <span>Collection No : {data.collectionNumber || data.collectionNo || "01"}</span>
-            <span className="font-bold">COLLECTION MEMO</span>
             <span>Date {data.date || <u>{"          "}</u>}</span>
           </div>
         </div>
@@ -126,7 +127,7 @@ console.log(data)
         {/* M/s */}
         <div className="mt-1 text-[11pt] leading-[13pt] pl-4">
           <span>M/s. </span>
-          <span className="inline-block min-w-[520px]  border-b border-black align-baseline pb-[6px]">
+          <span className="font-bold">
             {data.msName || ""}
           </span>
         </div>
@@ -143,15 +144,15 @@ console.log(data)
         <div className="mt-2 text-[11pt] leading-[14pt] pl-5 pr-7">
           <p>
             Lorry No{" "}
-            <span className="inline-block min-w-[220px] border-b border-black align-baseline pb-[6px]">
+            <span className="font-bold">
               {data.lorryNumber || data.lorryNo || ""}
             </span>{" "}
             For The Collection Of Your Goods To Be Despatched From{" "}
-            <span className="inline-block min-w-[160px] border-b border-black align-baseline pb-[6px]">
+            <span className="font-bold">
               {data.from || ""}
             </span>{" "}
             To{" "}
-            <span className="inline-block min-w-[160px] border-b border-black align-baseline pb-[6px]">
+            <span className="font-bold">
               {data.to || ""}
             </span>
             .
@@ -163,13 +164,13 @@ console.log(data)
           <p className="flex gap-6">
             <span>
               Rate{" "}
-              <span className="inline-block min-w-[180px] border-b border-black align-baseline pb-[6px]">
+              <span className="font-bold">
                 {data.rate || ""}
               </span>
             </span>
             <span>
               Fright{" "}
-              <span className="inline-block min-w-[140px] border-b border-black align-baseline pb-[6px]">
+              <span className="font-bold">
                 {data.freight || data.fright || ""}
               </span>
             </span>
@@ -181,13 +182,13 @@ console.log(data)
           <p className="flex gap-6">
             <span>
               Weight{" "}
-              <span className="inline-block min-w-[200px] border-b border-black align-baseline pb-[6px]">
+              <span className="font-bold">
                 {data.weight || ""}
               </span>
             </span>
             <span>
               Adcance{" "}
-              <span className="inline-block min-w-[140px] border-b border-black align-baseline pb-[6px]">
+              <span className="font-bold">
                 {data.advance || data.adcance || ""}
               </span>
             </span>
@@ -199,13 +200,13 @@ console.log(data)
           <p className="flex gap-6">
             <span>
               Guarantee{" "}
-              <span className="inline-block min-w-[200px] border-b border-black align-baseline pb-[6px]">
+              <span className="font-bold">
                 {data.guarantee || ""}
               </span>
             </span>
             <span>
               Blance{" "}
-              <span className="inline-block min-w-[140px] border-b border-black align-baseline pb-[6px]">
+              <span className="font-bold">
                 {data.balance || data.blance || ""}
               </span>
             </span>
