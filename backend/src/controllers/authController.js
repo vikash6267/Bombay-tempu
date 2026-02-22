@@ -294,6 +294,7 @@ const getClientTripBalances = catchAsync(async (req, res, next) => {
         tripNumber: trip.tripNumber,
         tripStatus: trip.status,
         tripDate: clientData.timeline?.bookedAt || null,
+        loadDate: clientData.loadDate || null,
         vehicleNumber: trip.vehicle?.registrationNumber || null,
         total: totalRate,
         paid: paidAmount,

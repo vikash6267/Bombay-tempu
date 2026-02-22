@@ -196,6 +196,23 @@ export function EditVehicleDialog({ open, onOpenChange, vehicle }) {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="fleetOwner">Ownership Type *</Label>
+                    <Select onValueChange={(value) => setFieldValue("fleetOwner", value)} value={values.fleetOwner}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select owner" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Self Owned</SelectItem>
+                        {fleetOwners?.data?.users?.map((owner) => (
+                          <SelectItem key={owner._id} value={owner._id}>
+                            {owner.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="status">Status *</Label>
                     <Select onValueChange={(value) => setFieldValue("status", value)} value={values.status}>
                       <SelectTrigger className={errors.status && touched.status ? "border-red-500" : ""}>

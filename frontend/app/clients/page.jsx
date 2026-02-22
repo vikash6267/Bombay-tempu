@@ -891,6 +891,19 @@ const handleTripClick = (tripId) => {
                                   </div>
                                 </div>
 
+                                {/* Load Date */}
+                                <div className="flex items-center space-x-2">
+                                  <Calendar className="h-4 w-4 text-purple-500" />
+                                  <div>
+                                    <p className="text-xs text-gray-500">
+                                      Load Date
+                                    </p>
+                                    <p className="font-medium">
+                                      {formatDate(trip.loadDate)}
+                                    </p>
+                                  </div>
+                                </div>
+
                                 {/* Vehicle */}
                                 <div className="flex items-center space-x-2">
                                   <Truck className="h-4 w-4 text-green-500" />
